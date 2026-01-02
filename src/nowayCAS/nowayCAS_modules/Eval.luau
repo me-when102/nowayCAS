@@ -1,5 +1,7 @@
 local Eval = {}
 
+local tonumber = tonumber
+
 -------------------------------------------------------
 -- Evaluator
 -- Evaluates an AST numerically given an environment.

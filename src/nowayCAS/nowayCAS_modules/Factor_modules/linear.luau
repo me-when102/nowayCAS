@@ -6,6 +6,10 @@ local Rules = require(script.Parent.Parent.Rewrite.Rules)
 local Util = require(script.Parent.Parent.Util)
 local Simplify = require(script.Parent.Parent.Simplify)
 
+local ipairs = ipairs
+
+local table_insert = table.insert
+
 local Lin = {}
 
 -- create a left-associative sum Node from an arry of nodes (returns 0 if empty)
@@ -35,9 +39,9 @@ function Lin.factorLinearIn(node, varName)
 			for k,v in pairs(extracted.varExp) do
 				if k ~= varName then newVarExp[k] = v end
 			end
-			table.insert(A_terms, { num = extracted.num, varExp = newVarExp, others = extracted.others })
+			table_insert(A_terms, { num = extracted.num, varExp = newVarExp, others = extracted.others })
 		else
-			table.insert(B_terms, extracted)
+			table_insert(B_terms, extracted)
 		end
 	end
 
@@ -45,7 +49,7 @@ function Lin.factorLinearIn(node, varName)
 
 	local function buildPoly(terms)
 		local nodes = {}
-		for _, t in ipairs(terms) do table.insert(nodes, H.buildMul(t)) end
+		for _, t in ipairs(terms) do table_insert(nodes, H.buildMul(t)) end
 		return buildAdd(nodes)
 	end
 

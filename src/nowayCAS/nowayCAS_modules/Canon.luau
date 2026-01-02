@@ -4,6 +4,9 @@ local CANON_CACHE = {}
 local Node = require(script.Parent.Node)
 
 local table_insert = table.insert
+local table_sort = table.sort
+
+local ipairs = ipairs
 
 -------------------------------------------------------
 -- Canonicalizer
@@ -53,7 +56,7 @@ end
 -- Sort nodes for canonical ordering
 -- Variables alphabetically, numbers last
 local function sortNodes(nodes)
-	table.sort(nodes, function(a, b)
+	table_sort(nodes, function(a, b)
 		if isVar(a) and isVar(b) then
 			return a.name < b.name
 		end
@@ -120,7 +123,7 @@ local function combineMul(nodes)
 	for name,_ in pairs(varExp) do
 		table_insert(names, name)
 	end
-	table.sort(names)
+	table_sort(names)
 
 	for _, name in ipairs(names) do
 		local exp = varExp[name]
@@ -142,7 +145,7 @@ local function combineMul(nodes)
 	end
 
 	-- 5. Deterministic order for the whole product
-	table.sort(out, function(a, b)
+	table_sort(out, function(a, b)
 		return tostring(a) < tostring(b)
 	end)
 
@@ -198,7 +201,7 @@ local function combineLikeTerms(nodes)
 			-- build a canonical key string
 			local names = {}
 			for k,_ in pairs(m.vars) do table_insert(names, k) end
-			table.sort(names)
+			table_sort(names)
 
 			local key = ""
 			for _, name in ipairs(names) do
@@ -219,7 +222,7 @@ local function combineLikeTerms(nodes)
 			for name,_ in pairs(b.vars) do
 				table_insert(names, name)
 			end
-			table.sort(names)
+			table_sort(names)
 
 			for _, name in ipairs(names) do
 				local exp = b.vars[name]

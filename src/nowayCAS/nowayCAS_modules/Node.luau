@@ -1,6 +1,8 @@
 local Node = {}
 local NODE_CACHE = {}
 
+local tostring = tostring
+
 -------------------------------------------------------
 -- Expression Node Constructors
 -------------------------------------------------------

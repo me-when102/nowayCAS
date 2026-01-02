@@ -7,6 +7,8 @@ local Util = require(script.Parent.Util)
 local table_remove = table.remove
 local table_insert = table.insert
 
+local ipairs = ipairs
+
 -------------------------------------------------------
 -- Rewrite
 -------------------------------------------------------

@@ -20,6 +20,9 @@ local Bin = require(script.binomial)
 local Lin = require(script.linear)
 local Trace = require(script.trace)
 
+local tostring = tostring
+local ipairs = ipairs
+
 -- expose trace toggle
 Factor.trace = Trace
 

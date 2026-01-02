@@ -5,6 +5,9 @@ local Canon = require(script.Parent.Canon)
 local Node = require(script.Parent.Node)
 local Util = require(script.Parent.Util)
 
+local tonumber = tonumber
+local tostring = tostring
+
 -------------------------------------------------------
 -- Simplifier
 -- Applies algebraic rewrite rules to AST nodes.

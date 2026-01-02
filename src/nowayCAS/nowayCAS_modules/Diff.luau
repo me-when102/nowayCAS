@@ -3,6 +3,9 @@ local DIFF_CACHE = {}
 
 local Node = require(script.Parent.Node)
 
+local tostring = tostring
+local tonumber = tonumber
+
 -------------------------------------------------------
 -- Differentiation
 -- Computes d/d(var) of an AST node.

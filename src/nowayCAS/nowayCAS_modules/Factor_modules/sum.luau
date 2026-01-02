@@ -6,6 +6,9 @@ local Canon = require(script.Parent.Parent.Canon)
 local Sum = {}
 
 local table_insert = table.insert
+local table_sort = table.sort
+
+local ipairs = ipairs
 
 -- factor a sum node by extracting the greatest common factor and
 -- returning common * (sum of remainders); returns original node if no nontrivial factor.
@@ -59,7 +62,7 @@ function Sum.factorSum(node)
 		table_insert(newTerms, Canon.canonical(mulNode))
 	end
 
-	table.sort(newTerms, function(a, b) return tostring(a) < tostring(b) end)
+	table_sort(newTerms, function(a, b) return tostring(a) < tostring(b) end)
 
 	local common = Canon.canonical(H.buildMul(factor))
 	local distributed = Canon.canonical(H.buildAdd(newTerms))

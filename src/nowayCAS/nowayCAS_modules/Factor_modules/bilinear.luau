@@ -6,6 +6,13 @@ local Util = require(script.Parent.Parent.Util)
 local Print = require(script.Parent.Parent.Print)
 local Trace = require(script.Parent.trace)
 
+local tostring = tostring
+local pairs = pairs
+local ipairs = ipairs
+
+local table_sort = table.sort
+local table_insert = table.insert
+
 local Bil = {}
 
 -- all ways to split 4 items into two pairs for grouping checks
@@ -53,14 +60,14 @@ function Bil.factorByPairwiseCommon(node)
 			if H.factorDividesTerm(cf, ex) then count = count + 1 end
 		end
 		if count >= 2 then
-			table.insert(scored, {key = key, factor = cf, node = candidateNodes[key], count = count})
+			table_insert(scored, {key = key, factor = cf, node = candidateNodes[key], count = count})
 		end
 	end
 
 	if #scored == 0 then return nil end
 
 	-- 4) Sort candidates by count desc, then by string length (prefer larger)
-	table.sort(scored, function(a,b)
+	table_sort(scored, function(a,b)
 		if a.count ~= b.count then return a.count > b.count end
 		return #a.key > #b.key
 	end)
@@ -77,7 +84,7 @@ function Bil.factorByPairwiseCommon(node)
 				local remDesc = H.divideTerm(ex, Fdesc)
 				-- remove zero exponents
 				for name, e in pairs(remDesc.varExp) do if e == 0 then remDesc.varExp[name] = nil end end
-				table.insert(remainders, Canon.canonical(H.buildMul(remDesc)))
+				table_insert(remainders, Canon.canonical(H.buildMul(remDesc)))
 				usedIndices[i] = true
 			end
 		end
@@ -94,11 +101,11 @@ function Bil.factorByPairwiseCommon(node)
 			for i, t in ipairs(terms) do
 				if usedIndices[i] then
 					if not inserted then
-						table.insert(newTerms, product)
+						table_insert(newTerms, product)
 						inserted = true
 					end
 				else
-					table.insert(newTerms, Canon.canonical(t))
+					table_insert(newTerms, Canon.canonical(t))
 				end
 			end
 			local candidateSum = H.buildAdd(newTerms)

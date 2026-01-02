@@ -3,6 +3,11 @@ local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
 local Util = require(script.Parent.Parent.Util)
 
+local table_insert = table.insert
+
+local tonumber = tonumber
+local ipairs = ipairs
+
 local Bin = {}
 
 -- return true if node represents x^2 (a power with numeric exponent 2)
@@ -29,7 +34,7 @@ function Bin.factorBinomial(node)
 
 	local extractedList = {}
 	for _, t in ipairs(terms) do
-		table.insert(extractedList, { node = t, ex = H.extractTerm(t) })
+		table_insert(extractedList, { node = t, ex = H.extractTerm(t) })
 	end
 
 	-- difference of squares
@@ -57,9 +62,9 @@ function Bin.factorBinomial(node)
 	local crossCandidates = {}
 	for _, item in ipairs(extractedList) do
 		if isSquareNode(item.node) then
-			table.insert(squares, item)
+			table_insert(squares, item)
 		else
-			table.insert(crossCandidates, item)
+			table_insert(crossCandidates, item)
 		end
 	end
 

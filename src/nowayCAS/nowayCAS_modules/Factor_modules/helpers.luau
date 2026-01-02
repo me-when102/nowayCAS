@@ -6,6 +6,9 @@ local H = {}
 
 local table_insert = table.insert
 
+local ipairs = ipairs
+local type = type
+
 -- Compute the common factor descriptor for a list of term descriptors.
 -- Input: terms = { { num, varExp, others }, ... }
 -- Output: { num, varExp, others }
