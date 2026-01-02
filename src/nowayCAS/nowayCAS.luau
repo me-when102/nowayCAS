@@ -27,7 +27,7 @@ Print      = require(script.Print)
 Arithmetic = require(script.Arithmetic)
 UserFunctions = require(script.UserFunctions)
 
-Rules = require(script.Rewrite.Rules)
+rules_expand = require(script.Rewrite.rules_expand)
 
 local nowayCAS = {
 	Util = Util,
@@ -94,7 +94,7 @@ end
 
 -- Expands the AST.
 function nowayCAS.expand(node)
-	return Rewrite.apply(node, Rules.expandRules)
+	return Rewrite.apply(node, rules_expand)
 end
 
 -- Factorises the AST.
@@ -122,11 +122,16 @@ function nowayCAS.toLatex(node)
 	return Print._toLatex(node)
 end
 
+-- Converts the node into an AST representation (debug).
 function nowayCAS.toASTRepresentation(node)
 	return Print.toASTRepresentation(node)
 end
 
--- Defines a user-defined function
+-- Defines a user-defined function.
+-- Name: the name of the function, eg: 'f' = "f(...params)" when called.
+-- Params: the parameters to substitute into the bodyString.
+-- bodyString: the contents of the function, eg: 7x + 3
+-- Eg: f(7, 4) = (2*(3y + 7x)) / 3 (x, y are params, f is name, (2*(3y + 7x)) / 3 is bodyString).
 function nowayCAS.define(name, params, bodyString)
 	UserFunctions.define(name, params, bodyString)
 end
@@ -186,6 +191,7 @@ function Expression:toDAGString()
 	return nowayCAS.toDAGString(self.node)
 end
 
+-- Converts the expression into an AST representation (debug).
 function Expression:toASTRepresentation()
 	return nowayCAS.toASTRepresentation(self.node)
 end

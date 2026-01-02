@@ -4,6 +4,9 @@ local SIMPLIFY_CACHE = {}
 local Canon = require(script.Parent.Canon)
 local Node = require(script.Parent.Node)
 local Util = require(script.Parent.Util)
+local Rewrite = require(script.Parent.Rewrite)
+
+local rules_algebraic = require(script.Parent.Rewrite.rules_algebraic)
 
 local tonumber = tonumber
 local tostring = tostring
@@ -20,7 +23,7 @@ local tostring = tostring
 function Simplify.simplifyDeep(node, maxSteps)
 	maxSteps = maxSteps or 10000
 	local steps = 0
-	
+
 	while steps < maxSteps do
 		local next = Simplify.simplify(node)
 		if Util.nodeEquals(next, node) then
@@ -29,7 +32,7 @@ function Simplify.simplifyDeep(node, maxSteps)
 		node = next
 		steps += 1
 	end
-	
+
 	return node
 end
 
@@ -53,6 +56,9 @@ function Simplify.simplify(node)
 	else
 		error("Simplify: Unknown node kind '" .. tostring(node.kind) .. "'")
 	end
+	
+	-- Apply algebraic simplification.
+	simplified = Rewrite.apply(simplified, rules_algebraic.simplify)
 	
 	-- Canonicalize AFTER simplification
 	simplified = Canon.canonical(simplified)
@@ -106,7 +112,7 @@ function Simplify._simplifyFunc(node)
 	if name == "exp" and arg.kind == "num" and arg.value == "0" then
 		return Node.Num("1")
 	end
-	
+
 	-------------------------------------------------------
 	-- Reciprocal Trig Identities
 	-------------------------------------------------------
@@ -160,7 +166,7 @@ function Simplify._simplifyFunc(node)
 	if name == "tanh" and arg.kind == "num" and arg.value == "0" then
 		return Node.Num(0)
 	end
-	
+
 	-------------------------------------------------------
 	-- Reciprocal Hyperbolic Identities
 	-------------------------------------------------------
@@ -187,7 +193,7 @@ function Simplify._simplifyFunc(node)
 	if name == "atanh" and arg.kind == "num" and arg.value == "0" then
 		return Node.Num("0")
 	end
-	
+
 	-------------------------------------------------------
 	-- Natural Logarithm and Exponential Identities
 	-------------------------------------------------------
@@ -233,7 +239,7 @@ function Simplify._simplifyFunc(node)
 		and arg.right.value == "2" then
 		return arg.left
 	end
-	
+
 	-------------------------------------------------------
 	-- Miscellaneous Identities
 	-------------------------------------------------------

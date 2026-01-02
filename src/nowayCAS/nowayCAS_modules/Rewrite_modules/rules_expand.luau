@@ -1,4 +1,4 @@
-local Rules = {}
+local rules_expand = {}
 
 local table_insert = table.insert
 local table_remove = table.remove
@@ -40,12 +40,11 @@ local function rebuildAssoc(op, items)
 	return acc
 end
 
--- RULES DO SOMETHING!!!!
-
--- Expansion rules
-local expandRules = {
-
+rules_expand = {
+	
+	-------------------------------------------------------
 	-- (a + b + ...)^n -> sum of all n-fold products
+	-------------------------------------------------------
 	{
 		op = "^",
 		match = function(node)
@@ -222,6 +221,4 @@ local expandRules = {
 	},
 }
 
-Rules.expandRules = expandRules
-
-return Rules
+return rules_expand
