@@ -1,0 +1,395 @@
+local Simplify = {}
+local SIMPLIFY_CACHE = {}
+
+local Canon = require(script.Parent.Canon)
+local Node = require(script.Parent.Node)
+local Util = require(script.Parent.Util)
+
+-------------------------------------------------------
+-- Simplifier
+-- Applies algebraic rewrite rules to AST nodes.
+-- Invariants:
+--   - Simplification never mutates nodes.
+--   - Always returns a new or original node.
+--   - Recursively simplifies children before applying rules.
+-------------------------------------------------------
+
+function Simplify.simplifyDeep(node)
+	while true do
+		local next = Simplify.simplify(node)
+		if Util.nodeEquals(next, node) then
+			return node
+		end
+		node = next
+	end
+end
+
+-- Simplifies a node.
+function Simplify.simplify(node)
+	-- DAG-aware memoization
+	local cached = SIMPLIFY_CACHE[node]
+	if cached then
+		return cached
+	end
+
+	local simplified
+	if node.kind == "num" then
+		simplified = node
+	elseif node.kind == "var" then
+		simplified = node
+	elseif node.kind == "func" then
+		simplified = Simplify._simplifyFunc(node)
+	elseif node.kind == "op" then
+		simplified = Simplify._simplifyOp(node)
+	else
+		error("Simplify: Unknown node kind '" .. tostring(node.kind) .. "'")
+	end
+
+	-- Canonicalize AFTER simplification
+	simplified = Canon.canonical(simplified)
+
+	-- Store in memo table
+	SIMPLIFY_CACHE[node] = simplified
+	return simplified
+end
+
+-- Simplifies the function node.
+function Simplify._simplifyFunc(node)
+	local arg = Simplify.simplify(node.arg)
+	local name = node.name
+
+	-------------------------------------------------------
+	-- Function-specific simplifications
+	-------------------------------------------------------
+
+	-- sin(0) -> 0
+	if name == "sin" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num("0")
+	end
+
+	-- cos(0) -> 1
+	if name == "cos" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num("1")
+	end
+
+	-- exp(0) -> 1
+	if name == "exp" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num("1")
+	end
+
+	-- ln(1) -> 0
+	if name == "ln" and arg.kind == "num" and arg.value == "1" then
+		return Node.Num("0")
+	end
+
+	-- ln(exp(x)) -> x
+	if name == "ln"
+		and arg.kind == "func"
+		and arg.name == "exp" then
+		return arg.arg
+	end
+
+	-- exp(ln(x)) -> x
+	if name == "exp"
+		and arg.kind == "func"
+		and arg.name == "ln" then
+		return arg.arg
+	end
+
+	-- sqrt(0) -> 0
+	if name == "sqrt" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num("0")
+	end
+
+	-- sqrt(1) -> 1
+	if name == "sqrt" and arg.kind == "num" and arg.value == "1" then
+		return Node.Num("1")
+	end
+
+	-- sqrt(x^2) -> x   (optional but very useful)
+	if name == "sqrt"
+		and arg.kind == "op"
+		and arg.op == "^"
+		and arg.right.kind == "num"
+		and arg.right.value == "2" then
+		return arg.left
+	end
+
+	-------------------------------------------------------
+	-- No function-specific rule applied
+	-------------------------------------------------------
+	if arg == node.arg then
+		return node
+	end
+
+	return Node.Func(name, arg)
+end
+
+-- Simplifies the operator node.
+function Simplify._simplifyOp(node)
+	local left = Simplify.simplify(node.left)
+	local right = Simplify.simplify(node.right)
+	local op = node.op
+
+	-------------------------------------------------------
+	-- Constant folding
+	-------------------------------------------------------
+	if left.kind == "num" and right.kind == "num" then
+		return Simplify._foldConstants(op, left.value, right.value)
+	end
+
+	-------------------------------------------------------
+	-- Algebraic identities and structural simplifications
+	-------------------------------------------------------
+
+	-------------------------------------------------------
+	-- ADDITION
+	-------------------------------------------------------
+	if op == "+" then
+		-- x + 0 -> x
+		if right.kind == "num" and right.value == "0" then return left end
+		if left.kind == "num" and left.value == "0" then return right end
+
+		-- Flatten right: x + (y + z) -> (x + y + z)
+		if right.kind == "op" and right.op == "+" then
+			return Node.Op("+",
+				Node.Op("+", left, right.left),
+				right.right
+			)
+		end
+
+		-- Flatten left: (x + y) + z -> (x + y + z)
+		if left.kind == "op" and left.op == "+" then
+			return Node.Op("+",
+				left.left,
+				Node.Op("+", left.right, right)
+			)
+		end
+
+		-- Combine numeric terms: (a + b) + c -> Num(a+b+c)
+		if left.kind == "op" and left.op == "+"
+			and left.left.kind == "num"
+			and left.right.kind == "num"
+			and right.kind == "num" then
+
+			local sum = tonumber(left.left.value)
+				+ tonumber(left.right.value)
+				+ tonumber(right.value)
+
+			return Node.Num(tostring(sum))
+		end
+
+		-- (x + a) + b -> x + (a+b)
+		if left.kind == "op" and left.op == "+"
+			and left.right.kind == "num"
+			and right.kind == "num" then
+
+			local sum = tonumber(left.right.value) + tonumber(right.value)
+			return Node.Op("+", left.left, Node.Num(tostring(sum)))
+		end
+
+		-- x + (-1)*y -> x - y
+		if right.kind == "op" and right.op == "*"
+			and right.left.kind == "num" and right.left.value == "-1" then
+
+			return Node.Op("-", left, right.right)
+		end
+	end
+
+	-------------------------------------------------------
+	-- SUBTRACTION
+	-------------------------------------------------------
+	if op == "-" then
+		-- x - 0 -> x
+		if right.kind == "num" and right.value == "0" then
+			return left
+		end
+
+		-- 0 - x -> -x
+		if left.kind == "num" and left.value == "0" then
+			return Node.Op("*", Node.Num("-1"), right)
+		end
+
+		-- Normalize subtraction: x - y -> x + (-1)*y
+		return Node.Op("+",
+			left,
+			Node.Op("*", Node.Num("-1"), right)
+		)
+	end
+
+	-------------------------------------------------------
+	-- MULTIPLICATION
+	-------------------------------------------------------
+	if op == "*" then
+		-- x * 1 -> x
+		if right.kind == "num" and right.value == "1" then return left end
+		if left.kind == "num" and left.value == "1" then return right end
+
+		-- x * 0 -> 0
+		if right.kind == "num" and right.value == "0" then return right end
+		if left.kind == "num" and left.value == "0" then return left end
+
+		-- (-1) * (-1) -> 1
+		if left.kind == "num" and left.value == "-1"
+			and right.kind == "num" and right.value == "-1" then
+			return Node.Num("1")
+		end
+
+		-- (-1) * n -> -n
+		if left.kind == "num" and left.value == "-1"
+			and right.kind == "num" then
+			return Node.Num(tostring(-tonumber(right.value)))
+		end
+
+		-- x * (-1) -> -x
+		if right.kind == "num" and right.value == "-1" then
+			return Node.Op("*", Node.Num("-1"), left)
+		end
+
+		-- Flatten right: x * (y * z) -> (x * y * z)
+		if right.kind == "op" and right.op == "*" then
+			return Node.Op("*",
+				Node.Op("*", left, right.left),
+				right.right
+			)
+		end
+
+		-- Flatten left: (x * y) * z -> (x * y * z)
+		if left.kind == "op" and left.op == "*" then
+			return Node.Op("*",
+				left.left,
+				Node.Op("*", left.right, right)
+			)
+		end
+
+		-- Combine numeric factors: (a * b) * c -> Num(a*b*c)
+		if left.kind == "op" and left.op == "*"
+			and left.left.kind == "num"
+			and left.right.kind == "num"
+			and right.kind == "num" then
+
+			local prod = tonumber(left.left.value)
+				* tonumber(left.right.value)
+				* tonumber(right.value)
+
+			return Node.Num(tostring(prod))
+		end
+
+		-- (x * a) * b -> x * (a*b)
+		if left.kind == "op" and left.op == "*"
+			and left.right.kind == "num"
+			and right.kind == "num" then
+
+			local prod = tonumber(left.right.value) * tonumber(right.value)
+			return Node.Op("*", left.left, Node.Num(tostring(prod)))
+		end
+
+		-- 1/x * x -> 1 (reverse order)
+		if left.kind == "op" and left.op == "/"
+			and left.left.kind == "num" and left.left.value == "1"
+			and Util.nodeEquals(left.right, right) then
+			return Node.Num("1")
+		end
+
+		-- Negation propagation: (-1)*(u+v) -> (-u) + (-v)
+		if left.kind == "num" and left.value == "-1"
+			and right.kind == "op" and right.op == "+" then
+
+			local negLeft = Node.Op("*", Node.Num("-1"), right.left)
+			local negRight = Node.Op("*", Node.Num("-1"), right.right)
+
+			return Node.Op("+",
+				Simplify.simplify(negLeft),
+				Simplify.simplify(negRight)
+			)
+		end
+	end
+
+	-------------------------------------------------------
+	-- DIVISION
+	-------------------------------------------------------
+
+	if op == "/" then
+		-- (u * 1) / v -> u / v
+		if left.kind == "op" and left.op == "*" then
+			if left.right.kind == "num" and left.right.value == "1" then
+				return Node.Op("/", left.left, right)
+			end
+			if left.left.kind == "num" and left.left.value == "1" then
+				return Node.Op("/", left.right, right)
+			end
+		end
+	end
+
+	-------------------------------------------------------
+	-- EXPONENTIATION
+	-------------------------------------------------------
+	if op == "^" then
+		-- x^1 -> x
+		if right.kind == "num" and right.value == "1" then
+			return left
+		end
+
+		-- x^0 -> 1
+		if right.kind == "num" and right.value == "0" then
+			return Node.Num("1")
+		end
+
+		-- x^(-1) -> 1/x
+		if right.kind == "num" and right.value == "-1" then
+			return Node.Op("/", Node.Num("1"), left)
+		end
+
+		-- (x^a)^b -> x^(a*b)
+		if left.kind == "op" and left.op == "^"
+			and right.kind == "num"
+			and left.right.kind == "num" then
+
+			local newExp = tonumber(left.right.value) * tonumber(right.value)
+			return Node.Op("^", left.left, Node.Num(tostring(newExp)))
+		end
+	end
+
+	-------------------------------------------------------
+	-- No simplification applied -> rebuild if needed
+	-------------------------------------------------------
+	if left == node.left and right == node.right then
+		return node
+	end
+
+	return Node.Op(op, left, right)
+end
+
+--[[
+    Constant folding helper.
+    Given an operator and two numeric literal strings (a, b),
+    evaluate the operation at simplification time and return
+    a new Num node containing the computed result.
+
+    Example:
+        ("+", "2", "3") -> Num("5")
+        ("*", "4", "7") -> Num("28")
+
+    If either operand cannot be converted to a number,
+    returns a normal Op node as a safe fallback.
+]]
+function Simplify._foldConstants(op, a, b)
+	local na = tonumber(a)
+	local nb = tonumber(b)
+
+	if not na or not nb then
+		-- Should never happen, but safe fallback
+		return Node.Op(op, Node.Num(a), Node.Num(b))
+	end
+
+	if op == "+" then return Node.Num(tostring(na + nb)) end
+	if op == "-" then return Node.Num(tostring(na - nb)) end
+	if op == "*" then return Node.Num(tostring(na * nb)) end
+	if op == "/" then return Node.Num(tostring(na / nb)) end
+	if op == "^" then return Node.Num(tostring(na ^ nb)) end
+
+	return Node.Op(op, Node.Num(a), Node.Num(b))
+end
+
+-- The Simplifier sub-library.
+return Simplify
