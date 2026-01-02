@@ -438,7 +438,7 @@ function Diff._diffFunc(node, var)
 	-------------------------------------------------------
 
 	if f == "sqrt" then
-		-- u' = 0 → derivative is 0
+		-- u' = 0 -> derivative is 0
 		if du.kind == "num" and du.value == "0" then
 			return Node.Num("0")
 		end
