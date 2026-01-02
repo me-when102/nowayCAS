@@ -124,7 +124,39 @@ function Diff._diffFunc(node, var)
 			du
 		)
 	end
+	
+	-------------------------------------------------------
+	-- Reciprocal Trigonometric
+	-------------------------------------------------------
+	
+	-- d/dx sec(u) = sec(u) * tan(u) * u'
+	if f == "sec" then
+		return Node.Op("*",
+			Node.Op("*", Node.Func("sec", u), Node.Func("tan", u)),
+			du
+		)
 
+		-- d/dx csc(u) = -csc(u) * cot(u) * u'
+	elseif f == "csc" then
+		return Node.Op("*",
+			Node.Num("-1"),
+			Node.Op("*",
+				Node.Func("csc", u),
+				Node.Op("*", Node.Func("cot", u), du)
+			)
+		)
+
+		-- d/dx cot(u) = -csc(u)^2 * u'
+	elseif f == "cot" then
+		return Node.Op("*",
+			Node.Num("-1"),
+			Node.Op("*",
+				Node.Op("^", Node.Func("csc", u), Node.Num("2")),
+				du
+			)
+		)
+	end
+	
 	-------------------------------------------------------
 	-- Inverse Trigonometric
 	-------------------------------------------------------
@@ -152,6 +184,182 @@ function Diff._diffFunc(node, var)
 		return Node.Op("/",
 			du,
 			Node.Op("+", Node.Num("1"),
+				Node.Op("^", u, Node.Num("2"))
+			)
+		)
+	end
+	
+	-------------------------------------------------------
+	-- Reciprocal Inverse Trigonometric
+	-------------------------------------------------------
+	
+	-- d/dx asec(u) = u' / (|u| * sqrt(u^2 - 1))
+	if f == "asec" then
+		return Node.Op("/",
+			du,
+			Node.Op("*",
+				Node.Func("abs", u),
+				Node.Func("sqrt",
+					Node.Op("-", Node.Op("^", u, Node.Num("2")), Node.Num("1"))
+				)
+			)
+		)
+
+		-- d/dx acsc(u) = -u' / (|u| * sqrt(u^2 - 1))
+	elseif f == "acsc" then
+		return Node.Op("*",
+			Node.Num("-1"),
+			Diff._diffFunc(Node.Func("asec", u), var)
+		)
+
+		-- d/dx acot(u) = -u' / (1 + u^2)
+	elseif f == "acot" then
+		return Node.Op("*",
+			Node.Num("-1"),
+			Node.Op("/",
+				du,
+				Node.Op("+", Node.Num("1"),
+					Node.Op("^", u, Node.Num("2"))
+				)
+			)
+		)
+	end
+
+	-------------------------------------------------------
+	-- Hyperbolic
+	-------------------------------------------------------
+
+	-- d/dx sinh(u) = cosh(u) * u'
+	if f == "sinh" then
+		return Node.Op("*", Node.Func("cosh", u), du)
+
+		-- d/dx cosh(u) = sinh(u) * u'
+	elseif f == "cosh" then
+		return Node.Op("*", Node.Func("sinh", u), du)
+
+		-- d/dx tanh(u) = (1 - tanh(u)^2) * u'
+	elseif f == "tanh" then
+		return Node.Op("*",
+			Node.Op("-", Node.Num("1"),
+				Node.Op("^", Node.Func("tanh", u), Node.Num("2"))
+			),
+			du
+		)
+	end
+	
+	-------------------------------------------------------
+	-- Reciprocal Hyperbolic
+	-------------------------------------------------------
+	
+	-- d/dx sech(u) = -sech(u) * tanh(u) * u'
+	if f == "sech" then
+		return Node.Op("*",
+			Node.Num("-1"),
+			Node.Op("*",
+				Node.Func("sech", u),
+				Node.Op("*", Node.Func("tanh", u), du)
+			)
+		)
+
+		-- d/dx csch(u) = -csch(u) * coth(u) * u'
+	elseif f == "csch" then
+		return Node.Op("*",
+			Node.Num("-1"),
+			Node.Op("*",
+				Node.Func("csch", u),
+				Node.Op("*", Node.Func("coth", u), du)
+			)
+		)
+
+		-- d/dx coth(u) = -csch(u)^2 * u'
+	elseif f == "coth" then
+		return Node.Op("*",
+			Node.Num("-1"),
+			Node.Op("*",
+				Node.Op("^", Node.Func("csch", u), Node.Num("2")),
+				du
+			)
+		)
+	end
+	
+	-------------------------------------------------------
+	-- Inverse Hyperbolic
+	-------------------------------------------------------
+
+	-- d/dx asinh(u) = u' / sqrt(1 + u^2)
+	if f == "asinh" then
+		return Node.Op("/",
+			du,
+			Node.Func("sqrt",
+				Node.Op("+", Node.Num("1"),
+					Node.Op("^", u, Node.Num("2"))
+				)
+			)
+		)
+
+		-- d/dx acosh(u) = u' / (sqrt(u - 1) * sqrt(u + 1))
+	elseif f == "acosh" then
+		return Node.Op("/",
+			du,
+			Node.Op("*",
+				Node.Func("sqrt", Node.Op("-", u, Node.Num("1"))),
+				Node.Func("sqrt", Node.Op("+", u, Node.Num("1")))
+			)
+		)
+
+		-- d/dx atanh(u) = u' / (1 - u^2)
+	elseif f == "atanh" then
+		return Node.Op("/",
+			du,
+			Node.Op("-", Node.Num("1"),
+				Node.Op("^", u, Node.Num("2"))
+			)
+		)
+	end
+	
+	-------------------------------------------------------
+	-- Inverse Reciprocal Hyperbolic
+	-------------------------------------------------------
+	
+	-- d/dx asech(u) = -u' / (u * sqrt(1 - u^2))
+	if f == "asech" then
+		return Node.Op("*",
+			Node.Num("-1"),
+			Node.Op("/",
+				du,
+				Node.Op("*",
+					u,
+					Node.Func("sqrt",
+						Node.Op("-", Node.Num("1"),
+							Node.Op("^", u, Node.Num("2"))
+						)
+					)
+				)
+			)
+		)
+
+		-- d/dx acsch(u) = -u' / (|u| * sqrt(1 + u^2))
+	elseif f == "acsch" then
+		return Node.Op("*",
+			Node.Num("-1"),
+			Node.Op("/",
+				du,
+				Node.Op("*",
+					Node.Func("abs", u),
+					Node.Func("sqrt",
+						Node.Op("+", Node.Num("1"),
+							Node.Op("^", u, Node.Num("2"))
+						)
+					)
+				)
+			)
+		)
+
+		-- d/dx acoth(u) = u' / (1 - u^2)
+	elseif f == "acoth" then
+		return Node.Op("/",
+			du,
+			Node.Op("-", Node.Num("1"),
 				Node.Op("^", u, Node.Num("2"))
 			)
 		)
@@ -189,63 +397,6 @@ function Diff._diffFunc(node, var)
 			Node.Op("*",
 				Node.Num("2"),
 				Node.Func("sqrt", u)
-			)
-		)
-	end
-
-	-------------------------------------------------------
-	-- Hyperbolic
-	-------------------------------------------------------
-
-	-- d/dx sinh(u) = cosh(u) * u'
-	if f == "sinh" then
-		return Node.Op("*", Node.Func("cosh", u), du)
-
-		-- d/dx cosh(u) = sinh(u) * u'
-	elseif f == "cosh" then
-		return Node.Op("*", Node.Func("sinh", u), du)
-
-		-- d/dx tanh(u) = (1 - tanh(u)^2) * u'
-	elseif f == "tanh" then
-		return Node.Op("*",
-			Node.Op("-", Node.Num("1"),
-				Node.Op("^", Node.Func("tanh", u), Node.Num("2"))
-			),
-			du
-		)
-	end
-
-	-------------------------------------------------------
-	-- Inverse Hyperbolic
-	-------------------------------------------------------
-
-	-- d/dx asinh(u) = u' / sqrt(1 + u^2)
-	if f == "asinh" then
-		return Node.Op("/",
-			du,
-			Node.Func("sqrt",
-				Node.Op("+", Node.Num("1"),
-					Node.Op("^", u, Node.Num("2"))
-				)
-			)
-		)
-
-		-- d/dx acosh(u) = u' / (sqrt(u - 1) * sqrt(u + 1))
-	elseif f == "acosh" then
-		return Node.Op("/",
-			du,
-			Node.Op("*",
-				Node.Func("sqrt", Node.Op("-", u, Node.Num("1"))),
-				Node.Func("sqrt", Node.Op("+", u, Node.Num("1")))
-			)
-		)
-
-		-- d/dx atanh(u) = u' / (1 - u^2)
-	elseif f == "atanh" then
-		return Node.Op("/",
-			du,
-			Node.Op("-", Node.Num("1"),
-				Node.Op("^", u, Node.Num("2"))
 			)
 		)
 	end

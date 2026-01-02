@@ -17,14 +17,20 @@ local tostring = tostring
 --   - Recursively simplifies children before applying rules.
 -------------------------------------------------------
 
-function Simplify.simplifyDeep(node)
-	while true do
+function Simplify.simplifyDeep(node, maxSteps)
+	maxSteps = maxSteps or 10000
+	local steps = 0
+	
+	while steps < maxSteps do
 		local next = Simplify.simplify(node)
 		if Util.nodeEquals(next, node) then
 			return node
 		end
 		node = next
+		steps += 1
 	end
+	
+	return node
 end
 
 -- Simplifies a node.
@@ -47,10 +53,10 @@ function Simplify.simplify(node)
 	else
 		error("Simplify: Unknown node kind '" .. tostring(node.kind) .. "'")
 	end
-
+	
 	-- Canonicalize AFTER simplification
 	simplified = Canon.canonical(simplified)
-
+	
 	-- Store in memo table
 	SIMPLIFY_CACHE[node] = simplified
 	return simplified
@@ -83,7 +89,88 @@ function Simplify._simplifyFunc(node)
 	if name == "exp" and arg.kind == "num" and arg.value == "0" then
 		return Node.Num("1")
 	end
+	
+	-------------------------------------------------------
+	-- Reciprocal Trig Identities
+	-------------------------------------------------------
 
+	-- sec(0) -> 1
+	if name == "sec" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num("1")
+	end
+
+	-- csc(0) is undefined, so no simplification
+
+	-- cot(0) is undefined, so no simplification
+
+	-- sin(acos(x)) etc. handled above; here we only collapse reciprocals:
+	-- sec(x) where arg is cos^-1 form is handled in diff layer, not here.
+
+	-------------------------------------------------------
+	-- Inverse Trig Identities
+	-------------------------------------------------------
+
+	-- asin(0) -> 0
+	if name == "asin" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-- acos(1) -> 0
+	if name == "acos" and arg.kind == "num" and arg.value == "1" then
+		return Node.Num(0)
+	end
+
+	-- atan(0) -> 0
+	if name == "atan" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-------------------------------------------------------
+	-- Hyberbolic Identities
+	-------------------------------------------------------
+
+	-- sinh(0) -> 0
+	if name == "sinh" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-- cosh(0) -> 1
+	if name == "cosh" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(1)
+	end
+
+	-- tanh(0) -> 0
+	if name == "tanh" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+	
+	-------------------------------------------------------
+	-- Reciprocal Hyperbolic Identities
+	-------------------------------------------------------
+
+	-- sech(0) -> 1 / cosh(0) -> 1
+	if name == "sech" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num("1")
+	end
+
+	-- csch(0) undefined -> no simplification
+
+	-- coth(0) undefined -> no simplification
+
+	-------------------------------------------------------
+	-- Inverse Hyberbolic Identities
+	-------------------------------------------------------
+
+	-- asinh(0) -> 0
+	if name == "asinh" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-- atanh(0) -> 0
+	if name == "atanh" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+	
 	-------------------------------------------------------
 	-- Natural Logarithm and Exponential Identities
 	-------------------------------------------------------
@@ -129,59 +216,7 @@ function Simplify._simplifyFunc(node)
 		and arg.right.value == "2" then
 		return arg.left
 	end
-
-	-------------------------------------------------------
-	-- Inverse Trig Identities
-	-------------------------------------------------------
-
-	-- asin(0) -> 0
-	if name == "asin" and arg.kind == "num" and arg.value == "0" then
-		return Node.Num(0)
-	end
-
-	-- acos(1) -> 0
-	if name == "acos" and arg.kind == "num" and arg.value == "1" then
-		return Node.Num(0)
-	end
-
-	-- atan(0) -> 0
-	if name == "atan" and arg.kind == "num" and arg.value == "0" then
-		return Node.Num(0)
-	end
-
-	-------------------------------------------------------
-	-- Hyberbolic Identities
-	-------------------------------------------------------
-
-	-- sinh(0) -> 0
-	if name == "sinh" and arg.kind == "num" and arg.value == "0" then
-		return Node.Num(0)
-	end
-
-	-- cosh(0) -> 1
-	if name == "cosh" and arg.kind == "num" and arg.value == "0" then
-		return Node.Num(1)
-	end
-
-	-- tanh(0) -> 0
-	if name == "tanh" and arg.kind == "num" and arg.value == "0" then
-		return Node.Num(0)
-	end
-
-	-------------------------------------------------------
-	-- Inverse Hyberbolic Identities
-	-------------------------------------------------------
-
-	-- asinh(0) -> 0
-	if name == "asinh" and arg.kind == "num" and arg.value == "0" then
-		return Node.Num(0)
-	end
-
-	-- atanh(0) -> 0
-	if name == "atanh" and arg.kind == "num" and arg.value == "0" then
-		return Node.Num(0)
-	end
-
+	
 	-------------------------------------------------------
 	-- Miscellaneous Identities
 	-------------------------------------------------------
@@ -428,7 +463,13 @@ function Simplify._simplifyOp(node)
 	-------------------------------------------------------
 
 	if op == "/" then
+		-- First: simplify children
+		local left = Simplify.simplify(node.left)
+		local right = Simplify.simplify(node.right)
+
+		-------------------------------------------------------
 		-- (u * 1) / v -> u / v
+		-------------------------------------------------------
 		if left.kind == "op" and left.op == "*" then
 			if left.right.kind == "num" and left.right.value == "1" then
 				return Node.Op("/", left.left, right)
@@ -437,6 +478,55 @@ function Simplify._simplifyOp(node)
 				return Node.Op("/", left.right, right)
 			end
 		end
+
+		-------------------------------------------------------
+		-- Reciprocal trig collapsing
+		-------------------------------------------------------
+
+		-- 1 / cos(x) -> sec(x)
+		if left.kind == "num" and left.value == "1"
+			and right.kind == "func" and right.name == "cos" then
+			return Node.Func("sec", right.arg)
+		end
+
+		-- 1 / sin(x) -> csc(x)
+		if left.kind == "num" and left.value == "1"
+			and right.kind == "func" and right.name == "sin" then
+			return Node.Func("csc", right.arg)
+		end
+
+		-- cos(x) / sin(x) -> cot(x)
+		if left.kind == "func" and left.name == "cos"
+			and right.kind == "func" and right.name == "sin" then
+			return Node.Func("cot", left.arg)
+		end
+
+		-------------------------------------------------------
+		-- Hyperbolic versions
+		-------------------------------------------------------
+
+		-- 1 / cosh(x) -> sech(x)
+		if left.kind == "num" and left.value == "1"
+			and right.kind == "func" and right.name == "cosh" then
+			return Node.Func("sech", right.arg)
+		end
+
+		-- 1 / sinh(x) -> csch(x)
+		if left.kind == "num" and left.value == "1"
+			and right.kind == "func" and right.name == "sinh" then
+			return Node.Func("csch", right.arg)
+		end
+
+		-- cosh(x) / sinh(x) -> coth(x)
+		if left.kind == "func" and left.name == "cosh"
+			and right.kind == "func" and right.name == "sinh" then
+			return Node.Func("coth", left.arg)
+		end
+
+		-------------------------------------------------------
+		-- No rule matched -> return simplified division
+		-------------------------------------------------------
+		return Node.Op("/", left, right)
 	end
 
 	-------------------------------------------------------

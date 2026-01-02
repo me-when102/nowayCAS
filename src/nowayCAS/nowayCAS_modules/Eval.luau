@@ -59,22 +59,42 @@ function Eval.eval(node, env)
 		if f == "sin"  then return math.sin(arg) end
 		if f == "cos"  then return math.cos(arg) end
 		if f == "tan"  then return math.tan(arg) end
+		
+		-- Reciprocal trig
+		if f == "sec"  then return 1 / math.cos(arg) end
+		if f == "csc"  then return 1 / math.sin(arg) end
+		if f == "cot"  then return math.cos(arg) / math.sin(arg) end
 
 		-- Inverse trig
 		if f == "asin" then return math.asin(arg) end
 		if f == "acos" then return math.acos(arg) end
 		if f == "atan" then return math.atan(arg) end
-
+		
+		-- Inverse reciprocal trig
+		if f == "asec" then return math.acos(1 / arg) end
+		if f == "acsc" then return math.asin(1 / arg) end
+		if f == "acot" then return math.atan(1 / arg) end
+		
 		-- Hyperbolic
 		if f == "sinh" then return math.sinh(arg) end
 		if f == "cosh" then return math.cosh(arg) end
 		if f == "tanh" then return math.tanh(arg) end
-
+		
+		-- Reciprocal hyperbolic
+		if f == "sech" then return 1 / math.cosh(arg) end
+		if f == "csch" then return 1 / math.sinh(arg) end
+		if f == "coth" then return math.cosh(arg) / math.sinh(arg) end
+		
 		-- Inverse hyperbolic
 		if f == "asinh" then return asinh(arg) end
 		if f == "acosh" then return acosh(arg) end
 		if f == "atanh" then return atanh(arg) end
-
+		
+		-- Inverse reciprocal hyperbolic
+		if f == "asech" then return acosh(1 / arg) end
+		if f == "acsch" then return asinh(1 / arg) end
+		if f == "acoth" then return atanh(1 / arg) end
+		
 		-- Exponential / log
 		if f == "exp"  then return math.exp(arg) end
 		if f == "ln"   then return math.log(arg) end
