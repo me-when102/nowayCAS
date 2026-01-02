@@ -8,7 +8,6 @@ local ipairs = ipairs
 -- Converts an AST back into a readable expression string.
 -- Respects operator precedence and inserts parentheses only
 -- when necessary.
--- @@find_print
 -------------------------------------------------------
 
 local PRECEDENCE = {
@@ -264,15 +263,42 @@ end
 -------------------------------------------------------
 
 local latexNames = {
+	-- Elementary
 	ln    = "ln",
 	sqrt  = "sqrt",
+	abs   = "abs",
+
+	-- Trigonometric
+	sin   = "sin",
+	cos   = "cos",
+	tan   = "tan",
+	csc   = "csc",
+	sec   = "sec",
+	cot   = "cot",
+
+	-- Inverse trigonometric
 	asin  = "arcsin",
 	acos  = "arccos",
 	atan  = "arctan",
+	acsc  = "operatorname{arccsc}",
+	asec  = "operatorname{arcsec}",
+	acot  = "operatorname{arccot}",
+
+	-- Hyperbolic
+	sinh  = "sinh",
+	cosh  = "cosh",
+	tanh  = "tanh",
+	csch  = "csch",
+	sech  = "sech",
+	coth  = "coth",
+
+	-- Inverse hyperbolic
 	asinh = "operatorname{asinh}",
 	acosh = "operatorname{acosh}",
 	atanh = "operatorname{atanh}",
-	abs   = "abs",
+	acsch = "operatorname{acsch}",
+	asech = "operatorname{asech}",
+	acoth = "operatorname{acoth}",
 }
 
 -- Checks if the node needs paranthesises / brackets
