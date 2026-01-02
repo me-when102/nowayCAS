@@ -301,13 +301,44 @@ local latexNames = {
 	acoth = "operatorname{acoth}",
 }
 
--- Checks if the node needs paranthesises / brackets
--- just check if node is an operator kind.
-local function needsParens(node)
-	return node.kind == "op"
+-- Get precedence of the node for LaTeX.
+local function latexPrec(node)
+	if node.kind ~= "op" then
+		return 10
+	end
+	return PRECEDENCE[node.op] or 10
 end
 
--- Converts the node into a string in LaTeX format.
+-- Wrap parenthesis / brackets determined by precedence for LaTeX.
+local function latexParen(child, parentOp, isRight)
+	if child.kind ~= "op" then
+		return Print._toLatex(child)
+	end
+
+	local c = latexPrec(child)
+	local p = PRECEDENCE[parentOp] or 0
+
+	-- Lower precedence -> must wrap
+	if c < p then
+		return "(" .. Print._toLatex(child) .. ")"
+	end
+
+	-- Right-associativity of ^
+	if parentOp == "^" and isRight and c == p then
+		return "(" .. Print._toLatex(child) .. ")"
+	end
+
+	return Print._toLatex(child)
+end
+
+-- Checks if the node is a unary minus.
+local function isUnaryMinus(node)
+	return node.kind == "op"
+		and node.op == "*"
+		and node.left.kind == "num"
+		and node.left.value == "-1"
+end
+
 function Print._toLatex(node)
 	local kind = node.kind
 
@@ -332,18 +363,16 @@ function Print._toLatex(node)
 		local name = latexNames[node.name] or node.name
 		local arg = Print._toLatex(node.arg)
 
-		-- sqrt is special: \sqrt{...}
 		if node.name == "sqrt" then
 			return "\\sqrt{" .. arg .. "}"
 		end
 
-		-- abs is special: |x|
 		if node.name == "abs" then
 			return "\\left|" .. arg .. "\\right|"
 		end
 
-		-- Parenthesize argument only if needed
-		if needsParens(node.arg) then
+		-- Parenthesize only if needed
+		if node.arg.kind == "op" then
 			arg = "(" .. arg .. ")"
 		end
 
@@ -358,13 +387,26 @@ function Print._toLatex(node)
 		local L = node.left
 		local R = node.right
 
-		local left = Print._toLatex(L)
-		local right = Print._toLatex(R)
+		---------------------------------------------------
+		-- Unary minus
+		---------------------------------------------------
+		if isUnaryMinus(node) then
+			local inner = latexParen(R, "u-", false)
+			return "-" .. inner
+		end
 
 		---------------------------------------------------
 		-- Addition
 		---------------------------------------------------
 		if op == "+" then
+			local left = Print._toLatex(L)
+			local right = Print._toLatex(R)
+
+			-- Fix "+ -x" -> "- x"
+			if right:sub(1,1) == "-" then
+				return left .. " - " .. right:sub(2)
+			end
+
 			return left .. " + " .. right
 		end
 
@@ -372,6 +414,8 @@ function Print._toLatex(node)
 		-- Subtraction
 		---------------------------------------------------
 		if op == "-" then
+			local left = Print._toLatex(L)
+			local right = Print._toLatex(R)
 			return left .. " - " .. right
 		end
 
@@ -379,17 +423,71 @@ function Print._toLatex(node)
 		-- Multiplication (implicit)
 		---------------------------------------------------
 		if op == "*" then
-			-- Parenthesize right if needed
-			if needsParens(R) then
-				right = "(" .. right .. ")"
+			-- Flatten chain
+			local function collect(n, out)
+				if n.kind == "op" and n.op == "*" then
+					collect(n.left, out)
+					collect(n.right, out)
+				else
+					table_insert(out, n)
+				end
 			end
-			return left .. " " .. right
+
+			local factors = {}
+			collect(node, factors)
+
+			-- Convert each factor
+			local out = {}
+			for _, f in ipairs(factors) do
+				if isSimple(f) then
+					table_insert(out, Print._toLatex(f))
+				else
+					table_insert(out, "(" .. Print._toLatex(f) .. ")")
+				end
+			end
+
+			-- Join with implicit rules
+			local result = out[1]
+			for i = 2, #out do
+				local a = result
+				local b = out[i]
+				local leftNode = factors[i-1]
+				local rightNode = factors[i]
+
+				-- 1 * x -> x
+				if leftNode.kind == "num" and leftNode.value == "1" then
+					result = b
+
+					-- -1 * x -> -x
+				elseif leftNode.kind == "num" and leftNode.value == "-1" then
+					result = "-" .. b
+
+					-- number * variable -> 3x
+				elseif leftNode.kind == "num" and rightNode.kind == "var" then
+					result = a .. b
+
+					-- variable * variable -> xy
+				elseif leftNode.kind == "var" and rightNode.kind == "var" then
+					result = a .. b
+
+					-- simple * simple -> ab
+				elseif isSimple(leftNode) and isSimple(rightNode) then
+					result = a .. b
+
+				else
+					result = a .. " " .. b
+				end
+			end
+
+			return result
 		end
 
 		---------------------------------------------------
 		-- Division
 		---------------------------------------------------
 		if op == "/" then
+			local left = Print._toLatex(L)
+			local right = Print._toLatex(R)
 			return "\\frac{" .. left .. "}{" .. right .. "}"
 		end
 
@@ -397,11 +495,9 @@ function Print._toLatex(node)
 		-- Exponentiation
 		---------------------------------------------------
 		if op == "^" then
-			-- Parenthesize base if needed
-			if needsParens(L) then
-				left = "(" .. left .. ")"
-			end
-			return left .. "^{" .. right .. "}"
+			local base = latexParen(L, "^", false)
+			local exp = latexParen(R, "^", true)
+			return base .. "^{" .. exp .. "}"
 		end
 	end
 
@@ -437,29 +533,29 @@ local function nodeToIndented(node, level, out)
 	level = level or 0
 	local indent = string.rep("  ", level)
 	if not node then
-		table.insert(out, indent .. "<nil>")
+		table_insert(out, indent .. "<nil>")
 		return
 	end
 	if node.kind == "num" then
-		table.insert(out, indent .. ("Num value=%s"):format(tostring(node.value)))
+		table_insert(out, indent .. ("Num value=%s"):format(tostring(node.value)))
 		return
 	end
 	if node.kind == "var" then
-		table.insert(out, indent .. ("Var name=%s"):format(tostring(node.name)))
+		table_insert(out, indent .. ("Var name=%s"):format(tostring(node.name)))
 		return
 	end
 	if node.kind == "func" then
-		table.insert(out, indent .. ("Func name=%s"):format(tostring(node.name)))
+		table_insert(out, indent .. ("Func name=%s"):format(tostring(node.name)))
 		nodeToIndented(node.arg, level + 1, out)
 		return
 	end
 	if node.kind == "op" then
-		table.insert(out, indent .. ("Op %s"):format(tostring(node.op)))
+		table_insert(out, indent .. ("Op %s"):format(tostring(node.op)))
 		nodeToIndented(node.left, level + 1, out)
 		nodeToIndented(node.right, level + 1, out)
 		return
 	end
-	table.insert(out, indent .. ("<unknown kind=%s>"):format(tostring(node.kind)))
+	table_insert(out, indent .. ("<unknown kind=%s>"):format(tostring(node.kind)))
 end
 
 -- Public API: returns a table and an indented string
