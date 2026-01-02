@@ -87,7 +87,7 @@ function Diff._diffOp(node, var)
 		return Node.Op("*",
 			Node.Op("^", u, v),
 			Node.Op("+",
-				Node.Op("*", dv, Node.Func("ln", u)),
+				Node.Op("*", dv, Node.Func("ln", {u})),
 				Node.Op("*", v,
 					Node.Op("/", du, u)
 				)
