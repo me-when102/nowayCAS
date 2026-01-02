@@ -36,7 +36,7 @@ local function childrenOf(node, op)
 	end
 end
 
--- Rebuild assication.
+-- Rebuild association.
 local function rebuildAssoc(op, items)
 	if #items == 0 then
 		error("rebuildAssoc: empty")

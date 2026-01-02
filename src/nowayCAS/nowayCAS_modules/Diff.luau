@@ -102,30 +102,88 @@ function Diff._diffFunc(node, var)
 	local u = node.arg
 	local du = Diff.diff(u, var)
 
+	-------------------------------------------------------
+	-- Trigonometric
+	-------------------------------------------------------
+
+	-- d/dx sin(u) = cos(u) * u'
 	if f == "sin" then
 		return Node.Op("*", Node.Func("cos", u), du)
 
+		-- d/dx cos(u) = -sin(u) * u'
 	elseif f == "cos" then
 		return Node.Op("*",
 			Node.Op("*", Node.Num("-1"), Node.Func("sin", u)),
 			du
 		)
 
-	elseif f == "exp" then
+		-- d/dx tan(u) = sec(u)^2 * u'
+	elseif f == "tan" then
+		return Node.Op("*",
+			Node.Op("^", Node.Func("sec", u), Node.Num("2")),
+			du
+		)
+	end
+
+	-------------------------------------------------------
+	-- Inverse Trigonometric
+	-------------------------------------------------------
+
+	-- d/dx asin(u) = u' / sqrt(1 - u^2)
+	if f == "asin" then
+		return Node.Op("/",
+			du,
+			Node.Func("sqrt",
+				Node.Op("-", Node.Num("1"),
+					Node.Op("^", u, Node.Num("2"))
+				)
+			)
+		)
+
+		-- d/dx acos(u) = -u' / sqrt(1 - u^2)
+	elseif f == "acos" then
+		return Node.Op("*",
+			Node.Num("-1"),
+			Diff._diffFunc(Node.Func("asin", u), var)
+		)
+
+		-- d/dx atan(u) = u' / (1 + u^2)
+	elseif f == "atan" then
+		return Node.Op("/",
+			du,
+			Node.Op("+", Node.Num("1"),
+				Node.Op("^", u, Node.Num("2"))
+			)
+		)
+	end
+
+	-------------------------------------------------------
+	-- Exponential / Logarithmic
+	-------------------------------------------------------
+
+	-- d/dx exp(u) = exp(u) * u'
+	if f == "exp" then
 		return Node.Op("*", Node.Func("exp", u), du)
 
+		-- d/dx ln(u) = u' / u
 	elseif f == "ln" then
 		return Node.Op("*",
 			Node.Op("/", Node.Num("1"), u),
 			du
 		)
-	elseif f == "sqrt" then
-		-- If u' = 0, derivative is 0
+	end
+
+	-------------------------------------------------------
+	-- Square Root
+	-------------------------------------------------------
+
+	if f == "sqrt" then
+		-- u' = 0 → derivative is 0
 		if du.kind == "num" and du.value == "0" then
 			return Node.Num("0")
 		end
 
-		-- Otherwise: (u') / (2 * sqrt(u))
+		-- d/dx sqrt(u) = u' / (2 * sqrt(u))
 		return Node.Op("/",
 			du,
 			Node.Op("*",
@@ -134,6 +192,86 @@ function Diff._diffFunc(node, var)
 			)
 		)
 	end
+
+	-------------------------------------------------------
+	-- Hyperbolic
+	-------------------------------------------------------
+
+	-- d/dx sinh(u) = cosh(u) * u'
+	if f == "sinh" then
+		return Node.Op("*", Node.Func("cosh", u), du)
+
+		-- d/dx cosh(u) = sinh(u) * u'
+	elseif f == "cosh" then
+		return Node.Op("*", Node.Func("sinh", u), du)
+
+		-- d/dx tanh(u) = (1 - tanh(u)^2) * u'
+	elseif f == "tanh" then
+		return Node.Op("*",
+			Node.Op("-", Node.Num("1"),
+				Node.Op("^", Node.Func("tanh", u), Node.Num("2"))
+			),
+			du
+		)
+	end
+
+	-------------------------------------------------------
+	-- Inverse Hyperbolic
+	-------------------------------------------------------
+
+	-- d/dx asinh(u) = u' / sqrt(1 + u^2)
+	if f == "asinh" then
+		return Node.Op("/",
+			du,
+			Node.Func("sqrt",
+				Node.Op("+", Node.Num("1"),
+					Node.Op("^", u, Node.Num("2"))
+				)
+			)
+		)
+
+		-- d/dx acosh(u) = u' / (sqrt(u - 1) * sqrt(u + 1))
+	elseif f == "acosh" then
+		return Node.Op("/",
+			du,
+			Node.Op("*",
+				Node.Func("sqrt", Node.Op("-", u, Node.Num("1"))),
+				Node.Func("sqrt", Node.Op("+", u, Node.Num("1")))
+			)
+		)
+
+		-- d/dx atanh(u) = u' / (1 - u^2)
+	elseif f == "atanh" then
+		return Node.Op("/",
+			du,
+			Node.Op("-", Node.Num("1"),
+				Node.Op("^", u, Node.Num("2"))
+			)
+		)
+	end
+
+	-------------------------------------------------------
+	-- Miscellaneous
+	-------------------------------------------------------
+
+	-- d/dx abs(u) = u' * sign(u)
+	if f == "abs" then
+		return Node.Op("*", Node.Func("sign", u), du)
+	end
+
+	-- d/dx floor(u) = 0 (almost everywhere)
+	if f == "floor" then
+		return Node.Num("0")
+	end
+
+	-- d/dx ceil(u) = 0 (almost everywhere)
+	if f == "ceil" then
+		return Node.Num("0")
+	end
+
+	-------------------------------------------------------
+	-- Unsupported
+	-------------------------------------------------------
 
 	error("Diff: Unsupported function '" .. f .. "'")
 end

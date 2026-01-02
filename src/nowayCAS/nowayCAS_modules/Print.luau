@@ -1,6 +1,8 @@
 local Print = {}
 
 local table_insert = table.insert
+local ipairs = ipairs
+
 -------------------------------------------------------
 -- Pretty Printer
 -- Converts an AST back into a readable expression string.
@@ -261,46 +263,119 @@ end
 -- LaTeX Printer
 -------------------------------------------------------
 
+local latexNames = {
+	ln    = "ln",
+	sqrt  = "sqrt",
+	asin  = "arcsin",
+	acos  = "arccos",
+	atan  = "arctan",
+	asinh = "operatorname{asinh}",
+	acosh = "operatorname{acosh}",
+	atanh = "operatorname{atanh}",
+	abs   = "abs",
+}
+
+-- Checks if the node needs paranthesises / brackets
+-- just check if node is an operator kind.
+local function needsParens(node)
+	return node.kind == "op"
+end
+
 -- Converts the node into a string in LaTeX format.
 function Print._toLatex(node)
 	local kind = node.kind
 
+	-------------------------------------------------------
+	-- Numbers
+	-------------------------------------------------------
 	if kind == "num" then
 		return node.value
 	end
 
+	-------------------------------------------------------
+	-- Variables
+	-------------------------------------------------------
 	if kind == "var" then
 		return node.name
 	end
 
+	-------------------------------------------------------
+	-- Functions
+	-------------------------------------------------------
 	if kind == "func" then
-		return "\\" .. node.name .. "(" .. Print._toLatex(node.arg) .. ")"
+		local name = latexNames[node.name] or node.name
+		local arg = Print._toLatex(node.arg)
+
+		-- sqrt is special: \sqrt{...}
+		if node.name == "sqrt" then
+			return "\\sqrt{" .. arg .. "}"
+		end
+
+		-- abs is special: |x|
+		if node.name == "abs" then
+			return "\\left|" .. arg .. "\\right|"
+		end
+
+		-- Parenthesize argument only if needed
+		if needsParens(node.arg) then
+			arg = "(" .. arg .. ")"
+		end
+
+		return "\\" .. name .. " " .. arg
 	end
 
+	-------------------------------------------------------
+	-- Operators
+	-------------------------------------------------------
 	if kind == "op" then
 		local op = node.op
 		local L = node.left
 		local R = node.right
 
+		local left = Print._toLatex(L)
+		local right = Print._toLatex(R)
+
+		---------------------------------------------------
+		-- Addition
+		---------------------------------------------------
 		if op == "+" then
-			return Print._toLatex(L) .. " + " .. Print._toLatex(R)
+			return left .. " + " .. right
 		end
 
+		---------------------------------------------------
+		-- Subtraction
+		---------------------------------------------------
 		if op == "-" then
-			return Print._toLatex(L) .. " - " .. Print._toLatex(R)
+			return left .. " - " .. right
 		end
 
+		---------------------------------------------------
+		-- Multiplication (implicit)
+		---------------------------------------------------
 		if op == "*" then
-			-- implicit multiplication in LaTeX
-			return Print._toLatex(L) .. " " .. Print._toLatex(R)
+			-- Parenthesize right if needed
+			if needsParens(R) then
+				right = "(" .. right .. ")"
+			end
+			return left .. " " .. right
 		end
 
+		---------------------------------------------------
+		-- Division
+		---------------------------------------------------
 		if op == "/" then
-			return "\\frac{" .. Print._toLatex(L) .. "}{" .. Print._toLatex(R) .. "}"
+			return "\\frac{" .. left .. "}{" .. right .. "}"
 		end
 
+		---------------------------------------------------
+		-- Exponentiation
+		---------------------------------------------------
 		if op == "^" then
-			return Print._toLatex(L) .. "^{" .. Print._toLatex(R) .. "}"
+			-- Parenthesize base if needed
+			if needsParens(L) then
+				left = "(" .. left .. ")"
+			end
+			return left .. "^{" .. right .. "}"
 		end
 	end
 

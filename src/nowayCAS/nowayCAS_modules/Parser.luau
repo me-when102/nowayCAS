@@ -152,15 +152,65 @@ function Parser._parsePower(stream)
 	return node
 end
 
--- list of known functions
+-- A list of known functions which should be parsed, if not, fall back to
+-- implicit multiplication
 local KNOWN_FUNCTIONS = {
+	-- elementary
+	exp = true,
+	ln  = true,
+	log = true,
+	sqrt = true,
+	abs = true,
+
+	-- trig
+	sin = true,
+	cos = true,
+	tan = true,
+	sec = true,
+	csc = true,
+	cot = true,
+
+	-- inverse trig
+	asin = true,
+	acos = true,
+	atan = true,
+	asec = true,
+	acsc = true,
+	acot = true,
+
+	-- hyperbolic
+	sinh = true,
+	cosh = true,
+	tanh = true,
+	sech = true,
+	csch = true,
+	coth = true,
+
+	-- inverse hyperbolic
+	asinh = true,
+	acosh = true,
+	atanh = true,
+	asech = true,
+	acsch = true,
+	acoth = true,
+
+	-- misc
+	floor = true,
+	ceil  = true,
+	round = true,
+	sign  = true,
+}
+
+--[[
+	already implemented:
+	
 	sin = true,
 	cos = true,
 	tan = true,
 	exp = true,
 	ln  = true,
 	sqrt = true,
-}
+]]
 
 -- primary -> number
 --          | identifier

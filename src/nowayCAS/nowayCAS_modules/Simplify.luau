@@ -65,6 +65,10 @@ function Simplify._simplifyFunc(node)
 	-- Function-specific simplifications
 	-------------------------------------------------------
 
+	-------------------------------------------------------
+	-- Trig Identities
+	-------------------------------------------------------
+
 	-- sin(0) -> 0
 	if name == "sin" and arg.kind == "num" and arg.value == "0" then
 		return Node.Num("0")
@@ -79,6 +83,10 @@ function Simplify._simplifyFunc(node)
 	if name == "exp" and arg.kind == "num" and arg.value == "0" then
 		return Node.Num("1")
 	end
+
+	-------------------------------------------------------
+	-- Natural Logarithm and Exponential Identities
+	-------------------------------------------------------
 
 	-- ln(1) -> 0
 	if name == "ln" and arg.kind == "num" and arg.value == "1" then
@@ -99,6 +107,10 @@ function Simplify._simplifyFunc(node)
 		return arg.arg
 	end
 
+	-------------------------------------------------------
+	-- Square Root Identities
+	-------------------------------------------------------
+
 	-- sqrt(0) -> 0
 	if name == "sqrt" and arg.kind == "num" and arg.value == "0" then
 		return Node.Num("0")
@@ -109,13 +121,116 @@ function Simplify._simplifyFunc(node)
 		return Node.Num("1")
 	end
 
-	-- sqrt(x^2) -> x   (optional but very useful)
+	-- sqrt(x^2) -> x
 	if name == "sqrt"
 		and arg.kind == "op"
 		and arg.op == "^"
 		and arg.right.kind == "num"
 		and arg.right.value == "2" then
 		return arg.left
+	end
+
+	-------------------------------------------------------
+	-- Inverse Trig Identities
+	-------------------------------------------------------
+
+	-- asin(0) -> 0
+	if name == "asin" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-- acos(1) -> 0
+	if name == "acos" and arg.kind == "num" and arg.value == "1" then
+		return Node.Num(0)
+	end
+
+	-- atan(0) -> 0
+	if name == "atan" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-------------------------------------------------------
+	-- Hyberbolic Identities
+	-------------------------------------------------------
+
+	-- sinh(0) -> 0
+	if name == "sinh" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-- cosh(0) -> 1
+	if name == "cosh" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(1)
+	end
+
+	-- tanh(0) -> 0
+	if name == "tanh" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-------------------------------------------------------
+	-- Inverse Hyberbolic Identities
+	-------------------------------------------------------
+
+	-- asinh(0) -> 0
+	if name == "asinh" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-- atanh(0) -> 0
+	if name == "atanh" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-------------------------------------------------------
+	-- Miscellaneous Identities
+	-------------------------------------------------------
+
+	-- abs(0) -> 0
+	if name == "abs" and arg.kind == "num" and arg.value == "0" then
+		return Node.Num(0)
+	end
+
+	-- floor(n) -> n for integers
+	if name == "floor" and arg.kind == "num" and math.floor(tonumber(arg.value)) == tonumber(arg.value) then
+		return arg
+	end
+
+	-- ceil(n) -> n for integers
+	if name == "ceil" and arg.kind == "num" and math.ceil(tonumber(arg.value)) == tonumber(arg.value) then
+		return arg
+	end
+
+	-------------------------------------------------------
+	-- Other Identities
+	-------------------------------------------------------
+
+	-- sin(asin(x)) -> x
+	if name == "sin"
+		and arg.kind == "func"
+		and arg.name == "asin" then
+		return arg.arg
+	end
+
+	-- cos(acos(x)) -> x
+	if name == "cos"
+		and arg.kind == "func"
+		and arg.name == "acos" then
+		return arg.arg
+	end
+
+	-- tan(atan(x)) -> x
+	if name == "tan"
+		and arg.kind == "func"
+		and arg.name == "atan" then
+		return arg.arg
+	end
+
+	-- abs(abs(x)) -> abs(x)
+	if name == "abs"
+		and arg.kind == "func"
+		and arg.name == "abs" then
+		return arg
 	end
 
 	-------------------------------------------------------
