@@ -5,8 +5,9 @@
 	Core invariants:
 	    - All expressions are immutable trees.
 	    - Node kinds: "num", "var", "op", "func".
-	    - Operators are binary; functions are unary (for now).
+	    - Operators are binary; functions are unary.
 	    - No node ever stores parent references.
+		- Unary minus is expressed as a multiplication node (left: -1, right: any)
 
 ]]
 
@@ -23,6 +24,7 @@ Factor     = require(script.Factor)
 Rewrite    = require(script.Rewrite)
 Substitute = require(script.Substitute)
 Print      = require(script.Print)
+Arithmetic = require(script.Arithmetic)
 
 Rules = require(script.Rewrite.Rules)
 
@@ -38,6 +40,7 @@ local nowayCAS = {
 	Rewrite = Rewrite,
 	Substitute = Substitute,
 	Print = Print,
+	Arithmetic = Arithmetic
 }
 
 -------------------------------------------------------
@@ -121,6 +124,7 @@ end
 function nowayCAS.toASTRepresentation(node)
 	return Print.toASTRepresentation(node)
 end
+
 -------------------------------------------------------
 -- Public API - Expression Objects
 -------------------------------------------------------
@@ -179,6 +183,7 @@ end
 function Expression:toASTRepresentation()
 	return nowayCAS.toASTRepresentation(self.node)
 end
+
 -------------------------------------------------------
 -- Metamethods
 -------------------------------------------------------
@@ -186,6 +191,42 @@ end
 -- Converts the AST to a readable string (metamethod).
 function Expression:__tostring()
 	return nowayCAS.toString(self.node)
+end
+
+-- Adds an expression with a thing.
+function Expression.__add(a, b)
+	local result = nowayCAS.Arithmetic.add(a, b)
+	return Expression.new(result)
+end
+
+-- Subtracts an expression with a thing.
+function Expression.__sub(a, b)
+	local result = nowayCAS.Arithmetic.sub(a, b)
+	return Expression.new(result)
+end
+
+-- Multiplies an expression with a thing.
+function Expression.__mul(a, b)
+	local result = nowayCAS.Arithmetic.mul(a, b)
+	return Expression.new(result)
+end
+
+-- Divides an expression with a thing.
+function Expression.__div(a, b)
+	local result = nowayCAS.Arithmetic.div(a, b)
+	return Expression.new(result)
+end
+
+-- Returns an expression powered by a thing
+function Expression.__pow(a, b)
+	local result = nowayCAS.Arithmetic.pow(a, b)
+	return Expression.new(result)
+end
+
+-- Returns the negated value of the expression.
+function Expression.__unm(a)
+	local result = nowayCAS.Arithmetic.neg(a)
+	return Expression.new(result)
 end
 
 -------------------------------------------------------

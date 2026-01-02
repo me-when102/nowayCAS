@@ -39,7 +39,7 @@ function Node.Var(name)
 	return node
 end
 
--- Constructs a node as an operator with two nodes 'left' and 'right' and the operator identifier..
+-- Constructs a node as an operator with two nodes 'left' and 'right' and the operator identifier.
 function Node.Op(op, left, right)
 	if left == nil or right == nil then
 		error(("Node.Op: missing child for '%s' (left=%s, right=%s)"):format(
