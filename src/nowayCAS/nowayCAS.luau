@@ -25,6 +25,7 @@ Rewrite    = require(script.Rewrite)
 Substitute = require(script.Substitute)
 Print      = require(script.Print)
 Arithmetic = require(script.Arithmetic)
+UserFunctions = require(script.UserFunctions)
 
 Rules = require(script.Rewrite.Rules)
 
@@ -40,7 +41,8 @@ local nowayCAS = {
 	Rewrite = Rewrite,
 	Substitute = Substitute,
 	Print = Print,
-	Arithmetic = Arithmetic
+	Arithmetic = Arithmetic,
+	UserFunctions = UserFunctions
 }
 
 -------------------------------------------------------
@@ -122,6 +124,11 @@ end
 
 function nowayCAS.toASTRepresentation(node)
 	return Print.toASTRepresentation(node)
+end
+
+-- Defines a user-defined function
+function nowayCAS.define(name, params, bodyString)
+	UserFunctions.define(name, params, bodyString)
 end
 
 -------------------------------------------------------
