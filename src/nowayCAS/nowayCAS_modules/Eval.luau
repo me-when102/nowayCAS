@@ -2,6 +2,9 @@ local Eval = {}
 
 local tonumber = tonumber
 
+local UserFunctions = require(script.Parent.UserFunctions)
+local Substitute = require(script.Parent.Substitute)
+
 -------------------------------------------------------
 -- Evaluator
 -- Evaluates an AST numerically given an environment.
@@ -46,11 +49,41 @@ function Eval.eval(node, env)
 		-- Functions
 		-------------------------------------------------------
 	elseif kind == "func" then
-		local arg = Eval.eval(node.arg, env)
-
 		local f = node.name
+
+		-------------------------------------------------------
+		-- User defined function?
+		-------------------------------------------------------
+		local def = UserFunctions.lookup(f)
+		if def then
+			-- Evaluate arguments
+			local evaluatedArgs = {}
+			for i, argNode in ipairs(node.args) do
+				evaluatedArgs[i] = argNode
+			end
+
+			-- Build substitution environment
+			local subEnv = {}
+			for i, param in ipairs(def.params) do
+				subEnv[param] = evaluatedArgs[i]
+			end
+
+			-- Substitute + evaluate
+			local substituted = Substitute.apply(def.body, subEnv)
+			return Eval.eval(substituted, env)
+		end
 		
-		-- guard: make sure arg is a number.
+		-------------------------------------------------------
+		-- Built-in Functions (single argument)
+		-------------------------------------------------------
+		-- Evaluate all args (even though built-ins only use the first)
+		local args = {}
+		for i, a in ipairs(node.args) do
+			args[i] = Eval.eval(a, env)
+		end
+
+		local arg = args[1]  -- built-ins are unary
+		
 		if type(arg) ~= "number" then
 			error("nowayCAS.Eval: function '" .. f .. "' expected numeric argument")
 		end

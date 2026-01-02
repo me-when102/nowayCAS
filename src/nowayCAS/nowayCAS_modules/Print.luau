@@ -91,7 +91,14 @@ function Print._toString(node, parentOp)
 	end
 
 	if kind == "func" then
-		return node.name .. "(" .. Print._toString(node.arg) .. ")"
+
+		-- Convert each argument to string
+		local parts = {}
+		for i, a in ipairs(node.args) do
+			parts[i] = Print._toString(a)
+		end
+
+		return node.name .. "(" .. table.concat(parts, ", ") .. ")"
 	end
 
 	if kind == "op" then

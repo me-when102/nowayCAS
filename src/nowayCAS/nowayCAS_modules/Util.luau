@@ -19,7 +19,7 @@ function Util.nodeEquals(a, b)
 		return a.name == b.name
 	elseif a.kind == "func" then
 		return a.name == b.name
-			and Util.nodeEquals(a.arg, b.arg)
+			and Util.nodeEquals(a.args, b.args)
 	elseif a.kind == "op" then
 		return a.op == b.op
 			and Util.nodeEquals(a.left, b.left)

@@ -45,11 +45,11 @@ function Arithmetic._canonical(node)
 	-- ADDITION RULES
 	-------------------------------------------------------
 	if op == "+" then
-		-- 0 + x → x
+		-- 0 + x -> x
 		if A.kind == "num" and A.value == 0 then
 			return B
 		end
-		-- x + 0 → x
+		-- x + 0 -> x
 		if B.kind == "num" and B.value == 0 then
 			return A
 		end
@@ -60,7 +60,7 @@ function Arithmetic._canonical(node)
 	-- SUBTRACTION RULES
 	-------------------------------------------------------
 	if op == "-" then
-		-- x - 0 → x
+		-- x - 0 -> x
 		if B.kind == "num" and B.value == 0 then
 			return A
 		end
@@ -71,31 +71,31 @@ function Arithmetic._canonical(node)
 	-- MULTIPLICATION RULES
 	-------------------------------------------------------
 	if op == "*" then
-		-- 0 * x → 0
+		-- 0 * x -> 0
 		if A.kind == "num" and A.value == 0 then
 			return Node.Num(0)
 		end
-		-- x * 0 → 0
+		-- x * 0 -> 0
 		if B.kind == "num" and B.value == 0 then
 			return Node.Num(0)
 		end
 
-		-- 1 * x → x
+		-- 1 * x -> x
 		if A.kind == "num" and A.value == 1 then
 			return B
 		end
-		-- x * 1 → x
+		-- x * 1 -> x
 		if B.kind == "num" and B.value == 1 then
 			return A
 		end
 
-		-- (-1) * num(n) → num(-n)
+		-- (-1) * num(n) -> num(-n)
 		if A.kind == "num" and A.value == -1 and B.kind == "num" then
 			return Node.Num(-B.value)
 		end
 
 		-- Double negation collapse:
-		-- (-1) * ((-1) * x) → x
+		-- (-1) * ((-1) * x) -> x
 		if A.kind == "num" and A.value == -1 then
 			if B.kind == "op" and B.op == "*" then
 				local BL = B.left
@@ -112,7 +112,7 @@ function Arithmetic._canonical(node)
 	-- DIVISION RULES
 	-------------------------------------------------------
 	if op == "/" then
-		-- x / 1 → x
+		-- x / 1 -> x
 		if B.kind == "num" and B.value == 1 then
 			return A
 		end
@@ -123,11 +123,11 @@ function Arithmetic._canonical(node)
 	-- POWER RULES
 	-------------------------------------------------------
 	if op == "^" then
-		-- x^1 → x
+		-- x^1 -> x
 		if B.kind == "num" and B.value == 1 then
 			return A
 		end
-		-- x^0 → 1 (domain issues ignored for now)
+		-- x^0 -> 1 (domain issues ignored for now)
 		if B.kind == "num" and B.value == 0 then
 			return Node.Num(1)
 		end

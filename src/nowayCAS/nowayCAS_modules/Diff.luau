@@ -2,6 +2,8 @@ local Diff = {}
 local DIFF_CACHE = {}
 
 local Node = require(script.Parent.Node)
+local UserFunctions = require(script.Parent.UserFunctions)
+local Substitute = require(script.Parent.Substitute)
 
 local tostring = tostring
 local tonumber = tonumber
@@ -99,8 +101,58 @@ end
 -- Differentiates a function node using the chain rule and built-in function derivatives.
 function Diff._diffFunc(node, var)
 	local f = node.name
-	local u = node.arg
-	local du = Diff.diff(u, var)
+	
+	local args = node.args
+	
+	-- Differentiates a function node using the chain rule and built-in function derivatives.
+
+	-------------------------------------------------------
+	-- User-defined Functions
+	-------------------------------------------------------
+	local def = UserFunctions.lookup(f)
+	if def then
+		-- def.params = {"x", "y", ...}
+		-- def.body   = AST of function definition
+
+		-- Compute derivatives of each argument
+		local dargs = {}
+		for i, a in ipairs(args) do
+			dargs[i] = Diff.diff(a, var)
+		end
+
+		local sum = nil
+
+		for i, param in ipairs(def.params) do
+			-- ∂f/∂param_i  (differentiate body w.r.t. parameter)
+			local partial = Diff.diff(def.body, param)
+
+			-- substitute actual arguments into the partial derivative
+			local env = {}
+			for j, p in ipairs(def.params) do
+				env[p] = args[j]
+			end
+			local substituted = Substitute.apply(partial, env)
+
+			-- multiply by derivative of argument
+			local term = Node.Op("*", substituted, dargs[i])
+
+			-- accumulate sum
+			if sum == nil then
+				sum = term
+			else
+				sum = Node.Op("+", sum, term)
+			end
+		end
+
+		return sum
+	end
+	
+
+	-------------------------------------------------------
+	-- Built-in Functions
+	-------------------------------------------------------
+	local u = args[1]                       -- first argument
+	local du = Diff.diff(u, var)            -- derivative of first argument
 
 	-------------------------------------------------------
 	-- Trigonometric

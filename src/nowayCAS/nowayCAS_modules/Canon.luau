@@ -271,7 +271,13 @@ function Canon.canonical(node)
 		result = node
 
 	elseif kind == "func" then
-		result = Node.Func(node.name, Canon.canonical(node.arg))
+		-- Canonicalize each argument
+		local newArgs = {}
+		for i, a in ipairs(node.args) do
+			newArgs[i] = Canon.canonical(a)
+		end
+
+		result = Node.Func(node.name, newArgs)
 
 	elseif kind == "op" then
 		result = Canon._canonicalOp(node)

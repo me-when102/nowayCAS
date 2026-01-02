@@ -7,11 +7,26 @@ local tostring = tostring
 -- Expression Node Constructors
 -------------------------------------------------------
 
+-- Hashes the node (DAG)
 local function hashNode(kind, a, b, c)
 	return kind .. "|" ..
 		tostring(a) .. "|" ..
 		tostring(b) .. "|" ..
 		tostring(c)
+end
+
+-- Hashes args (prevent printing table) (DAG)
+local function hashArgs(args)
+	if not args or #args == 0 then
+		return ""
+	end
+
+	local parts = {}
+	for i = 1, #args do
+		parts[i] = tostring(args[i])
+	end
+
+	return table.concat(parts, ",")
 end
 
 -- Constructs a node as a number with a value.
@@ -59,12 +74,15 @@ function Node.Op(op, left, right)
 end
 
 -- Constructs a node as a function with a name and arguments.
-function Node.Func(name, arg)
-	local key = hashNode("func", name, arg, "")
+function Node.Func(name, args)
+	-- Compute structural hash of argument list
+	local argKey = hashArgs(args)
+
+	local key = hashNode("func", name, argKey, "")
 	local existing = NODE_CACHE[key]
 	if existing then return existing end
 
-	local node = {kind = "func", name = name, arg = arg }
+	local node = { kind = "func", name = name, args = args }
 	NODE_CACHE[key] = node
 	return node
 end

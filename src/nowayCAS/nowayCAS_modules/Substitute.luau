@@ -17,6 +17,11 @@ function Substitute.apply(node, map)
 	if kind == "var" then
 		local repl = map[node.name]
 		if repl then
+			-- If replacement is an expression, use its AST
+			if repl.node then
+				return repl.node
+			end
+			
 			return repl
 		else
 			return node
@@ -30,7 +35,22 @@ function Substitute.apply(node, map)
 
 	-- Functions: recurse into argument
 	if kind == "func" then
-		return Node.Func(node.name, Substitute.apply(node.arg, map))
+		local newArgs = {}
+		local changed = false
+
+		for i, a in ipairs(node.args) do
+			local sa = Substitute.apply(a, map)
+			newArgs[i] = sa
+			if sa ~= a then
+				changed = true
+			end
+		end
+
+		if not changed then
+			return node
+		end
+
+		return Node.Func(node.name, newArgs)
 	end
 
 	-- Operators: recurse into children

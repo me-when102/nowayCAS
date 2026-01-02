@@ -277,14 +277,14 @@ end
 local function preprocessImplicitMul(node)
 	if node.kind == "func" and node.name:match("^[a-zA-Z]$") then  -- heuristic: single-letter vars
 		-- Treat a(b + c) as a * (b + c)
-		return Node.Op("*", Node.Var(node.name), preprocessImplicitMul(node.arg))
+		return Node.Op("*", Node.Var(node.name), preprocessImplicitMul(node.args[1]))
 	elseif node.kind == "op" then
 		return Node.Op(node.op,
 			preprocessImplicitMul(node.left),
 			preprocessImplicitMul(node.right)
 		)
 	elseif node.kind == "func" then
-		return Node.Func(node.name, preprocessImplicitMul(node.arg))
+		return Node.Func(node.name, { preprocessImplicitMul(node.args[1]) })
 	else
 		return node
 	end
@@ -350,7 +350,11 @@ function Rewrite._match(pattern, node, bindings)
 
 	if pattern.kind == "func" then
 		if pattern.name ~= node.name then return nil end
-		return Rewrite._match(pattern.arg, node.arg, bindings)
+
+		local pArg = pattern.args[1]
+		local nArg = node.args[1]
+
+		return Rewrite._match(pArg, nArg, bindings)
 	end
 
 	if pattern.kind == "op" then

@@ -64,8 +64,25 @@ end
 
 -- Simplifies the function node.
 function Simplify._simplifyFunc(node)
-	local arg = Simplify.simplify(node.arg)
 	local name = node.name
+
+	-- Backward compatible: support old node.arg
+	local args = node.args
+
+	-- Simplify all arguments
+	local newArgs = {}
+
+	for i, a in ipairs(args) do
+		local sa = Simplify.simplify(a)
+		newArgs[i] = sa
+	end
+
+	-- For built-in unary rules, use first argument
+	local arg = newArgs[1]
+	if not arg then
+		-- zero-arg function: nothing to do
+		return node
+	end
 
 	-------------------------------------------------------
 	-- Function-specific simplifications
@@ -163,12 +180,12 @@ function Simplify._simplifyFunc(node)
 
 	-- asinh(0) -> 0
 	if name == "asinh" and arg.kind == "num" and arg.value == "0" then
-		return Node.Num(0)
+		return Node.Num("0")
 	end
 
 	-- atanh(0) -> 0
 	if name == "atanh" and arg.kind == "num" and arg.value == "0" then
-		return Node.Num(0)
+		return Node.Num("0")
 	end
 	
 	-------------------------------------------------------
@@ -184,14 +201,14 @@ function Simplify._simplifyFunc(node)
 	if name == "ln"
 		and arg.kind == "func"
 		and arg.name == "exp" then
-		return arg.arg
+		return arg.args[1]
 	end
 
 	-- exp(ln(x)) -> x
 	if name == "exp"
 		and arg.kind == "func"
 		and arg.name == "ln" then
-		return arg.arg
+		return arg.args[1]
 	end
 
 	-------------------------------------------------------
@@ -244,21 +261,21 @@ function Simplify._simplifyFunc(node)
 	if name == "sin"
 		and arg.kind == "func"
 		and arg.name == "asin" then
-		return arg.arg
+		return arg
 	end
 
 	-- cos(acos(x)) -> x
 	if name == "cos"
 		and arg.kind == "func"
 		and arg.name == "acos" then
-		return arg.arg
+		return arg
 	end
 
 	-- tan(atan(x)) -> x
 	if name == "tan"
 		and arg.kind == "func"
 		and arg.name == "atan" then
-		return arg.arg
+		return arg
 	end
 
 	-- abs(abs(x)) -> abs(x)
@@ -271,7 +288,7 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 	-- No function-specific rule applied
 	-------------------------------------------------------
-	if arg == node.arg then
+	if node.args ~= nil then
 		return node
 	end
 
@@ -486,19 +503,19 @@ function Simplify._simplifyOp(node)
 		-- 1 / cos(x) -> sec(x)
 		if left.kind == "num" and left.value == "1"
 			and right.kind == "func" and right.name == "cos" then
-			return Node.Func("sec", right.arg)
+			return Node.Func("sec", right.args[1])
 		end
 
 		-- 1 / sin(x) -> csc(x)
 		if left.kind == "num" and left.value == "1"
 			and right.kind == "func" and right.name == "sin" then
-			return Node.Func("csc", right.arg)
+			return Node.Func("csc", right.args[1])
 		end
 
 		-- cos(x) / sin(x) -> cot(x)
 		if left.kind == "func" and left.name == "cos"
 			and right.kind == "func" and right.name == "sin" then
-			return Node.Func("cot", left.arg)
+			return Node.Func("cot", left.args[1])
 		end
 
 		-------------------------------------------------------
@@ -508,19 +525,19 @@ function Simplify._simplifyOp(node)
 		-- 1 / cosh(x) -> sech(x)
 		if left.kind == "num" and left.value == "1"
 			and right.kind == "func" and right.name == "cosh" then
-			return Node.Func("sech", right.arg)
+			return Node.Func("sech", right.args[1])
 		end
 
 		-- 1 / sinh(x) -> csch(x)
 		if left.kind == "num" and left.value == "1"
 			and right.kind == "func" and right.name == "sinh" then
-			return Node.Func("csch", right.arg)
+			return Node.Func("csch", right.args[1])
 		end
 
 		-- cosh(x) / sinh(x) -> coth(x)
 		if left.kind == "func" and left.name == "cosh"
 			and right.kind == "func" and right.name == "sinh" then
-			return Node.Func("coth", left.arg)
+			return Node.Func("coth", left.args[1])
 		end
 
 		-------------------------------------------------------
