@@ -162,19 +162,19 @@ function Diff._diffFunc(node, var)
 
 	-- d/dx sin(u) = cos(u) * u'
 	if f == "sin" then
-		return Node.Op("*", Node.Func("cos", u), du)
+		return Node.Op("*", Node.Func("cos", {u}), du)
 
 		-- d/dx cos(u) = -sin(u) * u'
 	elseif f == "cos" then
 		return Node.Op("*",
-			Node.Op("*", Node.Num("-1"), Node.Func("sin", u)),
+			Node.Op("*", Node.Num("-1"), Node.Func("sin", {u})),
 			du
 		)
 
 		-- d/dx tan(u) = sec(u)^2 * u'
 	elseif f == "tan" then
 		return Node.Op("*",
-			Node.Op("^", Node.Func("sec", u), Node.Num("2")),
+			Node.Op("^", Node.Func("sec", {u}), Node.Num("2")),
 			du
 		)
 	end
@@ -186,7 +186,8 @@ function Diff._diffFunc(node, var)
 	-- d/dx sec(u) = sec(u) * tan(u) * u'
 	if f == "sec" then
 		return Node.Op("*",
-			Node.Op("*", Node.Func("sec", u), Node.Func("tan", u)),
+			Node.Op("*", Node.Func("sec", {u}), 
+			Node.Func("tan", {u})),
 			du
 		)
 
@@ -195,8 +196,8 @@ function Diff._diffFunc(node, var)
 		return Node.Op("*",
 			Node.Num("-1"),
 			Node.Op("*",
-				Node.Func("csc", u),
-				Node.Op("*", Node.Func("cot", u), du)
+				Node.Func("csc", {u}),
+				Node.Op("*", Node.Func("cot", {u}), du)
 			)
 		)
 
@@ -205,7 +206,7 @@ function Diff._diffFunc(node, var)
 		return Node.Op("*",
 			Node.Num("-1"),
 			Node.Op("*",
-				Node.Op("^", Node.Func("csc", u), Node.Num("2")),
+				Node.Op("^", Node.Func("csc", {u}), Node.Num("2")),
 				du
 			)
 		)
@@ -220,9 +221,11 @@ function Diff._diffFunc(node, var)
 		return Node.Op("/",
 			du,
 			Node.Func("sqrt",
-				Node.Op("-", Node.Num("1"),
-					Node.Op("^", u, Node.Num("2"))
-				)
+				{
+					Node.Op("-", Node.Num("1"),
+						Node.Op("^", u, Node.Num("2"))
+					)
+				}
 			)
 		)
 
@@ -230,7 +233,7 @@ function Diff._diffFunc(node, var)
 	elseif f == "acos" then
 		return Node.Op("*",
 			Node.Num("-1"),
-			Diff._diffFunc(Node.Func("asin", u), var)
+			Diff._diffFunc(Node.Func("asin", {u}), var)
 		)
 
 		-- d/dx atan(u) = u' / (1 + u^2)
@@ -252,9 +255,11 @@ function Diff._diffFunc(node, var)
 		return Node.Op("/",
 			du,
 			Node.Op("*",
-				Node.Func("abs", u),
-				Node.Func("sqrt",
-					Node.Op("-", Node.Op("^", u, Node.Num("2")), Node.Num("1"))
+				Node.Func("abs", {u}),
+				Node.Func("sqrt", 
+					{
+						Node.Op("-", Node.Op("^", u, Node.Num("2")), Node.Num("1"))
+					}
 				)
 			)
 		)
@@ -263,7 +268,7 @@ function Diff._diffFunc(node, var)
 	elseif f == "acsc" then
 		return Node.Op("*",
 			Node.Num("-1"),
-			Diff._diffFunc(Node.Func("asec", u), var)
+			Diff._diffFunc(Node.Func("asec", {u}), var)
 		)
 
 		-- d/dx acot(u) = -u' / (1 + u^2)
@@ -285,17 +290,17 @@ function Diff._diffFunc(node, var)
 
 	-- d/dx sinh(u) = cosh(u) * u'
 	if f == "sinh" then
-		return Node.Op("*", Node.Func("cosh", u), du)
+		return Node.Op("*", Node.Func("cosh", {u}), du)
 
 		-- d/dx cosh(u) = sinh(u) * u'
 	elseif f == "cosh" then
-		return Node.Op("*", Node.Func("sinh", u), du)
+		return Node.Op("*", Node.Func("sinh", {u}), du)
 
 		-- d/dx tanh(u) = (1 - tanh(u)^2) * u'
 	elseif f == "tanh" then
 		return Node.Op("*",
 			Node.Op("-", Node.Num("1"),
-				Node.Op("^", Node.Func("tanh", u), Node.Num("2"))
+				Node.Op("^", Node.Func("tanh", {u}), Node.Num("2"))
 			),
 			du
 		)
@@ -310,8 +315,8 @@ function Diff._diffFunc(node, var)
 		return Node.Op("*",
 			Node.Num("-1"),
 			Node.Op("*",
-				Node.Func("sech", u),
-				Node.Op("*", Node.Func("tanh", u), du)
+				Node.Func("sech", {u}),
+				Node.Op("*", Node.Func("tanh", {u}), du)
 			)
 		)
 
@@ -320,8 +325,8 @@ function Diff._diffFunc(node, var)
 		return Node.Op("*",
 			Node.Num("-1"),
 			Node.Op("*",
-				Node.Func("csch", u),
-				Node.Op("*", Node.Func("coth", u), du)
+				Node.Func("csch", {u}),
+				Node.Op("*", Node.Func("coth", {u}), du)
 			)
 		)
 
@@ -330,7 +335,7 @@ function Diff._diffFunc(node, var)
 		return Node.Op("*",
 			Node.Num("-1"),
 			Node.Op("*",
-				Node.Op("^", Node.Func("csch", u), Node.Num("2")),
+				Node.Op("^", Node.Func("csch", {u}), Node.Num("2")),
 				du
 			)
 		)
@@ -345,9 +350,11 @@ function Diff._diffFunc(node, var)
 		return Node.Op("/",
 			du,
 			Node.Func("sqrt",
-				Node.Op("+", Node.Num("1"),
-					Node.Op("^", u, Node.Num("2"))
-				)
+				{
+					Node.Op("+", Node.Num("1"),
+						Node.Op("^", u, Node.Num("2"))
+					)
+				}
 			)
 		)
 
@@ -356,8 +363,8 @@ function Diff._diffFunc(node, var)
 		return Node.Op("/",
 			du,
 			Node.Op("*",
-				Node.Func("sqrt", Node.Op("-", u, Node.Num("1"))),
-				Node.Func("sqrt", Node.Op("+", u, Node.Num("1")))
+				Node.Func("sqrt", {Node.Op("-", u, Node.Num("1"))}),
+				Node.Func("sqrt", {Node.Op("+", u, Node.Num("1"))})
 			)
 		)
 
@@ -384,9 +391,11 @@ function Diff._diffFunc(node, var)
 				Node.Op("*",
 					u,
 					Node.Func("sqrt",
-						Node.Op("-", Node.Num("1"),
-							Node.Op("^", u, Node.Num("2"))
-						)
+						{
+							Node.Op("-", Node.Num("1"),
+								Node.Op("^", u, Node.Num("2"))
+							)
+						}
 					)
 				)
 			)
@@ -399,11 +408,13 @@ function Diff._diffFunc(node, var)
 			Node.Op("/",
 				du,
 				Node.Op("*",
-					Node.Func("abs", u),
+					Node.Func("abs", {u}),
 					Node.Func("sqrt",
-						Node.Op("+", Node.Num("1"),
-							Node.Op("^", u, Node.Num("2"))
-						)
+						{
+							Node.Op("+", Node.Num("1"),
+								Node.Op("^", u, Node.Num("2"))
+							)
+						}
 					)
 				)
 			)
@@ -425,7 +436,7 @@ function Diff._diffFunc(node, var)
 
 	-- d/dx exp(u) = exp(u) * u'
 	if f == "exp" then
-		return Node.Op("*", Node.Func("exp", u), du)
+		return Node.Op("*", Node.Func("exp", {u}), du)
 
 		-- d/dx ln(u) = u' / u
 	elseif f == "ln" then
@@ -450,7 +461,7 @@ function Diff._diffFunc(node, var)
 			du,
 			Node.Op("*",
 				Node.Num("2"),
-				Node.Func("sqrt", u)
+				Node.Func("sqrt", {u})
 			)
 		)
 	end
@@ -461,7 +472,7 @@ function Diff._diffFunc(node, var)
 
 	-- d/dx abs(u) = u' * sign(u)
 	if f == "abs" then
-		return Node.Op("*", Node.Func("sign", u), du)
+		return Node.Op("*", Node.Func("sign", {u}), du)
 	end
 
 	-- d/dx floor(u) = 0 (almost everywhere)

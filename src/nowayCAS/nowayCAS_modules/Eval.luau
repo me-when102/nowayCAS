@@ -158,6 +158,7 @@ function Eval.eval(node, env)
 		if f == "abs"  then return math.abs(arg) end
 		if f == "floor" then return math.floor(arg) end
 		if f == "ceil"  then return math.ceil(arg) end
+		if f == "sign" then return math.sign(arg) end
 
 		error("nowayCAS.Eval: unsupported function '" .. f .. "'")
 
