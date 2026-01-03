@@ -3,6 +3,7 @@ local Eval = {}
 local tonumber = tonumber
 
 local UserFunctions = require(script.Parent.UserFunctions)
+local UserConstants = require(script.Parent.UserConstants)
 local Substitute = require(script.Parent.Substitute)
 
 -------------------------------------------------------
@@ -11,6 +12,12 @@ local Substitute = require(script.Parent.Substitute)
 -- env is a table mapping variable names to numbers.
 -- Example: Eval.eval(ast, { x = 3 })
 -------------------------------------------------------
+
+local BUILTIN_CONST = {
+	pi = math.pi,
+	phi = (1 + math.sqrt(5)) / 2,
+	tau = 2 * math.pi
+}
 
 -- manual inverse hyperbolic functions
 local function asinh(x)
@@ -44,6 +51,20 @@ function Eval.eval(node, env)
 			error("nowayCAS.Eval: variable '" .. node.name .. "' not provided")
 		end
 		return v
+		
+		-------------------------------------------------------
+		-- Constants
+		-------------------------------------------------------
+	elseif kind == "const" then
+		-- built-in constants
+		local v = BUILTIN_CONST[node.name]
+		if v ~= nil then return v end
+
+		-- user-defined constants
+		local u = UserConstants.lookup(node.name)
+		if u ~= nil then return u end
+
+		error("nowayCAS.Eval: unknown constant '" .. node.name .. "'")
 
 		-------------------------------------------------------
 		-- Functions

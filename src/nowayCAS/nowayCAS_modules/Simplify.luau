@@ -21,7 +21,7 @@ local tostring = tostring
 -------------------------------------------------------
 
 function Simplify.simplifyDeep(node, maxSteps)
-	maxSteps = maxSteps or 10000
+	maxSteps = maxSteps or 20
 	local steps = 0
 
 	while steps < maxSteps do
@@ -48,6 +48,8 @@ function Simplify.simplify(node)
 	if node.kind == "num" then
 		simplified = node
 	elseif node.kind == "var" then
+		simplified = node
+	elseif node.kind == "const" then
 		simplified = node
 	elseif node.kind == "func" then
 		simplified = Simplify._simplifyFunc(node)

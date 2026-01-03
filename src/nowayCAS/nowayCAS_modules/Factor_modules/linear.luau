@@ -2,7 +2,7 @@ local H = require(script.Parent.helpers)
 local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
 local Rewrite = require(script.Parent.Parent.Rewrite)
-local Rules = require(script.Parent.Parent.Rewrite.Rules)
+local rules_expand = require(script.Parent.Parent.Rewrite.rules_expand)
 local Util = require(script.Parent.Parent.Util)
 local Simplify = require(script.Parent.Parent.Simplify)
 
@@ -23,7 +23,7 @@ end
 -- if node is linear in varName, return A*(varName + Q) candidate, else nil
 function Lin.factorLinearIn(node, varName)
 	if node.kind ~= "op" or node.op ~= "+" then return nil end
-
+	
 	local terms = {}
 	H.factor_flatten(node, "+", terms)
 
@@ -59,8 +59,8 @@ function Lin.factorLinearIn(node, varName)
 	local Q = Node.Op("/", B, A)
 	Q = Simplify.simplify(Q)
 
-	local candidate = Node.Op("*", A, Node.Op("+", Node.Var(varName), Q))
-	local expanded = Rewrite.apply(candidate, Rules.expandRules)
+	local candidate = Node.Op("*", A, Node.Op("+", Util.buildSymbol(varName), Q))
+	local expanded = Rewrite.apply(candidate, rules_expand)
 	expanded = Canon.canonical(expanded)
 	local original = Canon.canonical(node)
 

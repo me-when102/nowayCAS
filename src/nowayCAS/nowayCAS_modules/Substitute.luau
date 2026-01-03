@@ -27,6 +27,19 @@ function Substitute.apply(node, map)
 			return node
 		end
 	end
+	
+	-- Constants: allow substitution just like variables
+	if kind == "const" then
+		local repl = map[node.name]
+		if repl then
+			if repl.node then
+				return repl.node
+			end
+			return repl
+		else
+			return node
+		end
+	end
 
 	-- Numbers unchanged
 	if kind == "num" then

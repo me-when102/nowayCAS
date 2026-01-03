@@ -1,5 +1,7 @@
 local Util = {}
 
+local Node = require(script.Parent.Node)
+
 -------------------------------------------------------
 -- Utility Helpers
 -------------------------------------------------------
@@ -39,6 +41,15 @@ function Util.gcd(a, b)
 	end
 
 	return a
+end
+
+-- Build a variable or a constant.
+function Util.buildSymbol(name)
+	if name:sub(1,6) == "const:" then
+		return Node.Const(name:sub(7))
+	else
+		return Node.Var(name)
+	end
 end
 
 -- The Utility sub-library

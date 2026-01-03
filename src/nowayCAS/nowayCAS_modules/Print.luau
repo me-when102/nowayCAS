@@ -19,6 +19,12 @@ local PRECEDENCE = {
 	["^"] = 4,
 }
 
+local unicodeConstants = {
+	pi  = "π",
+	phi = "φ",
+	tau = "τ",
+}
+
 -- Wrap child in parentheses if needed
 local function maybeParen(child, parentOp, isRight)
 	if child.kind ~= "op" then
@@ -54,7 +60,7 @@ end
 
 -- Checks if the node is a variable
 local function isBareVar(n)
-	return n.kind == "var"
+	return (n.kind == "var" or n.kind == "const")
 end
 
 -- Checks if the node is just var^number.
@@ -70,6 +76,7 @@ local function isSimple(n)
 	return n.kind == "num"
 		or n.kind == "var"
 		or n.kind == "func"
+		or n.kind == "const"
 		or isSimplePower(n)
 end
 
@@ -89,7 +96,11 @@ function Print._toString(node, parentOp)
 	if kind == "var" then
 		return node.name
 	end
-
+	
+	if kind == "const" then
+		return unicodeConstants[node.name] or node.name
+	end
+	
 	if kind == "func" then
 
 		-- Convert each argument to string
@@ -161,7 +172,7 @@ function Print._toString(node, parentOp)
 					result = a .. b
 
 					-- variable * number -> 3x
-				elseif leftNode.kind == "var" and rightNode.kind == "num" then
+				elseif leftNode.kind == "num" and isBareVar(rightNode) then
 					result = b .. a
 
 					-- variable * variable
@@ -360,6 +371,19 @@ function Print._toLatex(node)
 	-- Variables
 	-------------------------------------------------------
 	if kind == "var" then
+		if #node.name > 1 then
+			return "\\text{" .. node.name .. "}"
+		end
+		return node.name
+	end
+
+	-------------------------------------------------------
+	-- Constants
+	-------------------------------------------------------
+	if kind == "const" then
+		if node.name == "pi" then return "\\pi" end
+		if node.name == "phi" then return "\\varphi" end
+		if node.name == "tau" then return "\\tau" end
 		return node.name
 	end
 
@@ -524,6 +548,8 @@ local function nodeToTable(node)
 		t.value = node.value
 	elseif node.kind == "var" then
 		t.name = node.name
+	elseif node.kind == "const" then
+		t.name = node.name
 	elseif node.kind == "func" then
 		t.name = node.name
 		t.arg = nodeToTable(node.arg)
@@ -549,6 +575,10 @@ local function nodeToIndented(node, level, out)
 	end
 	if node.kind == "var" then
 		table_insert(out, indent .. ("Var name=%s"):format(tostring(node.name)))
+		return
+	end
+	if node.kind == "const" then
+		table_insert(out, indent .. ("Const name=%s"):format(tostring(node.name)))
 		return
 	end
 	if node.kind == "func" then

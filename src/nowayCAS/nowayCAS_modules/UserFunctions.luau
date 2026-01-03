@@ -20,9 +20,10 @@ function UserFunctions.define(name, params, bodyAST)
 	}
 end
 
--- Look-ups the function with the function's name.
+-- Look-ups the function with the function's name into the registry.
 function UserFunctions.lookup(name)
 	return UserFunctions.registry[name]
 end
 
+-- The User-defined Functions sub library.
 return UserFunctions

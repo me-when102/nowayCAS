@@ -1,6 +1,8 @@
 local Parser = {}
 
 local Node = require(script.Parent.Node)
+local UserConstants = require(script.Parent.UserConstants)
+
 -------------------------------------------------------
 -- Parser
 -- Converts a token list into an AST (expression tree).
@@ -152,6 +154,13 @@ function Parser._parsePower(stream)
 	return node
 end
 
+-- Lists of known constants
+local CONSTANTS = {
+	pi = true,
+	phi = true,
+	tau = true,
+}
+
 -- primary -> number
 --          | identifier
 --          | identifier "(" expression ")"
@@ -165,14 +174,19 @@ function Parser._parsePrimary(stream)
 		return Node.Num(tok.value)
 	end
 
-	-- identifier (variable or function)
+	-- identifier (variable, constant, or function)
 	if tok.kind == "identifier" then
 		stream:next()
 		local name = tok.value
 		
 		local args = {}
 		
-		-- turn it into a function.
+		-- is it a constant + user-defined constant?
+		if CONSTANTS[name] or UserConstants.isConstant(name) then
+			return Node.Const(name)
+		end
+		
+		-- is it a function?
 		if stream:peek().kind == "lparen" then
 			stream:next() -- consume "("
 			

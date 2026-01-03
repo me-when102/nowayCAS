@@ -26,6 +26,7 @@ Substitute = require(script.Substitute)
 Print      = require(script.Print)
 Arithmetic = require(script.Arithmetic)
 UserFunctions = require(script.UserFunctions)
+UserConstants = require(script.UserConstants)
 
 rules_expand = require(script.Rewrite.rules_expand)
 
@@ -132,8 +133,15 @@ end
 -- Params: the parameters to substitute into the bodyString.
 -- bodyString: the contents of the function, eg: 7x + 3
 -- Eg: f(7, 4) = (2*(3y + 7x)) / 3 (x, y are params, f is name, (2*(3y + 7x)) / 3 is bodyString).
-function nowayCAS.define(name, params, bodyString)
+function nowayCAS.defineFunction(name, params, bodyString)
 	UserFunctions.define(name, params, bodyString)
+end
+
+-- Defines a user-defined constant.
+-- Name: the name of the constant.
+-- Value: the value that the constant will hold.
+function nowayCAS.defineConstant(name, value)
+	UserConstants.define(name, value)
 end
 
 -------------------------------------------------------

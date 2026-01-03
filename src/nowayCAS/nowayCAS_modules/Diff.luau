@@ -31,6 +31,8 @@ function Diff.diff(node, var)
 		result = Diff._diffOp(node, var)
 	elseif node.kind == "func" then
 		result = Diff._diffFunc(node, var)
+	elseif node.kind == "const" then
+		result = Node.Num("0")
 	else
 		error("Diff: Unknown node kind '" .. tostring(node.kind) .. "'")
 	end

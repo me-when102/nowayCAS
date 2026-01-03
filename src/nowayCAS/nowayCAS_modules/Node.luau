@@ -44,6 +44,7 @@ end
 
 -- Constructs a node as a variable with a name.
 function Node.Var(name) 
+	--if name:sub(1,6) == "const:" then error("FACTOR BUG: Var created with constant key", name) end
 	local key = hashNode("var", name, "", "")
 	local existing = NODE_CACHE[key]
 	if existing then return existing end
@@ -83,6 +84,16 @@ function Node.Func(name, args)
 	if existing then return existing end
 
 	local node = { kind = "func", name = name, args = args }
+	NODE_CACHE[key] = node
+	return node
+end
+
+-- Constructs a node as a constant with a name.
+function Node.Const(name)
+	local key = hashNode("const", name, "", "")
+	local existing = NODE_CACHE[key]
+	if existing then return existing end
+	local node = { kind = "const", name = name }
 	NODE_CACHE[key] = node
 	return node
 end

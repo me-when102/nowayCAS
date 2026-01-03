@@ -19,21 +19,26 @@ local ipairs = ipairs
 --   5. Normalize subtraction and negation
 -------------------------------------------------------
 
--- Utility: deep copy
+-- deep copy
 local function copy(t)
 	local n = {}
 	for k,v in pairs(t) do n[k] = v end
 	return n
 end
 
--- Utility: check if node is numeric literal
+-- check if node is numeric literal
 local function isNum(n)
 	return n.kind == "num"
 end
 
--- Utility: check if node is variable
+-- check if node is variable
 local function isVar(n)
 	return n.kind == "var"
+end
+
+-- check if node is constant
+local function isConst(n)
+	return n.kind == "const"
 end
 
 -- Flatten associative operators
@@ -53,6 +58,31 @@ local function flatten(op, items)
 	return out
 end
 
+-- Get canonical key for deterministic stuff.
+local function canonicalKey(node)
+	if node.kind == "num" then
+		return "num:" .. node.value
+	elseif node.kind == "var" then
+		return "var:" .. node.name
+	elseif node.kind == "const" then
+		return "const: " .. node.name
+	elseif node.kind == "func" then
+		local parts = { "func:", node.name, "(" }
+		for i, arg in ipairs(node.args) do
+			if i > 1 then table_insert(parts, ",") end
+			table_insert(parts, canonicalKey(arg))
+		end
+		table_insert(parts, ")")
+		return table.concat(parts)
+	elseif node.kind == "op" then
+		return "op:" .. node.op .. "("
+			.. canonicalKey(node.left) .. ","
+			.. canonicalKey(node.right) .. ")"
+	else
+		return node.kind or "?"
+	end
+end
+
 -- Sort nodes for canonical ordering
 -- Variables alphabetically, numbers last
 local function sortNodes(nodes)
@@ -60,13 +90,18 @@ local function sortNodes(nodes)
 		if isVar(a) and isVar(b) then
 			return a.name < b.name
 		end
-		if isVar(a) and isNum(b) then return true end
-		if isNum(a) and isVar(b) then return false end
-		if isNum(a) and isNum(b) then
-			return tonumber(a.value) < tonumber(b.value)
+		if isVar(a) and not isVar(b) then return true end
+		if not isVar(a) and isVar(b) then return false end
+
+		-- NEW: constants
+		if isConst(a) and isConst(b) then
+			return a.name < b.name
 		end
+		if isConst(a) and isNum(b) then return true end
+		if isNum(a) and isConst(b) then return false end
+
 		-- fallback: string compare
-		return tostring(a.kind) < tostring(b.kind)
+		return canonicalKey(a.kind) < canonicalKey(b.kind)
 	end)
 end
 
@@ -101,11 +136,23 @@ local function combineMul(nodes)
 	for _, n in ipairs(nodes) do
 		if isNum(n) then
 			prod *= tonumber(n.value)
+
 		elseif isVar(n) then
 			varExp[n.name] = (varExp[n.name] or 0) + 1
-		elseif n.kind == "op" and n.op == "^"
-			and isVar(n.left) and isNum(n.right) then
-			varExp[n.left.name] = (varExp[n.left.name] or 0) + tonumber(n.right.value)
+
+		elseif isConst(n) then
+			varExp["const:" .. n.name] = (varExp["const:" .. n.name] or 0) + 1
+
+		elseif n.kind == "op" and n.op == "^" and isNum(n.right) then
+			if isVar(n.left) then
+				varExp[n.left.name] = (varExp[n.left.name] or 0) + tonumber(n.right.value)
+			elseif isConst(n.left) then
+				varExp["const:" .. n.left.name] =
+					(varExp["const:" .. n.left.name] or 0) + tonumber(n.right.value)
+			else
+				table_insert(others, n)
+			end
+
 		else
 			table_insert(others, n)
 		end
@@ -125,17 +172,28 @@ local function combineMul(nodes)
 	end
 	table_sort(names)
 
-	for _, name in ipairs(names) do
-		local exp = varExp[name]
-		if exp == 1 then
-			table_insert(out, Node.Var(name))
+	for _, key in ipairs(names) do
+		local exp = varExp[key]
+
+		if key:sub(1,6) == "const:" then
+			local cname = key:sub(7)
+			local base = Node.Const(cname)
+
+			if exp == 1 then
+				table_insert(out, base)
+			else
+				table_insert(out, Node.Op("^", base, Node.Num(tostring(exp))))
+			end
+
 		else
-			table_insert(out,
-				Node.Op("^",
-					Node.Var(name),
-					Node.Num(tostring(exp))
-				)
-			)
+			-- normal variable
+			local base = Node.Var(key)
+
+			if exp == 1 then
+				table_insert(out, base)
+			else
+				table_insert(out, Node.Op("^", base, Node.Num(tostring(exp))))
+			end
 		end
 	end
 
@@ -146,7 +204,7 @@ local function combineMul(nodes)
 
 	-- 5. Deterministic order for the whole product
 	table_sort(out, function(a, b)
-		return tostring(a) < tostring(b)
+		return canonicalKey(a) < canonicalKey(b)
 	end)
 
 	return out
@@ -160,6 +218,10 @@ local function monomialKey(node)
 
 	if node.kind == "num" then
 		return { coeff = tonumber(node.value), vars = {} }
+	end
+	
+	if node.kind == "const" then
+		return { coeff = 1, vars = { ["const:" .. node.name] = 1 } }
 	end
 
 	if node.kind == "op" and node.op == "*" then
@@ -178,11 +240,18 @@ local function monomialKey(node)
 		return { coeff = coeff, vars = vars }
 	end
 
-	if node.kind == "op" and node.op == "^" and node.left.kind == "var" and isNum(node.right) then
-		return {
-			coeff = 1,
-			vars = { [node.left.name] = tonumber(node.right.value) }
-		}
+	if node.kind == "op" and node.op == "^" and isNum(node.right) then
+		if node.left.kind == "var" then
+			return {
+				coeff = 1,
+				vars = { [node.left.name] = tonumber(node.right.value) }
+			}
+		elseif node.left.kind == "const" then
+			return {
+				coeff = 1,
+				vars = { ["const:" .. node.left.name] = tonumber(node.right.value) }
+			}
+		end
 	end
 
 	return nil
@@ -267,7 +336,7 @@ function Canon.canonical(node)
 	local result
 	local kind = node.kind
 
-	if kind == "num" or kind == "var" then
+	if kind == "num" or kind == "var" or kind == "const" then
 		result = node
 
 	elseif kind == "func" then

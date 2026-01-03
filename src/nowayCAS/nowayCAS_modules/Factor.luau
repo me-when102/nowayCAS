@@ -48,7 +48,7 @@ local function factorAt(node)
 	local bil = Bil.factorBilinearGrouping(node)
 	Trace.log("Bilinear Grouping attempt: ".. tostring(bil))
 	if bil then return bil end
-	
+
 	-- linear in variable
 	if node.kind == "op" and node.op == "+" then
 		local vars = {}
@@ -97,7 +97,7 @@ end
 -- Canonicalize, try pariwse common, top-down bilinear pass, then iterative bottom-up factoring loop.
 function Factor.factor(node)
 	node = Canon.canonical(node)
-	
+
 	local common = Bil.factorByPairwiseCommon(node)
 	if common then return common end
 

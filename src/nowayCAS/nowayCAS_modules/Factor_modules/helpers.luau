@@ -230,15 +230,4 @@ function H.normalizeRemainder(node)
 	return n
 end
 
--- helper: robust canonical equality fallback (place near top of file or require from helpers)
-local function equalsCanonical(a, b)
-	if a == b then return true end
-	if not a or not b then return a == b end
-	local ca = Canon.canonical(a)
-	local cb = Canon.canonical(b)
-	if ca.kind ~= cb.kind then return false end
-	-- quick string fallback for canonical structural equality
-	return tostring(ca) == tostring(cb)
-end
-
 return H
