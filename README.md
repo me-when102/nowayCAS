@@ -1,28 +1,74 @@
 <p align="center"> 
-    <img src="./assets/logo/nowayCAS_logo.jpg" alt="nowayCAS Logo" width="200"> 
+    <img src="./assets/logo/nowayCAS_logo.jpg" alt="nowayCAS Logo" width="400"> 
 </p>
 
-# **nowayCAS** - Symbolic Mathematics for Luau / Roblox Studio 🔥
-This is **nowayCAS**, a Computer Algebra System built specifically for Roblox Studio. It brings symbolic expressions, algebraic manipulation, and pretty-printing into an environment that normally has none of these capabilities.
+<h1 align="center">nowayCAS</h1>
 
-Whether you're building developer tools, educational experiences, or just experimenting with symbolic math inside Roblox, nowayCAS gives you a clean, modular foundation to work with.
+<p align="center">
+    <strong>A full-featured Computer Algebra System for Luau & Roblox Studio</strong> 🔥🧮
+</p>
 
-## **Why nowayCAS?**
-Roblox Studio does not have built-in symbolic math, meaning it wouldn't be able to parse expressions like "3x + 4" and "2x+4y^2+6z" into its own built-in math library or anything like that. **nowayCAS changes that.**
+## Why nowayCAS?
+Roblox's built-in math is purely **numerical** - great for games, but useless for symbolic manipulation.
 
-It is a pure-Luau library that:
-- Parses mathematical expressions into an **Abstract Syntax Tree (AST)** optimized with **Directed Acyclic Graph (DAG)**
-- Supports variables, constants, operators, and functions in one expression
-- Allows symboilic manipulation through a modular internal API
-- Provides a clean external API for constructing and transforming expressions
-- Outputs expressions in pretty-print, DAG print, and LaTeX print
-- Operator overloading for symbolic arithmetic between two expressions.
+You can't natively:
+- Parse `"3x + pi^7"` and keep it exact
+- Simplify `(x^2 - y^2)/(x - y)` → `x + y` (beta)
+- Substituting expressions with values and other expressions
+- Evalute reciprocal functions (csc, sec, cot) and inverse hyperbolic functions
+- Differentiate, factor, or rewrite expressions symbolically
+
+**nowayCAS changes everything.**
+
+## Features 🚀
+
+nowayCAS is a **full-featured symbolic engine** built from the ground up in pure Luau:
+
+- **Expression parsing** from strings → optimized **AST → DAG** representation (shared subexpressions for speed & memory)
+- **Natural math syntax** via operator overloading (`x^2 + 2*x + 1`)
+- **Symbolic manipulation**:
+  - Simplification (algebraic identities, rational forms)
+  - Expansion & factoring of polynomials (partially)
+  - Symbolic **differentiation** (`var:diff()`)
+  - Variable/expression **substitution** (`:substitute({x: AST_node = 3})`)
+- **Evaluation**: Numerical results with parameter tables (`:eval({x=5})`)
+- **Extensibility**:
+  - Built-in functions & constants (sin, cos, pi, e, etc.)
+  - **User-defined functions and constants**
+- **Output formats**:
+  - `.toString()` → clean pretty-printed Unicode
+  - `.toLaTeX()` → ready for docs/export
+  - `.toDAGString()` & `.toASTRepresentation()` → debugging/power-user tools
+- **Modular design** → easy to extend with new rules, parsers, or backends
+
+All of this runs natively in Roblox Studio — no external services needed.
 
 ## **Development Status**
-The **nowayCAS** library started development on 1st January 2026 and it's still currently on beta. This means it's unpolished, have missing features, or buggy.
+**nowayCAS** started in **1st January 2026** and it's currently in **beta**. Expect:
+- Some edge-case bugs
+- Incomplete features and function coverage
+- API changes as it stabilizes
 
-## **Roadmap**
-- Fix the factor system.
+## **Roadmap (needs help)**
+- Enhance simplification.
+- Add more factorising kinds.
+- Support equations (`x = y + 3`)
+    - Solve equations
+    - Solve simultaneous equations
+    - ...etc
+- Factorial (unary operator)
+- Sum and product
+- Polynomial factoring engine
 
 ## ❤️ Contributing
-**nowayCAS** is still young and it is open for collaborations, ideas, and feedback. Feel free issues, suggest features, or help shape the roadmap. Please see 
+We are going to make Roblox Studio have its own **CAS** system!
+We're wide open to:
+- Bug reports & fixes
+- New rewrite rules
+- Feature ideas (solvers? plotting hooks? etc)
+- Documentation & examples
+- Performance tweaks
+Check out [CONTRIBUTING.md](CONTRIBUTING.md) for how to get started. No contribution too small, even a single test case helps!
+
+## 🔨 Installation
+- Will come soon with a .rbxm model or other things (like Wally or Rojo setup if possible)
