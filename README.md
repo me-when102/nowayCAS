@@ -150,11 +150,10 @@ print(call)
 ### 8. User-Defined Constants
 
 ```lua
-nowayCAS.defineConstant("tau", 6.283185307179586)
+nowayCAS.defineConstant("yo", 9992.2134)
 
-local circ = nowayCAS.new("tau * r")
-print(circ:eval({ r = 5 })) --> 31.41592653589793
-
+local a = nowayCAS.new("yo * r")
+print(a:eval({ r = 5 })) --> 49961.067
 ```
 
 ### 9. Debugging Tools
