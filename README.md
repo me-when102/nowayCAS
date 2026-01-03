@@ -1,5 +1,5 @@
 <p align="center"> 
-    <img src=".assets/logo/nowayCAS_logo.jpg" alt="nowayCAS Logo" width="200"> 
+    <img src="./assets/logo/nowayCAS_logo.jpg" alt="nowayCAS Logo" width="200"> 
 </p>
 
 # **nowayCAS** - Symbolic Mathematics for Luau / Roblox Studio 🔥
@@ -25,4 +25,4 @@ The **nowayCAS** library started development on 1st January 2026 and it's still 
 - Fix the factor system.
 
 ## ❤️ Contributing
-**nowayCAS** is still young and it is open for collaborations, ideas, and feedback. Feel free issues, suggest features, or help shape the roadmap.
+**nowayCAS** is still young and it is open for collaborations, ideas, and feedback. Feel free issues, suggest features, or help shape the roadmap. Please see 
