@@ -84,6 +84,8 @@ function nowayCAS.diff(node, var)
 end
 
 -- Evaluate an expression with an environment table.
+-- The environment table contains a key which is the variable name, which a value that is a native Lua number.
+-- For example: { x = 2, y = math.pi }
 function nowayCAS.eval(node, env)
 	return Eval.eval(node, env or {})
 end
@@ -104,6 +106,8 @@ function nowayCAS.factor(node)
 end
 
 -- Substitutes the AST with a map.
+-- The map contains a key that is the variable name, with a value containing another AST which it will be converted to.
+-- For example: { x = AST1, y = AST2 }
 function nowayCAS.substitute(node, map)
 	return nowayCAS.Substitute.apply(node, map)
 end
@@ -131,10 +135,10 @@ end
 -- Defines a user-defined function.
 -- Name: the name of the function, eg: 'f' = "f(...params)" when called.
 -- Params: the parameters to substitute into the bodyString.
--- bodyString: the contents of the function, eg: 7x + 3
--- Eg: f(7, 4) = (2*(3y + 7x)) / 3 (x, y are params, f is name, (2*(3y + 7x)) / 3 is bodyString).
-function nowayCAS.defineFunction(name, params, bodyString)
-	UserFunctions.define(name, params, bodyString)
+-- bodyString: the contents of the function as an AST node, eg: 7x + 3
+-- Eg: f(7, 4) = (2*(3y + 7x)) / 3 (x, y are params, f is name, (2*(3y + 7x)) / 3 is bodyAST).
+function nowayCAS.defineFunction(name, params, bodyAST)
+	UserFunctions.define(name, params, bodyAST)
 end
 
 -- Defines a user-defined constant.
@@ -175,11 +179,15 @@ function Expression:factor()
 end
 
 -- Substitutes the expression with a map.
+-- The map contains a key that is the variable name, with a value containing another AST node which it will be converted to.
+-- For example: { x = expr1.node, y = expr2.node }
 function Expression:substitute(map)
 	return Expression.new(nowayCAS.Substitute.apply(self.node, map))
 end
 
 -- Evaluate an expression with an environment table.
+-- The environment table contains a key which is the variable name, which a value that is a native Lua number.
+-- For example: { x = 2, y = math.pi }
 function Expression:eval(env)
 	return nowayCAS.eval(self.node, env)
 end
