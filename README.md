@@ -15,7 +15,7 @@ You can't natively:
 - Parse `"3x + pi^7"` and keep it exact
 - Simplify `(x^2 - y^2)/(x - y)` → `x + y` (beta)
 - Substituting expressions with values and other expressions
-- Evalute reciprocal functions (csc, sec, cot) and inverse hyperbolic functions
+- Evaluate reciprocal functions (csc, sec, cot) and inverse hyperbolic functions
 - Differentiate, factor, or rewrite expressions symbolically
 
 But if you really had to, you need to use `loadstring()` enabled,
