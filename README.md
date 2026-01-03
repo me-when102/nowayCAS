@@ -54,13 +54,10 @@ All of this runs natively in Roblox Studio - no external services needed.
 ## How to Use?
 nowayCAS exposes a simple, expressive external API for parsing, manipulating, differentiating, simplifying, evaluating, and printing symbolic expressions. Everything begins with `nowayCAS.new(...)`, which parses a string into an immutable expression tree.
 
+
+### 1. Parsing Expressions
+
 ```lua
-local nowayCAS = require(path.to.nowayCAS)
-
--------------------------------------------------------
--- 1. Parsing Expressions
--------------------------------------------------------
-
 -- Parse a string into an immutable expression tree
 local expr = nowayCAS.new("2x^2 + 3x - 5")
 
@@ -68,11 +65,11 @@ print(expr)                 --> 2x^2 + 3x - 5
 print(expr:toLatex())       --> 2x^{2} + 3x - 5
 print(expr:toDAGString())   --> DAG-style structural print
 
+```
 
--------------------------------------------------------
--- 2. Simplification, Expansion, Factorisation
--------------------------------------------------------
+### 2. Simplification, Expansion, Factorisation
 
+```lua
 local e = nowayCAS.new("(x + 2)(x - 2)")
 
 print(e:expand())           --> x^2 - 4
@@ -80,23 +77,22 @@ print(e:factor())           --> (x - 2)(x + 2)
 
 local e2 = nowayCAS.new("43x + 54x - (8 + 3)")
 print(e2:simplify())         --> 97x - 11
+```
 
 
--------------------------------------------------------
--- 3. Differentiation
--------------------------------------------------------
+### 3. Differentiation
 
+```lua
 local f = nowayCAS.new("3x^3 - 4x + 7")
 
 local df = f:diff("x")
 print(df)                   --> 9x^2 - 4
 print(df:toLatex())         --> 9x^{2} - 4
+```
 
+### 4. Substitution
 
--------------------------------------------------------
--- 4. Substitution
--------------------------------------------------------
-
+```lua
 local g = nowayCAS.new("x^2 + y")
 
 -- Substitute x = 3, y = 10
@@ -107,12 +103,12 @@ local substituted = g:substitute({
 
 print(substituted)              --> 3^2 + 10
 print(substituted:simplify())   --> 19
+```
 
 
--------------------------------------------------------
--- 5. Evaluation
--------------------------------------------------------
+### 5. Evaluation
 
+```lua
 local h = nowayCAS.new("2x + 3y")
 
 local value = h:eval({
@@ -121,23 +117,23 @@ local value = h:eval({
 })
 
 print(value)                    --> 2*4 + 3*pi
+```
 
 
--------------------------------------------------------
--- 6. Raw AST API (optional)
--------------------------------------------------------
+### 6. Raw AST API (optional)
 
+```lua
 local ast = nowayCAS.new("x^3 + 1").node
 
 print(nowayCAS.toString(nowayCAS.diff(ast, "x")))
 print(nowayCAS.toLatex(nowayCAS.simplify(ast)))
 print(nowayCAS.toDAGString(nowayCAS.expand(ast)))
+```
 
 
--------------------------------------------------------
--- 7. User-Defined Functions
--------------------------------------------------------
+### 7. User-Defined Functions
 
+```lua
 -- Define f(x, y) = (2*(3y + 7x)) / 3
 nowayCAS.defineFunction(
 	"f",
@@ -148,32 +144,32 @@ nowayCAS.defineFunction(
 local call = nowayCAS.new("f(7, 4) - 40")
 print(call:eval())
 print(call)
+```
 
 
--------------------------------------------------------
--- 8. User-Defined Constants
--------------------------------------------------------
+### 8. User-Defined Constants
 
+```lua
 nowayCAS.defineConstant("tau", 6.283185307179586)
 
 local circ = nowayCAS.new("tau * r")
 print(circ:eval({ r = 5 })) --> 31.41592653589793
 
+```
 
--------------------------------------------------------
--- 9. Debugging Tools
--------------------------------------------------------
+### 9. Debugging Tools
 
+```lua
 local dbg = nowayCAS.new("x^2 + 1")
 
 print(dbg:toASTRepresentation())
 print(dbg:toDAGString())
+```
 
 
--------------------------------------------------------
--- 10. Operator Overloads
--------------------------------------------------------
+### 10. Operator Overloads
 
+```lua
 local x = nowayCAS.new("x")
 local y = nowayCAS.new("y")
 
