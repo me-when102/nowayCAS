@@ -2,6 +2,7 @@ local Canon = {}
 local CANON_CACHE = {}
 
 local Node = require(script.Parent.Node)
+local Util = require(script.Parent.Util)
 
 local table_insert = table.insert
 local table_sort = table.sort
@@ -65,7 +66,7 @@ local function canonicalKey(node)
 	elseif node.kind == "var" then
 		return "var:" .. node.name
 	elseif node.kind == "const" then
-		return "const: " .. node.name
+		return "const:" .. node.name
 	elseif node.kind == "func" then
 		local parts = { "func:", node.name, "(" }
 		for i, arg in ipairs(node.args) do
@@ -262,12 +263,12 @@ local function combineLikeTerms(nodes)
 	local buckets = {}
 	local others = {}
 
+	-- 1. Bucket monomials by their variable/exponent signature
 	for _, n in ipairs(nodes) do
 		local m = monomialKey(n)
 		if not m then
 			table_insert(others, n)
 		else
-			-- build a canonical key string
 			local names = {}
 			for k,_ in pairs(m.vars) do table_insert(names, k) end
 			table_sort(names)
@@ -282,45 +283,48 @@ local function combineLikeTerms(nodes)
 		end
 	end
 
-	-- rebuild combined monomials
+	-- 2. Rebuild each combined monomial in canonical order
 	for _, b in pairs(buckets) do
 		if b.coeff ~= 0 then
-			local term
 
+			-- Collect factors into a flat list
+			local factors = {}
+
+			-- Add symbolic factors (vars + consts)
 			local names = {}
-			for name,_ in pairs(b.vars) do
-				table_insert(names, name)
-			end
+			for name,_ in pairs(b.vars) do table_insert(names, name) end
 			table_sort(names)
 
 			for _, name in ipairs(names) do
 				local exp = b.vars[name]
-				local v = Node.Var(name)
-				local factor = (exp == 1)
-					and v
-					or Node.Op("^", v, Node.Num(tostring(exp)))
+				local base = Util.buildSymbol(name)
 
-				if not term then
-					term = factor
+				if exp == 1 then
+					table_insert(factors, base)
 				else
-					term = Node.Op("*", term, factor)
+					table_insert(factors, Node.Op("^", base, Node.Num(tostring(exp))))
 				end
 			end
 
-			if not term then
-				term = Node.Num(tostring(b.coeff))
-			elseif b.coeff == 1 then
-				-- leave as is
-			elseif b.coeff == -1 then
-				term = Node.Op("*", Node.Num("-1"), term)
-			else
-				term = Node.Op("*", Node.Num(tostring(b.coeff)), term)
+			-- Add numeric coefficient
+			if b.coeff ~= 1 then
+				table_insert(factors, 1, Node.Num(tostring(b.coeff)))
+			end
+
+			-- Sort factors canonically
+			table_sort(factors, function(a, b)
+				return canonicalKey(a) < canonicalKey(b)
+			end)
+
+			-- Fold into left-associative product
+			local term = factors[1]
+			for i = 2, #factors do
+				term = Node.Op("*", term, factors[i])
 			end
 
 			table_insert(others, term)
 		end
 	end
-
 
 	return others
 end
