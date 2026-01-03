@@ -25,7 +25,7 @@ But if you really had to, you need to use `loadstring()` enabled,
 **nowayCAS changes everything.**
 
 <p align="center">
-    <img src="./assets/images/nowayCAS-capability.png" alt="nowayCAS capabilities" width="700">
+    <img src="./assets/images/nowayCAS-capability.png" alt="nowayCAS capabilities" width="900">
 </p>
 
 ## Features 🚀
