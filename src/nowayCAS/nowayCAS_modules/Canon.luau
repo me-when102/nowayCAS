@@ -211,7 +211,7 @@ local function combineMul(nodes)
 	return out
 end
 
--- get monomial key if possible
+-- Returns a canonical string key representing the symbolic part of a product
 local function monomialKey(node)
 	if node.kind == "var" then
 		return { coeff = 1, vars = { [node.name] = 1 } }
@@ -364,6 +364,7 @@ function Canon.canonical(node)
 	return result
 end
 
+-- Canonicalizes the operator
 function Canon._canonicalOp(node)
 	local op = node.op
 	local left = Canon.canonical(node.left)

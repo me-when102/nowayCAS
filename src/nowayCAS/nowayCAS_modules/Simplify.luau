@@ -424,6 +424,42 @@ function Simplify._simplifyOp(node)
 			local sum = tonumber(left.right.value) + tonumber(right.value)
 			return Node.Op("+", left.left, Node.Num(tostring(sum)))
 		end
+		
+		-- sin(x)^2 + cos(x)^2 -> 1
+		
+		-- checks if node == sin(x)^2
+		local function isSin2(node)
+			return node.kind == "op"
+				and node.op == "^"
+				and node.left.kind == "func"
+				and node.left.name == "sin"
+				and node.right.kind == "num"
+				and node.right.value == "2"
+		end
+		
+		-- checks if node == cos(x)^2
+		local function isCos2(node)
+			return node.kind == "op"
+				and node.op == "^"
+				and node.left.kind == "func"
+				and node.left.name == "cos"
+				and node.right.kind == "num"
+				and node.right.value == "2"
+		end
+
+		-- Check for sin(x)^2 + cos(x)^2 in either order
+		if isSin2(left) and isCos2(right) then
+			-- same argument?
+			if Util.nodeEquals(left.left.args[1], right.left.args[1]) then
+				return Node.Num("1")
+			end
+		end
+
+		if isCos2(left) and isSin2(right) then
+			if Util.nodeEquals(left.left.args[1], right.left.args[1]) then
+				return Node.Num("1")
+			end
+		end
 
 		-- x + (-1)*y -> x - y
 		if right.kind == "op" and right.op == "*"
