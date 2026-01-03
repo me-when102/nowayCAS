@@ -86,8 +86,10 @@ print(e2:simplify())         --> 97x - 11
 local f = nowayCAS.new("3x^3 - 4x + 7")
 
 local df = f:diff("x")
+local df2 = f:diffN("x", 2)
 print(df)                   --> 9x^2 - 4
 print(df:toLatex())         --> 9x^{2} - 4
+print(df2)					        --> 18x
 ```
 
 ### 4. Substitution
