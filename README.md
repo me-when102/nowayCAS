@@ -192,7 +192,7 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Sum and product
 - Polynomial-supported expansions and factorization
 - Calculus and other things for the calculus suite.
-- Finish any remaining functions (`math.log`) missing in the library.
+- Add any remaining functions (`math.min` and `math.max`) missing in the library.
 
 ## ❤️ Contributing
 We are going to make Roblox Studio have its own **CAS** system!
