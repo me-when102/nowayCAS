@@ -183,16 +183,16 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - API changes as it stabilizes
 
 ## **Roadmap (needs help)**
-- Enhance simplification.
-- Add more factorising kinds.
+- Enhance simplification
+- Add more factorizing techniques.
 - Support equations (`x = y + 3`)
-    - Solve equations
-    - Solve simultaneous equations
-    - Etc.
+  - Solve equations
+  - Solve simultaneous questions
 - Factorial (unary operator)
 - Sum and product
-- Polynomial factoring engine
-- Integrals.
+- Polynomial-supported expansions and factorization
+- Calculus and other things for the calculus suite.
+- Finish any remaining functions (`math.log`) missing in the library.
 
 ## ❤️ Contributing
 We are going to make Roblox Studio have its own **CAS** system!
