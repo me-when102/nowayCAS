@@ -102,8 +102,10 @@ function Eval.eval(node, env)
 		for i, a in ipairs(node.args) do
 			args[i] = Eval.eval(a, env)
 		end
-
-		local arg = args[1]  -- built-ins are unary
+		
+		-- get arguments
+		local arg: number = args[1]
+		local arg2: number = args[2]
 		
 		if type(arg) ~= "number" then
 			error("nowayCAS.Eval: function '" .. f .. "' expected numeric argument")
@@ -159,7 +161,21 @@ function Eval.eval(node, env)
 		if f == "floor" then return math.floor(arg) end
 		if f == "ceil"  then return math.ceil(arg) end
 		if f == "sign" then return math.sign(arg) end
-
+		
+		-- Log
+		if f == "log10" then return math.log10(arg) end
+		if f == "log" then
+			if #args ~= 2 then
+				error("nowayCAS.Eval: log(a, x) expects 2 numeric arguments")
+			end
+			
+			if type(arg2) ~= "number" then
+				error("nowayCAS.Eval: function '" .. f .. "' expected second numeric argument")
+			end
+			
+			return math.log(arg, arg2)
+		end
+		
 		error("nowayCAS.Eval: unsupported function '" .. f .. "'")
 
 		-------------------------------------------------------

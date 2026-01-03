@@ -155,7 +155,10 @@ function Diff._diffFunc(node, var)
 	-------------------------------------------------------
 	local u = args[1]                       -- first argument
 	local du = Diff.diff(u, var)            -- derivative of first argument
-
+	
+	local u2  = args[2]						-- second argument
+	local du2 = u2 ~= nil and Diff.diff(u2, var) or nil			-- derivative of second argument
+	
 	-------------------------------------------------------
 	-- Trigonometric
 	-------------------------------------------------------
@@ -465,7 +468,33 @@ function Diff._diffFunc(node, var)
 			)
 		)
 	end
-
+	
+	-------------------------------------------------------
+	-- Log Identities
+	-------------------------------------------------------
+	
+	-- d/dx log10(u) = u' / (u * ln(10))
+	if f == "log10" then
+		return Node.Op("/",
+			du,
+			Node.Op("*",
+				u,
+				Node.Func("ln", { Node.Num("10") })
+			)
+		)
+	end
+	
+	-- d/dx log(a, x) = x' / (x * ln(a))
+	if f == "log" then
+		return Node.Op("/",
+			du2,
+			Node.Op("*",
+				u2,
+				Node.Func("ln", { u })
+			)
+		)
+	end
+	
 	-------------------------------------------------------
 	-- Miscellaneous
 	-------------------------------------------------------

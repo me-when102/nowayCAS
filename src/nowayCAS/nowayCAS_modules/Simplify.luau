@@ -85,12 +85,16 @@ function Simplify._simplifyFunc(node)
 		newArgs[i] = sa
 	end
 
-	-- For built-in unary rules, use first argument
+	-- get arguments
 	local arg = newArgs[1]
+	
 	if not arg then
 		-- zero-arg function: nothing to do
 		return node
 	end
+	
+	-- get second argument, not guaranteed
+	local arg2 = newArgs[2]
 
 	-------------------------------------------------------
 	-- Function-specific simplifications
@@ -240,6 +244,61 @@ function Simplify._simplifyFunc(node)
 		and arg.right.kind == "num"
 		and arg.right.value == "2" then
 		return arg.left
+	end
+	
+	-------------------------------------------------------
+	-- Log Identities
+	-------------------------------------------------------
+	
+	-- log10(1) -> 0
+	if name == "log10" and arg.kind == "num" and arg.value == "1" then
+		return Node.Num("0")
+	end
+
+	if name == "log" then
+		local base = arg2
+		local val  = arg
+
+		-- log(a, x) with missing args -> leave unchanged
+		if not base or not val then
+			return Node.Func("log", newArgs)
+		end
+
+		-- log(a, 1) = 0
+		if val.kind == "num" and val.value == "1" then
+			return Node.Num("0")
+		end
+
+		-- log(a, a) = 1
+		if base.kind == "num" and val.kind == "num"
+			and base.value == val.value then
+			return Node.Num("1")
+		end
+
+		-- log(e, x) = ln(x)
+		if base.kind == "const" and base.name == "e" then
+			return Node.Func("ln", { val })
+		end
+
+		-- log(a, exp(x)) = x / ln(a)
+		if val.kind == "func" and val.name == "exp" then
+			return Node.Op("/",
+				val.args[1],
+				Node.Func("ln", { base })
+			)
+		end
+
+		-- log(a, x^k) = k * log(a, x)
+		if val.kind == "op" and val.op == "^"
+			and val.right.kind == "num" then
+			return Node.Op("*",
+				val.right,
+				Node.Func("log", { base, val.left })
+			)
+		end
+
+		-- No rule matched -> return rebuilt node
+		return Node.Func("log", newArgs)
 	end
 
 	-------------------------------------------------------

@@ -263,12 +263,15 @@ local function combineLikeTerms(nodes)
 	local buckets = {}
 	local others = {}
 
-	-- 1. Bucket monomials by their variable/exponent signature
+	-- 1. Bucket only *symbolic* monomials
 	for _, n in ipairs(nodes) do
 		local m = monomialKey(n)
-		if not m then
+
+		-- Skip pure numeric constants — let combineAdd handle them
+		if not m or (next(m.vars) == nil) then
 			table_insert(others, n)
 		else
+			-- Build key from variable/exponent signature
 			local names = {}
 			for k,_ in pairs(m.vars) do table_insert(names, k) end
 			table_sort(names)
@@ -283,14 +286,12 @@ local function combineLikeTerms(nodes)
 		end
 	end
 
-	-- 2. Rebuild each combined monomial in canonical order
+	-- 2. Rebuild each combined symbolic monomial
 	for _, b in pairs(buckets) do
 		if b.coeff ~= 0 then
-
-			-- Collect factors into a flat list
 			local factors = {}
 
-			-- Add symbolic factors (vars + consts)
+			-- Add symbolic factors
 			local names = {}
 			for name,_ in pairs(b.vars) do table_insert(names, name) end
 			table_sort(names)

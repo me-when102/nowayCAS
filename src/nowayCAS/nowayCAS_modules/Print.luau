@@ -34,6 +34,11 @@ local function maybeParen(child, parentOp, isRight)
 	local childPrec = PRECEDENCE[child.op]
 	local parentPrec = PRECEDENCE[parentOp] or 0
 
+	-- Special case: 1 / (a * b) must keep parentheses
+	if parentOp == "/" and isRight and child.op == "*" then
+		return "(" .. Print._toString(child, parentOp) .. ")"
+	end
+
 	-- Lower precedence -> must wrap
 	if childPrec < parentPrec then
 		return "(" .. Print._toString(child, parentOp) .. ")"
@@ -391,8 +396,25 @@ function Print._toLatex(node)
 	-- Functions
 	-------------------------------------------------------
 	if kind == "func" then
-		local name = latexNames[node.name] or node.name
-		local arg = Print._toLatex(node.arg)
+		local name = node.name
+		local args = node.args
+		
+		-- Special case: log(a, x)
+		if name == "log" and #args == 2 then
+			local base = Print._toLatex(args[1])
+			local val  = Print._toLatex(args[2])
+			return "\\log_{" .. base .. "}(" .. val .. ")"
+		end
+
+		-- Special case: log10(x)
+		if name == "log10" then
+			local val = Print._toLatex(args[1])
+			return "\\log_{10}(" .. val .. ")"
+		end
+
+		-- Unary
+		local latexName = latexNames[node.name] or node.name
+		local arg = Print._toLatex(node.args[1])
 
 		if node.name == "sqrt" then
 			return "\\sqrt{" .. arg .. "}"
@@ -403,11 +425,11 @@ function Print._toLatex(node)
 		end
 
 		-- Parenthesize only if needed
-		if node.arg.kind == "op" then
+		if node.args[1].kind == "op" then
 			arg = "(" .. arg .. ")"
 		end
 
-		return "\\" .. name .. " " .. arg
+		return "\\" .. latexName .. " " .. arg
 	end
 
 	-------------------------------------------------------
