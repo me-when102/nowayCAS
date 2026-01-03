@@ -574,7 +574,10 @@ local function nodeToTable(node)
 		t.name = node.name
 	elseif node.kind == "func" then
 		t.name = node.name
-		t.arg = nodeToTable(node.arg)
+		t.args = {}
+		for i, a in ipairs(node.args) do
+			t.args[i] = nodeToTable(a)
+		end
 	elseif node.kind == "op" then
 		t.op = node.op
 		t.left = nodeToTable(node.left)
@@ -605,7 +608,9 @@ local function nodeToIndented(node, level, out)
 	end
 	if node.kind == "func" then
 		table_insert(out, indent .. ("Func name=%s"):format(tostring(node.name)))
-		nodeToIndented(node.arg, level + 1, out)
+		for i, a in ipairs(node.args) do
+			nodeToIndented(a, level + 1, out)
+		end
 		return
 	end
 	if node.kind == "op" then

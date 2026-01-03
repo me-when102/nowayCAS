@@ -521,5 +521,14 @@ function Diff._diffFunc(node, var)
 	error("Diff: Unsupported function '" .. f .. "'")
 end
 
+-- Computes the n-th derivative of a node with respect to a variable.
+function Diff.diffN(node, var, n)
+	local result = node
+	for i = 1, n do
+		result = Diff.diff(result, var)
+	end
+	return result
+end
+
 -- The Differentiator sub-library.
 return Diff

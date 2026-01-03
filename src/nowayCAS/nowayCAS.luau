@@ -71,63 +71,71 @@ Expression.__index = Expression
 
 -- nowayCAS public API
 
--- Parses a string into an expression AST
+-- Parses a string into an expression.
 function nowayCAS.new(str)
 	local tokens = Token._tokenize(str)
 	local ast = Parser.parse(tokens)
 	return Expression.new(ast)
 end
 
--- Differentiate an expression.
+-- Returns the derivative of an AST with respect to a variable.
 function nowayCAS.diff(node, var)
 	return Diff.diff(node, var or "x")
 end
 
--- Evaluate an expression with an environment table.
+-- Returns the n-th derivative of an AST with respect to a variable.
+function nowayCAS.diffN(node, var, n)
+	return Diff.diffN(node, var or "x", n)
+end
+
+-- Returns a number of the AST to be evaluated with an environment table.
 -- The environment table contains a key which is the variable name, which a value that is a native Lua number.
 -- For example: { x = 2, y = math.pi }
 function nowayCAS.eval(node, env)
 	return Eval.eval(node, env or {})
 end
 
--- Simplifies the AST.
+-- Returns the AST in simplified form.
 function nowayCAS.simplify(node)
 	return Simplify.simplifyDeep(node)
 end
 
--- Expands the AST.
+-- Returns the AST in expanded form.
 function nowayCAS.expand(node)
 	return Rewrite.apply(node, rules_expand)
 end
 
--- Factorises the AST.
+-- Returns the AST in factorized form.
 function nowayCAS.factor(node)
 	return Factor.factor(node)
 end
 
--- Substitutes the AST with a map.
+-- Returns an AST with variables subsituted according to the map.
 -- The map contains a key that is the variable name, with a value containing another AST which it will be converted to.
 -- For example: { x = AST1, y = AST2 }
 function nowayCAS.substitute(node, map)
 	return nowayCAS.Substitute.apply(node, map)
 end
 
--- Converts the AST to a readable string.
+-- Returns the AST converted into a pure string.
 function nowayCAS.toString(node)
 	return Print._toString(node)
 end
 
--- Converts the AST into a DAG print.
-function nowayCAS.toDAGString(node)
-	return Print._toDAGString(node)
-end
-
--- Converts the AST into a string in LaTeX form.
+-- Returns the AST converted into LaTeX format in string.
 function nowayCAS.toLatex(node)
 	return Print._toLatex(node)
 end
 
--- Converts the node into an AST representation (debug).
+-- Returns the AST converted into a DAG format.
+function nowayCAS.toDAGString(node)
+	return Print._toDAGString(node)
+end
+
+-- Returns the AST converted into an AST Representation (for debug purposes).
+-- Index the result with indented or raw to get its result.
+-- Indented: Returns the formatted table.
+-- Raw: Returns the luau table.
 function nowayCAS.toASTRepresentation(node)
 	return Print.toASTRepresentation(node)
 end
@@ -157,57 +165,66 @@ function Expression.new(node)
 	return setmetatable({ node = node }, Expression)
 end
 
--- Differentiate an expression.
+-- Returns the derivative of an expression with respect to a variable.
 function Expression:diff(var)
 	local raw = nowayCAS.Diff.diff(self.node, var or "x")
 	return Expression.new(nowayCAS.simplify(raw))
 end
 
--- Simplifies the AST expression.
+-- Returns the n-th derivative of an expression with respect to a variable.
+function Expression:diffN(var, n)
+	local raw = nowayCAS.Diff.diffN(self.node, var or "x", n)
+	return Expression.new(nowayCAS.simplify(raw))
+end
+
+-- Returns the expression in simplified form.
 function Expression:simplify()
 	return Expression.new(nowayCAS.simplify(self.node))
 end
 
--- Expands the expression.
+-- Returns the expression in expanded form.
 function Expression:expand()
 	return Expression.new(nowayCAS.expand(self.node))
 end
 
--- Factorizes the expression.
+-- Returns the expression in factorized form.
 function Expression:factor()
 	return Expression.new(nowayCAS.factor(self.node))
 end
 
--- Substitutes the expression with a map.
+-- Returns an expression with variables subsituted according to the map.
 -- The map contains a key that is the variable name, with a value containing another AST node which it will be converted to.
 -- For example: { x = expr1.node, y = expr2.node }
 function Expression:substitute(map)
 	return Expression.new(nowayCAS.Substitute.apply(self.node, map))
 end
 
--- Evaluate an expression with an environment table.
+-- Returns a number of the expression to be evaluated with an environment table.
 -- The environment table contains a key which is the variable name, which a value that is a native Lua number.
 -- For example: { x = 2, y = math.pi }
 function Expression:eval(env)
 	return nowayCAS.eval(self.node, env)
 end
 
--- Converts the AST to a readable string.
+-- Returns the expression converted into a pure string.
 function Expression:toString()
 	return nowayCAS.toString(self.node)
 end
 
--- Converts teh AST into a string in LaTeX form.
+-- Returns the expression converted into LaTeX format in string.
 function Expression:toLatex()
 	return nowayCAS.toLatex(self.node)
 end
 
--- Converts the AST into a DAG print.
+-- Returns the expression converted into a DAG format.
 function Expression:toDAGString()
 	return nowayCAS.toDAGString(self.node)
 end
 
--- Converts the expression into an AST representation (debug).
+-- Returns the expression converted into an AST Representation (for debug purposes).
+-- Index the result with indented or raw to get its result.
+-- Indented: Returns the formatted table.
+-- Raw: Returns the luau table.
 function Expression:toASTRepresentation()
 	return nowayCAS.toASTRepresentation(self.node)
 end
@@ -216,36 +233,36 @@ end
 -- Metamethods
 -------------------------------------------------------
 
--- Converts the AST to a readable string (metamethod).
+-- Returns the expression converted into a pure string.
 function Expression:__tostring()
 	return nowayCAS.toString(self.node)
 end
 
--- Adds an expression with a thing.
+-- Returns an expression added by another thing.
 function Expression.__add(a, b)
 	local result = nowayCAS.Arithmetic.add(a, b)
 	return Expression.new(result)
 end
 
--- Subtracts an expression with a thing.
+-- Returns an expression subtracted by another thing.
 function Expression.__sub(a, b)
 	local result = nowayCAS.Arithmetic.sub(a, b)
 	return Expression.new(result)
 end
 
--- Multiplies an expression with a thing.
+-- Returns an expression multiplied by another thing.
 function Expression.__mul(a, b)
 	local result = nowayCAS.Arithmetic.mul(a, b)
 	return Expression.new(result)
 end
 
--- Divides an expression with a thing.
+-- Returns an expression divided by another thing.
 function Expression.__div(a, b)
 	local result = nowayCAS.Arithmetic.div(a, b)
 	return Expression.new(result)
 end
 
--- Returns an expression powered by a thing
+-- Returns an expression powered by another thing
 function Expression.__pow(a, b)
 	local result = nowayCAS.Arithmetic.pow(a, b)
 	return Expression.new(result)

@@ -467,6 +467,18 @@ function Simplify._simplifyOp(node)
 
 			return Node.Op("-", left, right.right)
 		end
+		
+		-- (-1)*x + y -> y - x
+		if left.kind == "op" and left.op == "*"
+			and left.left.kind == "num" and left.left.value == "-1" then
+			return Node.Op("-", right, left.right)
+		end
+
+		-- x + -(y) -> x - y
+		if right.kind == "op" and right.op == "*"
+			and right.left.kind == "num" and right.left.value == "-1" then
+			return Node.Op("-", left, right.right)
+		end
 	end
 
 	-------------------------------------------------------
@@ -518,7 +530,43 @@ function Simplify._simplifyOp(node)
 		if right.kind == "num" and right.value == "-1" then
 			return Node.Op("*", Node.Num("-1"), left)
 		end
+		
+		-- -1 * x -> -x
+		if left.kind == "num" and left.value == "-1" then
+			return Node.Op("*", Node.Num("-1"), right)
+		end
 
+		-- -(-x) -> x
+		if left.kind == "num" and left.value == "-1"
+			and right.kind == "op" and right.op == "*"
+			and right.left.kind == "num" and right.left.value == "-1" then
+			return right.right
+		end
+		
+		-- (-1) * (u / v) -> -(u / v)
+		if left.kind == "num" and left.value == "-1"
+			and right.kind == "op" and right.op == "/" then
+			return Node.Op("*", Node.Num("-1"), right)
+		end
+
+		-- (u / v) * (-1) -> -(u / v)
+		if right.kind == "num" and right.value == "-1"
+			and left.kind == "op" and left.op == "/" then
+			return Node.Op("*", Node.Num("-1"), left)
+		end
+
+		-- (-1) * (u * v) -> -(u * v)
+		if left.kind == "num" and left.value == "-1"
+			and right.kind == "op" and right.op == "*" then
+			return Node.Op("*", Node.Num("-1"), right)
+		end
+
+		-- (u * v) * (-1) -> -(u * v)
+		if right.kind == "num" and right.value == "-1"
+			and left.kind == "op" and left.op == "*" then
+			return Node.Op("*", Node.Num("-1"), left)
+		end
+		
 		-- Flatten right: x * (y * z) -> (x * y * z)
 		if right.kind == "op" and right.op == "*" then
 			return Node.Op("*",
@@ -587,9 +635,7 @@ function Simplify._simplifyOp(node)
 		local left = Simplify.simplify(node.left)
 		local right = Simplify.simplify(node.right)
 
-		-------------------------------------------------------
 		-- (u * 1) / v -> u / v
-		-------------------------------------------------------
 		if left.kind == "op" and left.op == "*" then
 			if left.right.kind == "num" and left.right.value == "1" then
 				return Node.Op("/", left.left, right)
@@ -597,6 +643,29 @@ function Simplify._simplifyOp(node)
 			if left.left.kind == "num" and left.left.value == "1" then
 				return Node.Op("/", left.right, right)
 			end
+		end
+		
+		-- (u * -1) / v -> -(u / v)
+		if left.kind == "op" and left.op == "*"
+			and left.right.kind == "num" and left.right.value == "-1" then
+			return Node.Op("*", Node.Num("-1"), Node.Op("/", left.left, right))
+		end
+		
+		-- -(u) / v -> -(u / v)
+		if left.kind == "op" and left.op == "*"
+			and left.left.kind == "num" and left.left.value == "-1" then
+			return Node.Op("*", Node.Num("-1"), Node.Op("/", left.right, right))
+		end
+
+		-- u / -(v) -> -(u / v)
+		if right.kind == "op" and right.op == "*"
+			and right.left.kind == "num" and right.left.value == "-1" then
+			return Node.Op("*", Node.Num("-1"), Node.Op("/", left, right.right))
+		end
+
+		-- x / -y = -(x / y)
+		if right.kind == "num" and right.value == "-1" then
+			return Node.Op("*", Node.Num("-1"), Node.Op("/", left, Node.Num("1")))
 		end
 
 		-------------------------------------------------------
@@ -606,19 +675,19 @@ function Simplify._simplifyOp(node)
 		-- 1 / cos(x) -> sec(x)
 		if left.kind == "num" and left.value == "1"
 			and right.kind == "func" and right.name == "cos" then
-			return Node.Func("sec", right.args[1])
+			return Node.Func("sec", {right.args[1]})
 		end
 
 		-- 1 / sin(x) -> csc(x)
 		if left.kind == "num" and left.value == "1"
 			and right.kind == "func" and right.name == "sin" then
-			return Node.Func("csc", right.args[1])
+			return Node.Func("csc", {right.args[1]})
 		end
 
 		-- cos(x) / sin(x) -> cot(x)
 		if left.kind == "func" and left.name == "cos"
 			and right.kind == "func" and right.name == "sin" then
-			return Node.Func("cot", left.args[1])
+			return Node.Func("cot", {left.args[1]})
 		end
 
 		-------------------------------------------------------
@@ -628,19 +697,19 @@ function Simplify._simplifyOp(node)
 		-- 1 / cosh(x) -> sech(x)
 		if left.kind == "num" and left.value == "1"
 			and right.kind == "func" and right.name == "cosh" then
-			return Node.Func("sech", right.args[1])
+			return Node.Func("sech", {right.args[1]})
 		end
 
 		-- 1 / sinh(x) -> csch(x)
 		if left.kind == "num" and left.value == "1"
 			and right.kind == "func" and right.name == "sinh" then
-			return Node.Func("csch", right.args[1])
+			return Node.Func("csch", {right.args[1]})
 		end
 
 		-- cosh(x) / sinh(x) -> coth(x)
 		if left.kind == "func" and left.name == "cosh"
 			and right.kind == "func" and right.name == "sinh" then
-			return Node.Func("coth", left.args[1])
+			return Node.Func("coth", {left.args[1]})
 		end
 
 		-------------------------------------------------------
