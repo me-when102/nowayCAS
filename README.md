@@ -80,4 +80,4 @@ We're wide open to:
 Check out [CONTRIBUTING.md](CONTRIBUTING.md) for how to get started. No contribution too small, even a single test case helps!
 
 ## 🔨 Installation
-- Will come soon with a .rbxm model or other things (like Wally or Rojo setup if possible)
+Install the **nowayCAS** library [here](INSTALL.md).
