@@ -18,7 +18,15 @@ You can't natively:
 - Evalute reciprocal functions (csc, sec, cot) and inverse hyperbolic functions
 - Differentiate, factor, or rewrite expressions symbolically
 
+But if you really had to, you need to use `loadstring()` enabled,
+- Which makes your game vulnerable.
+- and it can't do algebra.
+
 **nowayCAS changes everything.**
+
+<p align="center">
+    <img src="./assets/images/nowayCAS-capability.png" alt="nowayCAS capabilities" width="700">
+</p>
 
 ## Features 🚀
 
@@ -41,7 +49,7 @@ nowayCAS is a **full-featured symbolic engine** built from the ground up in pure
   - `.toDAGString()` & `.toASTRepresentation()` → debugging/power-user tools
 - **Modular design** → easy to extend with new rules, parsers, or backends
 
-All of this runs natively in Roblox Studio — no external services needed.
+All of this runs natively in Roblox Studio - no external services needed.
 
 ## **Development Status**
 **nowayCAS** started in **1st January 2026** and it's currently in **beta**. Expect:
