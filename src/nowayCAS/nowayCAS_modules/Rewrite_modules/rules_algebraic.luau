@@ -29,67 +29,66 @@ rules_algebraic.simplify = {
 	---------------------------------------------------
 	{
 		op = "/",
-
 		match = function(node)
 			local num = node.left
 			local den = node.right
 
-			---------------------------------------------------
-			-- Numerator: u^2 + (-1 * v^2)
-			---------------------------------------------------
-			if num.kind ~= "op" or num.op ~= "+" then
-				return nil
+			-- Extract the two terms in numerator (should be ±u^2 and ±v^2)
+			if num.kind ~= "op" or num.op ~= "+" then return nil end
+
+			local term1, term2 = num.left, num.right
+
+			-- Helper to extract base and sign from ±base^2
+			local function extractSquare(term)
+				local sign = 1
+				local base
+
+				-- Case: + (base^2)
+				if term.kind == "op" and term.op == "^" and term.right.kind == "num" and tonumber(term.right.value) == 2 then
+					base = term.left
+					-- Case: - (base^2) -> either unary or (* -1 base^2)
+				else
+					local negated = matchNeg(term)
+					if negated and negated.kind == "op" and negated.op == "^" and negated.right.kind == "num" and tonumber(negated.right.value) == 2 then
+						base = negated.left
+						sign = -1
+					else
+						return nil
+					end
+				end
+
+				return base, sign
 			end
 
-			local a = num.left      -- expect u^2
-			local neg = num.right   -- expect -1 * v^2
+			local u, signU = extractSquare(term1)
+			local v, signV = extractSquare(term2)
+			if not u then
+				u, signU = extractSquare(term2)
+				v, signV = extractSquare(term1)
+			end
+			if not u or not v then return nil end
 
-			-- a = u^2
-			if a.kind ~= "op" or a.op ~= "^" then return nil end
-			if a.right.kind ~= "num" or tonumber(a.right.value) ~= 2 then return nil end
-			local u = a.left
+			-- We need one + and one -
+			if signU == signV then return nil end
 
-			-- neg = -1 * v^2
-			local b = matchNeg(neg)
-			if not b then print("niled 3.5") return nil end
-			if b.kind ~= "op" or b.op ~= "^" then return nil end
-			if b.right.kind ~= "num" or tonumber(b.right.value) ~= 2 then return nil end
-			local v = b.left
+			-- Determine which is positive
+			local posBase = signU == 1 and u or v
+			local negBase = signU == 1 and v or u
 
-			---------------------------------------------------
-			-- Denominator: u + (-1 * v)   OR   (-1 * v) + u
-			---------------------------------------------------
-			if den.kind ~= "op" or den.op ~= "+" then
-				return nil
+			-- Now check denominator: should be posBase + (-negBase)
+			local expectedDen
+			if den.kind == "op" and den.op == "+" then
+				local d1, d2 = den.left, den.right
+				local negPart = matchNeg(d2) or matchNeg(d1)
+				local posPart = (matchNeg(d2) and den.left) or (matchNeg(d1) and den.right) or nil
+
+				if posPart and negPart and Util.nodeEquals(posPart, posBase) and Util.nodeEquals(negPart, negBase) then
+					return { u = posBase, v = negBase }
+				end
 			end
 
-			local du, dneg
-
-			-- Case 1: u + (-1 * v)
-			local dv1 = matchNeg(den.right)
-			if dv1 and Util.nodeEquals(den.left, u) then
-				du = den.left
-				dneg = den.right
-			end
-
-			-- Case 2: (-1 * v) + u
-			local dv2 = matchNeg(den.left)
-			if dv2 and Util.nodeEquals(den.right, u) then
-				du = den.right
-				dneg = den.left
-			end
-
-			if not du then
-				return nil
-			end
-
-			local dv = matchNeg(dneg)
-			if not dv then return nil end
-			if not Util.nodeEquals(dv, v) then return nil end
-			
-			return { u = u, v = v }
+			return nil
 		end,
-
 		replace = function(node, m)
 			return Node.Op("+", m.u, m.v)
 		end

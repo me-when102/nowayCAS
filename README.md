@@ -1,3 +1,7 @@
+<p align="center"> 
+    <img src=".assets/logo/nowayCAS_logo.jpg" alt="nowayCAS Logo" width="200"> 
+</p>
+
 # **nowayCAS** - Symbolic Mathematics for Luau / Roblox Studio 🔥
 This is **nowayCAS**, a Computer Algebra System built specifically for Roblox Studio. It brings symbolic expressions, algebraic manipulation, and pretty-printing into an environment that normally has none of these capabilities.
 
@@ -13,8 +17,6 @@ It is a pure-Luau library that:
 - Provides a clean external API for constructing and transforming expressions
 - Outputs expressions in pretty-print, DAG print, and LaTeX print
 - Operator overloading for symbolic arithmetic between two expressions.
-
-And all of this runs inside Roblox Studio: no plugins, no external services, and no dependencies.
 
 ## **Development Status**
 The **nowayCAS** library started development on 1st January 2026 and it's still currently on beta. This means it's unpolished, have missing features, or buggy.
