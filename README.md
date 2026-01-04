@@ -40,7 +40,8 @@ nowayCAS is a **full-featured symbolic engine** built from the ground up in pure
 - **Expression parsing** from strings → optimized **AST → DAG** representation (shared subexpressions for speed & memory)
 - **Natural math syntax** via operator overloading (`x^2 + 2*x + 1`)
 - **Symbolic manipulation**:
-  - Simplification (algebraic identities, rational forms)
+  - Assumption system (x is positive, negative, etc) with assigning, removing, and checking.
+  - Simplification (algebraic identities, rational forms) integrated with assumptions
   - Expansion & factoring of polynomials (partially)
   - Symbolic **differentiation** (`var:diff()`)
   - Variable/expression **substitution** (`:substitute({x: AST_node = 3})`)
@@ -183,6 +184,26 @@ local combo = (x + 2) * (y - 3)^2
 print(combo)
 ```
 
+### 11. Assumptions
+```lua
+local nowayCAS = require(game.ReplicatedStorage.nowayCAS.nowayCAS)
+
+-- Declare global assumptions
+nowayCAS.assume("x", "positive")
+nowayCAS.assume("y", "nonzero")
+
+print(nowayCAS.assumptions())
+-- { x = {"positive"}, y = {"nonzero"} }
+
+-- Assumptions influence simplification
+local expr = nowayCAS.new("sqrt(x^2)")
+print(expr:simplify())        --> x    (because x > 0)
+
+-- Expression-level property checks
+print(expr:is("positive"))    --> true  (all vars in expr satisfy property)
+print(expr:varIs("y", "nonzero"))  --> true
+```
+
 ## **Development Status**
 nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Some edge-case bugs
@@ -219,7 +240,6 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Limits
 - Series Expansions (like Taylor/Maclaurin Series and Series simplifications)
 - Logical Expressions (`and`, `or`, `not`)
-- Assumptions system (`if x > 0`)
 
 ## ❤️ Contributing
 We are going to make Roblox Studio have its own **CAS** system!
