@@ -274,15 +274,6 @@ function Simplify._simplifyFunc(node)
 	if name == "sqrt" and isOne(arg) then
 		return Node.Num("1")
 	end
-
-	-- sqrt(x^2) -> x
-	if name == "sqrt"
-		and arg.kind == "op"
-		and arg.op == "^"
-		and arg.right.kind == "num"
-		and arg.right.value == "2" then
-		return arg.left
-	end
 	
 	-- sqrt(x^2) -> x or -x or abs(x)
 	if name == "sqrt"

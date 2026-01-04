@@ -572,21 +572,6 @@ function Canon._canonicalOp(node)
 	-- EXPONENTIATION
 	-------------------------------------------------------
 	if op == "^" then
-		-- sqrt(x^2) -> x assuming x > 0
-		if right.kind == "num" and right.value == "2" then
-			local base = left
-
-			if base.kind == "var" then
-				if Assume.is(base, "positive") then
-					return base
-				elseif Assume.is(base, "negative") then
-					return Node.Op("*", Node.Num("-1"), base)
-				else
-					return Node.Func("abs", { base })
-				end
-			end
-		end
-
 		return Node.Op("^", left, right)
 	end
 

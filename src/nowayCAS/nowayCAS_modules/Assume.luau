@@ -177,6 +177,10 @@ end
 -- Scoped Assume
 ---------------------------------------------------------------------
 
+-- NOTE: 
+-- the scope doesn't work because it does not update the table for other modules.
+
+--[[
 function Assume.with(temp, fn)
 	-- Save old state
 	local backup = {}
@@ -202,7 +206,7 @@ function Assume.with(temp, fn)
 	end
 
 	return ok, result
-end
+end]]
 
 -- The Assume sub-library.
 return Assume
