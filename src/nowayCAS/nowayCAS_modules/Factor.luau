@@ -5,8 +5,6 @@ local Factor = {}
 -- Facorizes expressions.
 -- May be one of the advanced + difficult modules in here
 -------------------------------------------------------
--- TODO: 
--- Fix generalized binomial factorization (Difficulty: Hard)
 
 local Canon = require(script.Parent.Canon)
 local Simplify = require(script.Parent.Simplify)

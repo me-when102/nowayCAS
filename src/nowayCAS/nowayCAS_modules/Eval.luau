@@ -164,17 +164,7 @@ function Eval.eval(node, env)
 		
 		-- Log
 		if f == "log10" then return math.log10(arg) end
-		if f == "log" then
-			if #args ~= 2 then
-				error("nowayCAS.Eval: log(a, x) expects 2 numeric arguments")
-			end
-			
-			if type(arg2) ~= "number" then
-				error("nowayCAS.Eval: function '" .. f .. "' expected second numeric argument")
-			end
-			
-			return math.log(arg, arg2)
-		end
+		if f == "log" then return math.log(arg, arg2) end
 		
 		error("nowayCAS.Eval: unsupported function '" .. f .. "'")
 

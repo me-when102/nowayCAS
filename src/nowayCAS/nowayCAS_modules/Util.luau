@@ -11,6 +11,7 @@ function Util.isNode(x)
 	return type(x) == "table" and x.kind ~= nil
 end
 
+-- Checks if the first node is equal to the second node.
 function Util.nodeEquals(a, b)
 	if a == b then return true end
 	if a.kind ~= b.kind then return false end
@@ -29,6 +30,20 @@ function Util.nodeEquals(a, b)
 	end
 
 	return false
+end
+
+function Util.nodeListEquals(a, b)
+	if #a ~= #b then
+		return false
+	end
+
+	for i = 1, #a do
+		if not Util.nodeEquals(a[i], b[i]) then
+			return false
+		end
+	end
+
+	return true
 end
 
 -- Great Common Divisor
