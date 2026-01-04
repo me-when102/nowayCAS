@@ -190,11 +190,29 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Support equations (`x = y + 3`)
   - Solve equations
   - Solve simultaneous questions
+  - Inequalities
 - Factorial (unary operator)
 - Sum and product
 - Polynomial-supported expansions and factorization
-- Calculus and other things for the calculus suite.
+- Calculus and other things for the calculus suite
+- Improving the rewrite engine with full pattern-matching
 - Add any remaining functions (`math.min` and `math.max`) missing in the library.
+- Complex numbers
+
+### Long-Term
+- Rational function algebra
+- Matrix Algebra
+  - Matrix literals
+  - Addition, multiplication matrix arithmetic, transpose
+  - Row-reduction (RREF)
+- Vector Algebra
+  - Dot product
+  - Cross product
+- Piecewise Functions (f(x) = (cond1, expr1, cond2, expr2, ...))
+- Limits
+- Series Expansions (like Taylor/Maclaurin Series and Series simplifications)
+- Logical Expressions (`and`, `or`, `not`)
+- Assumptions system (`if x > 0`)
 
 ## ❤️ Contributing
 We are going to make Roblox Studio have its own **CAS** system!
