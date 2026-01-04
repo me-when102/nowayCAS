@@ -11,8 +11,8 @@ local R = Rewrite.R
 -------------------------------------------------------
 
 rules_algebraic.simplify = {
+	-- (x^2 - y^2) / (x - y) - > x + y
 	R("(_u^2 + -(_v^2)) / (_u + -(_v))", "_u + _v"),
-	--R("(_u^2 + -(_v^2)) / (-(_v) + _u)", "_u + _v")
 }
 
 return rules_algebraic
