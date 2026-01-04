@@ -22,6 +22,11 @@ But if you really had to, you need to use `loadstring()` enabled,
 - Which makes your game vulnerable.
 - and it can't do algebra.
 
+Or you can use other modules in the Roblox community but some (to put it nicely):
+- Can not parse algebra through strings like "sin(x)^2 + y^3 - sqrt(5)"
+- Can not simplify expressions
+- Can not freely put any kind of expression you'd like in any form
+
 **nowayCAS changes everything.**
 
 <p align="center">
