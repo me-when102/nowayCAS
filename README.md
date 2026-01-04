@@ -192,6 +192,7 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 ## **Roadmap (needs help)**
 - Enhance simplification
 - Add more factorizing techniques.
+  - Rational-aware factorization.
 - Support equations (`x = y + 3`)
   - Solve equations
   - Solve simultaneous questions
@@ -203,7 +204,6 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Improving the rewrite engine with full pattern-matching
 - Add any remaining functions (`math.min` and `math.max`) missing in the library.
 - Complex numbers
-- Rational numbers
 - LaTeX to AST parsing.
 
 ### Long-Term
