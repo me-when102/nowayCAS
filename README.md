@@ -203,6 +203,8 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Improving the rewrite engine with full pattern-matching
 - Add any remaining functions (`math.min` and `math.max`) missing in the library.
 - Complex numbers
+- Rational numbers
+- LaTeX to AST parsing.
 
 ### Long-Term
 - Rational function algebra
