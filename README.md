@@ -186,21 +186,17 @@ print(combo)
 
 ### 11. Assumptions
 ```lua
-local nowayCAS = require(game.ReplicatedStorage.nowayCAS.nowayCAS)
-
 -- Declare global assumptions
 nowayCAS.assume("x", "positive")
 nowayCAS.assume("y", "nonzero")
 
 print(nowayCAS.assumptions())
--- { x = {"positive"}, y = {"nonzero"} }
 
 -- Assumptions influence simplification
 local expr = nowayCAS.new("sqrt(x^2)")
 print(expr:simplify())        --> x    (because x > 0)
 
--- Expression-level property checks
-print(expr:is("positive"))    --> true  (all vars in expr satisfy property)
+print(expr:is("positive"))    --> true
 print(expr:varIs("y", "nonzero"))  --> true
 ```
 
@@ -211,7 +207,7 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - API changes as it stabilizes
 
 ## **Roadmap (needs help)**
-- Enhance simplification
+- Enhance simplification by using strategies.
 - Add more factorizing techniques.
   - Rational-aware factorization.
 - Support equations (`x = y + 3`)
