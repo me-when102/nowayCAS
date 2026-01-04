@@ -3,6 +3,7 @@ local CANON_CACHE = {}
 
 local Node = require(script.Parent.Node)
 local Util = require(script.Parent.Util)
+local Assume = require(script.Parent.Assume)
 
 local table_insert = table.insert
 local table_sort = table.sort
@@ -475,8 +476,22 @@ function Canon.canonical(node)
 		for i, a in ipairs(node.args) do
 			newArgs[i] = Canon.canonical(a)
 		end
+		
+		-- may be put into a separate function (_canonicalFunc) if another function is added here
+		
+		-- abs(x) -> x if x > 0
+		if node.name == "abs" and #newArgs == 1 then
+			local arg = newArgs[1]
+			if arg.kind == "var" then
+				if Assume.is(arg, "positive") then
+					return arg
+				elseif Assume.is(arg, "negative") then
+					return Node.Op("*", Node.Num("-1"), arg)
+				end
+			end
+		end
 
-		result = Node.Func(node.name, newArgs)
+		return Node.Func(node.name, newArgs)
 
 	elseif kind == "op" then
 		result = Canon._canonicalOp(node)
@@ -557,6 +572,21 @@ function Canon._canonicalOp(node)
 	-- EXPONENTIATION
 	-------------------------------------------------------
 	if op == "^" then
+		-- sqrt(x^2) -> x assuming x > 0
+		if right.kind == "num" and right.value == "2" then
+			local base = left
+
+			if base.kind == "var" then
+				if Assume.is(base, "positive") then
+					return base
+				elseif Assume.is(base, "negative") then
+					return Node.Op("*", Node.Num("-1"), base)
+				else
+					return Node.Func("abs", { base })
+				end
+			end
+		end
+
 		return Node.Op("^", left, right)
 	end
 
@@ -564,17 +594,25 @@ function Canon._canonicalOp(node)
 	-- DIVISION + RATIONAL CREATION
 	-------------------------------------------------------
 	if op == "/" then
-		-- Case 1: both sides are integers -> rational
+		
+		-- x/x -> 1 if x ~= 0
+		if canonicalKey(left) == canonicalKey(right) then
+			if left.kind == "var" and Assume.is(left, "nonzero") then
+				return Node.Num("1")
+			end
+		end
+
+		-- both sides are integers -> rational
 		if isNum(left) and isNum(right) then
 			return Node.Rat(tonumber(left.value), tonumber(right.value))
 		end
 
-		-- Case 2: rational / integer -> rational
+		-- rational / integer -> rational
 		if isRat(left) and isNum(right) then
 			return Node.Rat(left.num, left.den * tonumber(right.value))
 		end
 
-		-- Case 3: integer / rational -> rational
+		-- integer / rational -> rational
 		if isNum(left) and isRat(right) then
 			return Node.Rat(
 				tonumber(left.value) * right.den,
@@ -582,7 +620,7 @@ function Canon._canonicalOp(node)
 			)
 		end
 
-		-- Case 4: rational / rational -> rational
+		-- rational / rational -> rational
 		if isRat(left) and isRat(right) then
 			return Node.Rat(
 				left.num * right.den,

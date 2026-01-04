@@ -5,6 +5,7 @@ local Canon = require(script.Parent.Canon)
 local Node = require(script.Parent.Node)
 local Util = require(script.Parent.Util)
 local Rewrite = require(script.Parent.Rewrite)
+local Assume = require(script.Parent.Assume)
 
 local rules_algebraic = require(script.Parent.Rewrite.rules_algebraic)
 
@@ -283,6 +284,25 @@ function Simplify._simplifyFunc(node)
 		return arg.left
 	end
 	
+	-- sqrt(x^2) -> x or -x or abs(x)
+	if name == "sqrt"
+		and arg.kind == "op"
+		and arg.op == "^"
+		and arg.right.kind == "num"
+		and arg.right.value == "2"
+	then
+		local base = arg.left
+		if base.kind == "var" then
+			if Assume.is(base, "positive") then
+				return base
+			elseif Assume.is(base, "negative") then
+				return Node.Op("*", Node.Num("-1"), base)
+			else
+				return Node.Func("abs", { base })
+			end
+		end
+	end
+
 	-------------------------------------------------------
 	-- Log Identities
 	-------------------------------------------------------
@@ -345,6 +365,26 @@ function Simplify._simplifyFunc(node)
 	-- abs(0) -> 0
 	if name == "abs" and isZero(arg) then
 		return Node.Num(0)
+	end
+	
+	-- abs(x) -> x or -x
+	if name == "abs" then
+		if arg.kind == "var" then
+			if Assume.is(arg, "positive") then
+				return arg
+			elseif Assume.is(arg, "negative") then
+				return Node.Op("*", Node.Num("-1"), arg)
+			end
+		end
+	end
+	
+	-- abs(-x) -> abs(x)
+	if name == "abs"
+		and arg.kind == "op"
+		and arg.op == "*"
+		and isNegOne(arg.left)
+	then
+		return Node.Func("abs", { arg.right })
 	end
 
 	-- floor(n) -> n for integers
@@ -671,6 +711,13 @@ function Simplify._simplifyOp(node)
 		-- First: simplify children
 		local left = Simplify.simplify(node.left)
 		local right = Simplify.simplify(node.right)
+		
+		-- x / x -> x if x ~= 0
+		if Util.nodeEquals(left, right) then
+			if left.kind == "var" and Assume.is(left, "nonzero") then
+				return Node.Num("1")
+			end
+		end
 
 		-- (u * 1) / v -> u / v
 		if left.kind == "op" and left.op == "*" then

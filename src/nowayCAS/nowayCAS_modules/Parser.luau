@@ -192,9 +192,11 @@ function Parser._parsePrimary(stream)
 			
 			local args = {}
 			if stream:peek().kind ~= "rparen" then
-				repeat
+				table.insert(args, Parser._parseExpression(stream))
+				while stream:peek().kind == "comma" do
+					stream:next() -- consume comma
 					table.insert(args, Parser._parseExpression(stream))
-				until stream:peek().kind ~= "comma" or not stream:next()
+				end
 			end
 			stream:expect("rparen")
 			return Node.Func(name, args)
