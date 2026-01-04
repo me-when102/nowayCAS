@@ -1,4 +1,4 @@
-local Assumptions = {}
+local Assume = {}
 
 -------------------------------------------------------
 -- Assumptions System
@@ -51,9 +51,9 @@ end
 -- Assumptions API
 -------------------------------------------------------
 
--- Replace all assumptions for a symbol
+-- Replace all Assume for a symbol
 -- Accepts either a tag string or array of tags.
-function Assumptions.set(symbol, tags)
+function Assume.set(symbol, tags)
 	symbol = normalizeSymbol(symbol)
 	local out = {}
 
@@ -69,19 +69,19 @@ function Assumptions.set(symbol, tags)
 end
 
 -- Gets the assumption for a symbol
-function Assumptions.get(symbol)
+function Assume.get(symbol)
 	symbol = normalizeSymbol(symbol)
 	return store[symbol]
 end
 
 -- Add a tag to an existing symbol
-function Assumptions.add(symbol, tag)
+function Assume.add(symbol, tag)
 	symbol = normalizeSymbol(symbol)
 	ensure(symbol)[tag] = true
 end
 
 -- Remove a tag from an existing symbol
-function Assumptions.remove(symbol, tag)
+function Assume.remove(symbol, tag)
 	symbol = normalizeSymbol(symbol)
 	local tags = store[symbol]
 	if tags then
@@ -94,14 +94,14 @@ function Assumptions.remove(symbol, tag)
 end
 
 -- Direct membership check (no implications)
-function Assumptions.has(symbol, tag)
+function Assume.has(symbol, tag)
 	symbol = normalizeSymbol(symbol)
 	local tags = store[symbol]
 	return tags ~= nil and tags[tag] == true
 end
 
 -- Query with implication lattice
-function Assumptions.is(symbol, tag)
+function Assume.is(symbol, tag)
 	symbol = normalizeSymbol(symbol)
 	local tags = store[symbol]
 	if not tags then
@@ -125,14 +125,14 @@ function Assumptions.is(symbol, tag)
 end
 
 -- Gets the tag from the implication table
-function Assumptions.implies(tag)
+function Assume.implies(tag)
 	return implies[tag]
 end
 
 -- Determines if the symbol has any of these tags (or)
-function Assumptions.any(symbol, tagList)
+function Assume.any(symbol, tagList)
 	for _, tag in ipairs(tagList) do
-		if Assumptions.is(symbol, tag) then
+		if Assume.is(symbol, tag) then
 			return true
 		end
 	end
@@ -140,36 +140,49 @@ function Assumptions.any(symbol, tagList)
 end
 
 -- Determines if the symbol has all of these tags (and)
-function Assumptions.all(symbol, tagList)
+function Assume.all(symbol, tagList)
 	for _, tag in ipairs(tagList) do
-		if not Assumptions.is(symbol, tag) then
+		if not Assume.is(symbol, tag) then
 			return false
 		end
 	end
 	return true
 end
 
--- Clear assumptions for one symbol
-function Assumptions.clear(symbol)
+-- Clear Assume for one symbol
+function Assume.clear(symbol)
 	symbol = normalizeSymbol(symbol)
 	store[symbol] = nil
 end
 
--- Reset all assumptions
-function Assumptions.reset()
+-- Reset all Assume
+function Assume.reset()
 	table.clear(store)
 end
 
+-- Dumps the assumptions table.
+function Assume.dump()
+	-- return a deep copy so users can't mutate internal state
+	local out = {}
+	for var, props in pairs(store) do
+		out[var] = {}
+		for prop, _ in pairs(props) do
+			table.insert(out[var], prop)
+		end
+	end
+	return out
+end
+
 ---------------------------------------------------------------------
--- Scoped assumptions
+-- Scoped Assume
 ---------------------------------------------------------------------
 
-function Assumptions.with(temp, fn)
+function Assume.with(temp, fn)
 	-- Save old state
 	local backup = {}
 
 	for symbol, tags in pairs(temp) do
-		if typeof(tags) ~= "table" then error("Assumptions.with: tag list must be an array") end
+		if typeof(tags) ~= "table" then error("Assume.with: tag list must be an array") end
 
 		local s = normalizeSymbol(symbol)
 		backup[s] = store[s] and table.clone(store[s]) or nil
@@ -191,5 +204,5 @@ function Assumptions.with(temp, fn)
 	return ok, result
 end
 
--- The Assumptions sub-library.
-return Assumptions
+-- The Assume sub-library.
+return Assume

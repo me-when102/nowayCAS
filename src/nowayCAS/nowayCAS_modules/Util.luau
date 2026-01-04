@@ -67,5 +67,41 @@ function Util.buildSymbol(name)
 	end
 end
 
+-- Collects all variable names appearing anywhere in an AST.
+-- Returns an array of unique variable names (strings).
+function Util.collectVars(node)
+	local out = {}
+	local seen = {}
+
+	local function walk(n)
+		if n.kind == "var" then
+			local name = n.name
+			if not seen[name] then
+				seen[name] = true
+				table.insert(out, name)
+			end
+			return
+		end
+
+		if n.kind == "op" then
+			walk(n.left)
+			walk(n.right)
+			return
+		end
+
+		if n.kind == "func" then
+			for _, arg in ipairs(n.args) do
+				walk(arg)
+			end
+			return
+		end
+
+		-- num, rat, const: no variables inside
+	end
+
+	walk(node)
+	return out
+end
+
 -- The Utility sub-library
 return Util

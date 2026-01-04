@@ -8,6 +8,7 @@
 	    - Operators are binary; functions are unary.
 	    - No node ever stores parent references.
 		- Unary minus is expressed as a multiplication node (left: -1, right: any)
+		- Rationals always contains integers.
 
 ]]
 
@@ -27,6 +28,7 @@ Print      = require(script.Print)
 Arithmetic = require(script.Arithmetic)
 UserFunctions = require(script.UserFunctions)
 UserConstants = require(script.UserConstants)
+Assume = require(script.Assume)
 
 rules_expand = require(script.Rewrite.rules_expand)
 
@@ -43,7 +45,8 @@ local nowayCAS = {
 	Substitute = Substitute,
 	Print = Print,
 	Arithmetic = Arithmetic,
-	UserFunctions = UserFunctions
+	UserFunctions = UserFunctions,
+	Assume = Assume
 }
 
 -------------------------------------------------------
@@ -63,6 +66,10 @@ local tostring = tostring
 
 -------------------------------------------------------
 -- Public API
+-------------------------------------------------------
+
+-------------------------------------------------------
+-- Node Manipulation
 -------------------------------------------------------
 
 -- expression instance
@@ -117,6 +124,10 @@ function nowayCAS.substitute(node, map)
 	return nowayCAS.Substitute.apply(node, map)
 end
 
+-------------------------------------------------------
+-- Pretty Printing + Other Outputs
+-------------------------------------------------------
+
 -- Returns the AST converted into a pure string.
 function nowayCAS.toString(node)
 	return Print._toString(node)
@@ -140,6 +151,10 @@ function nowayCAS.toASTRepresentation(node)
 	return Print.toASTRepresentation(node)
 end
 
+-------------------------------------------------------
+-- User-defined Functions + Constants API
+-------------------------------------------------------
+
 -- Defines a user-defined function.
 -- Name: the name of the function, eg: 'f' = "f(...params)" when called.
 -- Params: the parameters to substitute into the bodyString.
@@ -154,6 +169,58 @@ end
 -- Value: the value that the constant will hold.
 function nowayCAS.defineConstant(name, value)
 	UserConstants.define(name, value)
+end
+
+-------------------------------------------------------
+-- Assumptions External API
+-------------------------------------------------------
+
+-- Adds an assumption to a variable.
+function nowayCAS.assume(var, property)
+	Assume.add(var, property)
+end
+
+-- Removes a specific assumption from a variable.
+function nowayCAS.unassume(var, property)
+	Assume.remove(var, property)
+end
+
+-- Removes all assumptions associated with a variable.
+function nowayCAS.clearVarAssumptions(var)
+	Assume.clear(var)
+end
+
+-- Clears all assumptions for all variables.
+function nowayCAS.clearAssumptions()
+	Assume.reset()
+end
+
+-- Returns a read‑only table of all active assumptions.
+function nowayCAS.assumptions()
+	return Assume.dump()
+end
+
+-- Temporarily applies assumptions for the duration of fn. 
+-- Restores previous assumptions afterward.
+-- Parameter tbl is a table with the key as the variable name and the value is a list of temporary assumptions.
+-- Eg: table = {x = {"integer", "positive"}, y = ...}
+function nowayCAS.withAssumptions(tbl, fn)
+	return Assume.with(tbl, fn)
+end
+
+-- Returns true if the variable satisfies the property, directly or through implication.
+function nowayCAS.is(var, property)
+	return Assume.is(var, property)
+end
+
+-- Returns true only if the variable explicitly has the property (no implication).
+function nowayCAS.hasAssumption(var, property)
+	return Assume.has(var, property)
+end
+
+-- Replaces all assumptions for a variable with the provided list of tags.
+function nowayCAS.setAssumptions(var, tags)
+	Assume.set(var, tags)
 end
 
 -------------------------------------------------------
@@ -227,6 +294,30 @@ end
 -- Raw: Returns the luau table.
 function Expression:toASTRepresentation()
 	return nowayCAS.toASTRepresentation(self.node)
+end
+
+-- Determines if all variables of the expression satisfy the property.
+function Expression:is(property)
+	local vars = Util.collectVars(self.node)
+
+	-- No variables -> expression is trivially in the domain
+	if #vars == 0 then
+		return true
+	end
+
+	for _, var in ipairs(vars) do
+		if not nowayCAS.is(var, property) then
+			return false
+		end
+	end
+
+	return true
+end
+
+
+-- Determines if the variable in the expression satisfy the property.
+function Expression:varIs(var, property)
+	return nowayCAS.is(var, property)
 end
 
 -------------------------------------------------------
