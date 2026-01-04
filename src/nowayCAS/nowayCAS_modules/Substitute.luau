@@ -21,13 +21,13 @@ function Substitute.apply(node, map)
 			if repl.node then
 				return repl.node
 			end
-			
+
 			return repl
 		else
 			return node
 		end
 	end
-	
+
 	-- Constants: allow substitution just like variables
 	if kind == "const" then
 		local repl = map[node.name]
@@ -44,6 +44,11 @@ function Substitute.apply(node, map)
 	-- Numbers unchanged
 	if kind == "num" then
 		return node
+	end
+
+	-- Rationals unchanged
+	if kind == "rat" then 
+		return node 
 	end
 
 	-- Functions: recurse into argument

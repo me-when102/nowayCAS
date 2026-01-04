@@ -25,6 +25,8 @@ function Diff.diff(node, var)
 	local result
 	if node.kind == "num" then
 		result = Node.Num("0")
+	elseif node.kind == "rat" then
+		result = Node.Num("0")
 	elseif node.kind == "var" then
 		result = Node.Num(node.name == var and "1" or "0")
 	elseif node.kind == "op" then

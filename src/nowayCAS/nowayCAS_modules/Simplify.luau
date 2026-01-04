@@ -20,6 +20,16 @@ local tostring = tostring
 --   - Recursively simplifies children before applying rules.
 -------------------------------------------------------
 
+local function toRat(n)
+	if n.kind == "rat" then
+		return n.num, n.den
+	elseif n.kind == "num" then
+		return tonumber(n.value), 1
+	else
+		return nil
+	end
+end
+
 function Simplify.simplifyDeep(node, maxSteps)
 	maxSteps = maxSteps or 20
 	local steps = 0
@@ -43,7 +53,9 @@ function Simplify.simplify(node)
 	if cached then
 		return cached
 	end
-
+	
+	--node = Canon.canonical(node)
+	
 	local simplified
 	if node.kind == "num" then
 		simplified = node
@@ -51,6 +63,8 @@ function Simplify.simplify(node)
 		simplified = node
 	elseif node.kind == "const" then
 		simplified = node
+	elseif node.kind == "rat" then
+		simplified = Canon.canonical(node)
 	elseif node.kind == "func" then
 		simplified = Simplify._simplifyFunc(node)
 	elseif node.kind == "op" then
@@ -68,6 +82,29 @@ function Simplify.simplify(node)
 	-- Store in memo table
 	SIMPLIFY_CACHE[node] = simplified
 	return simplified
+end
+
+-- Checks if the node has a value of zero.
+local function isZero(n)
+	return (n.kind == "num" and n.value == "0")
+		or (n.kind == "rat" and n.num == 0)
+end
+
+-- Checks if the node has a value of one.
+local function isOne(n)
+	return (n.kind == "num" and n.value == "1")
+		or (n.kind == "rat" and n.num == n.den)
+end
+
+-- Checks if the node has a value of negative one.
+local function isNegOne(n)
+	return (n.kind == "num" and n.value == "-1")
+		or (n.kind == "rat" and n.num == -n.den)
+end
+
+-- Checks if the node is numeric or rational.
+local function isNumeric(n)
+	return n.kind == "num" or n.kind == "rat"
 end
 
 -- Simplifies the function node.
@@ -105,17 +142,17 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 
 	-- sin(0) -> 0
-	if name == "sin" and arg.kind == "num" and arg.value == "0" then
+	if name == "sin" and isZero(arg) then
 		return Node.Num("0")
 	end
 
 	-- cos(0) -> 1
-	if name == "cos" and arg.kind == "num" and arg.value == "0" then
+	if name == "cos" and isZero(arg) then
 		return Node.Num("1")
 	end
 
 	-- exp(0) -> 1
-	if name == "exp" and arg.kind == "num" and arg.value == "0" then
+	if name == "exp" and isZero(arg) then
 		return Node.Num("1")
 	end
 
@@ -124,7 +161,7 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 
 	-- sec(0) -> 1
-	if name == "sec" and arg.kind == "num" and arg.value == "0" then
+	if name == "sec" and isZero(arg) then
 		return Node.Num("1")
 	end
 
@@ -140,17 +177,17 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 
 	-- asin(0) -> 0
-	if name == "asin" and arg.kind == "num" and arg.value == "0" then
+	if name == "asin" and isZero(arg) then
 		return Node.Num(0)
 	end
 
 	-- acos(1) -> 0
-	if name == "acos" and arg.kind == "num" and arg.value == "1" then
+	if name == "acos" and isOne(arg) then
 		return Node.Num(0)
 	end
 
 	-- atan(0) -> 0
-	if name == "atan" and arg.kind == "num" and arg.value == "0" then
+	if name == "atan" and isZero(arg) then
 		return Node.Num(0)
 	end
 
@@ -159,17 +196,17 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 
 	-- sinh(0) -> 0
-	if name == "sinh" and arg.kind == "num" and arg.value == "0" then
+	if name == "sinh" and isZero(arg) then
 		return Node.Num(0)
 	end
 
 	-- cosh(0) -> 1
-	if name == "cosh" and arg.kind == "num" and arg.value == "0" then
+	if name == "cosh" and isZero(arg) then
 		return Node.Num(1)
 	end
 
 	-- tanh(0) -> 0
-	if name == "tanh" and arg.kind == "num" and arg.value == "0" then
+	if name == "tanh" and isZero(arg) then
 		return Node.Num(0)
 	end
 
@@ -178,7 +215,7 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 
 	-- sech(0) -> 1 / cosh(0) -> 1
-	if name == "sech" and arg.kind == "num" and arg.value == "0" then
+	if name == "sech" and isZero(arg) then
 		return Node.Num("1")
 	end
 
@@ -191,12 +228,12 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 
 	-- asinh(0) -> 0
-	if name == "asinh" and arg.kind == "num" and arg.value == "0" then
+	if name == "asinh" and isZero(arg) then
 		return Node.Num("0")
 	end
 
 	-- atanh(0) -> 0
-	if name == "atanh" and arg.kind == "num" and arg.value == "0" then
+	if name == "atanh" and isZero(arg) then
 		return Node.Num("0")
 	end
 
@@ -205,7 +242,7 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 
 	-- ln(1) -> 0
-	if name == "ln" and arg.kind == "num" and arg.value == "1" then
+	if name == "ln" and isOne(arg) then
 		return Node.Num("0")
 	end
 
@@ -228,12 +265,12 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 
 	-- sqrt(0) -> 0
-	if name == "sqrt" and arg.kind == "num" and arg.value == "0" then
+	if name == "sqrt" and isZero(arg) then
 		return Node.Num("0")
 	end
 
 	-- sqrt(1) -> 1
-	if name == "sqrt" and arg.kind == "num" and arg.value == "1" then
+	if name == "sqrt" and isOne(arg) then
 		return Node.Num("1")
 	end
 
@@ -251,7 +288,7 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 	
 	-- log10(1) -> 0
-	if name == "log10" and arg.kind == "num" and arg.value == "1" then
+	if name == "log10" and isOne(arg) then
 		return Node.Num("0")
 	end
 
@@ -265,12 +302,12 @@ function Simplify._simplifyFunc(node)
 		end
 
 		-- log(a, 1) = 0
-		if val.kind == "num" and val.value == "1" then
+		if isOne(val) then
 			return Node.Num("0")
 		end
 
 		-- log(a, a) = 1
-		if base.kind == "num" and val.kind == "num"
+		if isNumeric(base) and isNumeric(val)
 			and base.value == val.value then
 			return Node.Num("1")
 		end
@@ -306,17 +343,17 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 
 	-- abs(0) -> 0
-	if name == "abs" and arg.kind == "num" and arg.value == "0" then
+	if name == "abs" and isZero(arg) then
 		return Node.Num(0)
 	end
 
 	-- floor(n) -> n for integers
-	if name == "floor" and arg.kind == "num" and math.floor(tonumber(arg.value)) == tonumber(arg.value) then
+	if name == "floor" and isNumeric(arg) and math.floor(tonumber(arg.value)) == tonumber(arg.value) then
 		return arg
 	end
 
 	-- ceil(n) -> n for integers
-	if name == "ceil" and arg.kind == "num" and math.ceil(tonumber(arg.value)) == tonumber(arg.value) then
+	if name == "ceil" and isNumeric(arg) and math.ceil(tonumber(arg.value)) == tonumber(arg.value) then
 		return arg
 	end
 
@@ -371,8 +408,8 @@ function Simplify._simplifyOp(node)
 	-------------------------------------------------------
 	-- Constant folding
 	-------------------------------------------------------
-	if left.kind == "num" and right.kind == "num" then
-		return Simplify._foldConstants(op, left.value, right.value)
+	if isNumeric(left) and isNumeric(right) then
+		return Simplify._foldConstants(op, left, right)
 	end
 
 	-------------------------------------------------------
@@ -384,8 +421,8 @@ function Simplify._simplifyOp(node)
 	-------------------------------------------------------
 	if op == "+" then
 		-- x + 0 -> x
-		if right.kind == "num" and right.value == "0" then return left end
-		if left.kind == "num" and left.value == "0" then return right end
+		if isZero(right) then return left end
+		if isZero(left) then return right end
 
 		-- Flatten right: x + (y + z) -> (x + y + z)
 		if right.kind == "op" and right.op == "+" then
@@ -405,9 +442,9 @@ function Simplify._simplifyOp(node)
 
 		-- Combine numeric terms: (a + b) + c -> Num(a+b+c)
 		if left.kind == "op" and left.op == "+"
-			and left.left.kind == "num"
-			and left.right.kind == "num"
-			and right.kind == "num" then
+			and isNumeric(left.left)
+			and isNumeric(left.right)
+			and isNumeric(right) then
 
 			local sum = tonumber(left.left.value)
 				+ tonumber(left.right.value)
@@ -418,8 +455,8 @@ function Simplify._simplifyOp(node)
 
 		-- (x + a) + b -> x + (a+b)
 		if left.kind == "op" and left.op == "+"
-			and left.right.kind == "num"
-			and right.kind == "num" then
+			and isNumeric(left.right)
+			and isNumeric(right) then
 
 			local sum = tonumber(left.right.value) + tonumber(right.value)
 			return Node.Op("+", left.left, Node.Num(tostring(sum)))
@@ -463,20 +500,20 @@ function Simplify._simplifyOp(node)
 
 		-- x + (-1)*y -> x - y
 		if right.kind == "op" and right.op == "*"
-			and right.left.kind == "num" and right.left.value == "-1" then
+			and isNegOne(right.left) then
 
 			return Node.Op("-", left, right.right)
 		end
 		
 		-- (-1)*x + y -> y - x
 		if left.kind == "op" and left.op == "*"
-			and left.left.kind == "num" and left.left.value == "-1" then
+			and isNegOne(left.left) then
 			return Node.Op("-", right, left.right)
 		end
 
 		-- x + -(y) -> x - y
 		if right.kind == "op" and right.op == "*"
-			and right.left.kind == "num" and right.left.value == "-1" then
+			and isNegOne(right.left) then
 			return Node.Op("-", left, right.right)
 		end
 	end
@@ -486,12 +523,12 @@ function Simplify._simplifyOp(node)
 	-------------------------------------------------------
 	if op == "-" then
 		-- x - 0 -> x
-		if right.kind == "num" and right.value == "0" then
+		if isZero(right) then
 			return left
 		end
 
 		-- 0 - x -> -x
-		if left.kind == "num" and left.value == "0" then
+		if isZero(left) then
 			return Node.Op("*", Node.Num("-1"), right)
 		end
 
@@ -507,62 +544,62 @@ function Simplify._simplifyOp(node)
 	-------------------------------------------------------
 	if op == "*" then
 		-- x * 1 -> x
-		if right.kind == "num" and right.value == "1" then return left end
-		if left.kind == "num" and left.value == "1" then return right end
+		if isOne(right) then return left end
+		if isOne(left) then return right end
 
 		-- x * 0 -> 0
-		if right.kind == "num" and right.value == "0" then return right end
-		if left.kind == "num" and left.value == "0" then return left end
+		if isZero(right) then return right end
+		if isZero(left) then return left end
 
 		-- (-1) * (-1) -> 1
-		if left.kind == "num" and left.value == "-1"
-			and right.kind == "num" and right.value == "-1" then
+		if isNegOne(left)
+			and isNegOne(right) then
 			return Node.Num("1")
 		end
 
 		-- (-1) * n -> -n
-		if left.kind == "num" and left.value == "-1"
-			and right.kind == "num" then
+		if isNegOne(left)
+			and isNumeric(right) then
 			return Node.Num(tostring(-tonumber(right.value)))
 		end
 
 		-- x * (-1) -> -x
-		if right.kind == "num" and right.value == "-1" then
+		if isNegOne(right) then
 			return Node.Op("*", Node.Num("-1"), left)
 		end
 		
 		-- -1 * x -> -x
-		if left.kind == "num" and left.value == "-1" then
+		if isNegOne(left) then
 			return Node.Op("*", Node.Num("-1"), right)
 		end
 
 		-- -(-x) -> x
-		if left.kind == "num" and left.value == "-1"
+		if isNegOne(left)
 			and right.kind == "op" and right.op == "*"
-			and right.left.kind == "num" and right.left.value == "-1" then
+			and isNegOne(right.left) then
 			return right.right
 		end
 		
 		-- (-1) * (u / v) -> -(u / v)
-		if left.kind == "num" and left.value == "-1"
+		if isNegOne(left)
 			and right.kind == "op" and right.op == "/" then
 			return Node.Op("*", Node.Num("-1"), right)
 		end
 
 		-- (u / v) * (-1) -> -(u / v)
-		if right.kind == "num" and right.value == "-1"
+		if isNegOne(right)
 			and left.kind == "op" and left.op == "/" then
 			return Node.Op("*", Node.Num("-1"), left)
 		end
 
 		-- (-1) * (u * v) -> -(u * v)
-		if left.kind == "num" and left.value == "-1"
+		if isNegOne(left)
 			and right.kind == "op" and right.op == "*" then
 			return Node.Op("*", Node.Num("-1"), right)
 		end
 
 		-- (u * v) * (-1) -> -(u * v)
-		if right.kind == "num" and right.value == "-1"
+		if isNegOne(right)
 			and left.kind == "op" and left.op == "*" then
 			return Node.Op("*", Node.Num("-1"), left)
 		end
@@ -585,9 +622,9 @@ function Simplify._simplifyOp(node)
 
 		-- Combine numeric factors: (a * b) * c -> Num(a*b*c)
 		if left.kind == "op" and left.op == "*"
-			and left.left.kind == "num"
-			and left.right.kind == "num"
-			and right.kind == "num" then
+			and isNumeric(left.left)
+			and isNumeric(left.right)
+			and isNumeric(right) then
 
 			local prod = tonumber(left.left.value)
 				* tonumber(left.right.value)
@@ -598,8 +635,8 @@ function Simplify._simplifyOp(node)
 
 		-- (x * a) * b -> x * (a*b)
 		if left.kind == "op" and left.op == "*"
-			and left.right.kind == "num"
-			and right.kind == "num" then
+			and isNumeric(left.right)
+			and isNumeric(right) then
 
 			local prod = tonumber(left.right.value) * tonumber(right.value)
 			return Node.Op("*", left.left, Node.Num(tostring(prod)))
@@ -607,13 +644,13 @@ function Simplify._simplifyOp(node)
 
 		-- 1/x * x -> 1 (reverse order)
 		if left.kind == "op" and left.op == "/"
-			and left.left.kind == "num" and left.left.value == "1"
+			and isOne(left.left)
 			and Util.nodeEquals(left.right, right) then
 			return Node.Num("1")
 		end
 
 		-- Negation propagation: (-1)*(u+v) -> (-u) + (-v)
-		if left.kind == "num" and left.value == "-1"
+		if isNegOne(left)
 			and right.kind == "op" and right.op == "+" then
 
 			local negLeft = Node.Op("*", Node.Num("-1"), right.left)
@@ -637,34 +674,34 @@ function Simplify._simplifyOp(node)
 
 		-- (u * 1) / v -> u / v
 		if left.kind == "op" and left.op == "*" then
-			if left.right.kind == "num" and left.right.value == "1" then
+			if isOne(left.right)then
 				return Node.Op("/", left.left, right)
 			end
-			if left.left.kind == "num" and left.left.value == "1" then
+			if isOne(left.left) then
 				return Node.Op("/", left.right, right)
 			end
 		end
 		
 		-- (u * -1) / v -> -(u / v)
 		if left.kind == "op" and left.op == "*"
-			and left.right.kind == "num" and left.right.value == "-1" then
+			and isNegOne(left.right) then
 			return Node.Op("*", Node.Num("-1"), Node.Op("/", left.left, right))
 		end
 		
 		-- -(u) / v -> -(u / v)
 		if left.kind == "op" and left.op == "*"
-			and left.left.kind == "num" and left.left.value == "-1" then
+			and isNegOne(left.left) then
 			return Node.Op("*", Node.Num("-1"), Node.Op("/", left.right, right))
 		end
 
 		-- u / -(v) -> -(u / v)
 		if right.kind == "op" and right.op == "*"
-			and right.left.kind == "num" and right.left.value == "-1" then
+			and isNegOne(right.left) then
 			return Node.Op("*", Node.Num("-1"), Node.Op("/", left, right.right))
 		end
 
 		-- x / -y = -(x / y)
-		if right.kind == "num" and right.value == "-1" then
+		if isNegOne(right) then
 			return Node.Op("*", Node.Num("-1"), Node.Op("/", left, Node.Num("1")))
 		end
 
@@ -673,13 +710,13 @@ function Simplify._simplifyOp(node)
 		-------------------------------------------------------
 
 		-- 1 / cos(x) -> sec(x)
-		if left.kind == "num" and left.value == "1"
+		if isOne(left)
 			and right.kind == "func" and right.name == "cos" then
 			return Node.Func("sec", {right.args[1]})
 		end
 
 		-- 1 / sin(x) -> csc(x)
-		if left.kind == "num" and left.value == "1"
+		if isOne(left)
 			and right.kind == "func" and right.name == "sin" then
 			return Node.Func("csc", {right.args[1]})
 		end
@@ -695,13 +732,13 @@ function Simplify._simplifyOp(node)
 		-------------------------------------------------------
 
 		-- 1 / cosh(x) -> sech(x)
-		if left.kind == "num" and left.value == "1"
+		if isOne(left)
 			and right.kind == "func" and right.name == "cosh" then
 			return Node.Func("sech", {right.args[1]})
 		end
 
 		-- 1 / sinh(x) -> csch(x)
-		if left.kind == "num" and left.value == "1"
+		if isOne(left)
 			and right.kind == "func" and right.name == "sinh" then
 			return Node.Func("csch", {right.args[1]})
 		end
@@ -723,24 +760,24 @@ function Simplify._simplifyOp(node)
 	-------------------------------------------------------
 	if op == "^" then
 		-- x^1 -> x
-		if right.kind == "num" and right.value == "1" then
+		if isOne(right) then
 			return left
 		end
 
 		-- x^0 -> 1
-		if right.kind == "num" and right.value == "0" then
+		if isZero(right) then
 			return Node.Num("1")
 		end
 
 		-- x^(-1) -> 1/x
-		if right.kind == "num" and right.value == "-1" then
+		if isNegOne(right) then
 			return Node.Op("/", Node.Num("1"), left)
 		end
 
 		-- (x^a)^b -> x^(a*b)
 		if left.kind == "op" and left.op == "^"
-			and right.kind == "num"
-			and left.right.kind == "num" then
+			and isNumeric(right)
+			and isNumeric(left.right) then
 
 			local newExp = tonumber(left.right.value) * tonumber(right.value)
 			return Node.Op("^", left.left, Node.Num(tostring(newExp)))
@@ -759,33 +796,61 @@ end
 
 --[[
     Constant folding helper.
-    Given an operator and two numeric literal strings (a, b),
-    evaluate the operation at simplification time and return
-    a new Num node containing the computed result.
 
-    Example:
-        ("+", "2", "3") -> Num("5")
-        ("*", "4", "7") -> Num("28")
+    Given an operator and two *numeric nodes* (Num or Rat),
+    evaluate the operation exactly in the rational domain.
 
-    If either operand cannot be converted to a number,
-    returns a normal Op node as a safe fallback.
+    Behavior:
+      - Converts both operands into rational form (n/d).
+      - Performs exact arithmetic:
+            +  -> (a/b) + (c/d)
+            -  -> (a/b) - (c/d)
+            *  -> (a/b) * (c/d)
+            /  -> (a/b) / (c/d)
+            ^  -> (a/b)^k   (only when exponent is an integer literal)
+      - Returns a new Rat node (which Node.Rat will reduce via gcd).
+      - If either operand is non-numeric, falls back to building an Op node.
+
+    Notes:
+      - This function now operates on *nodes*, not raw strings.
+      - Canonicalization (e.g., Rat(n,1) -> Num(n)) is handled by Canon.canonical.
 ]]
 function Simplify._foldConstants(op, a, b)
-	local na = tonumber(a)
-	local nb = tonumber(b)
+	-- Convert both operands to rational form
+	local na, da = toRat(a)
+	local nb, db = toRat(b)
 
+	-- If either is not numeric, fallback
 	if not na or not nb then
-		-- Should never happen, but safe fallback
-		return Node.Op(op, Node.Num(a), Node.Num(b))
+		return Node.Op(op, a, b)
 	end
 
-	if op == "+" then return Node.Num(tostring(na + nb)) end
-	if op == "-" then return Node.Num(tostring(na - nb)) end
-	if op == "*" then return Node.Num(tostring(na * nb)) end
-	if op == "/" then return Node.Num(tostring(na / nb)) end
-	if op == "^" then return Node.Num(tostring(na ^ nb)) end
+	if op == "+" then
+		return Node.Rat(na*db + nb*da, da*db)
+	end
 
-	return Node.Op(op, Node.Num(a), Node.Num(b))
+	if op == "-" then
+		return Node.Rat(na*db - nb*da, da*db)
+	end
+
+	if op == "*" then
+		return Node.Rat(na*nb, da*db)
+	end
+
+	if op == "/" then
+		return Node.Rat(na*db, da*nb)
+	end
+
+	if op == "^" then
+		-- Only allow rational ^ integer
+		if b.kind == "num" then
+			local k = tonumber(b.value)
+			return Node.Rat(na^k, da^k)
+		end
+	end
+
+	-- Fallback
+	return Node.Op(op, a, b)
 end
 
 -- The Simplifier sub-library.

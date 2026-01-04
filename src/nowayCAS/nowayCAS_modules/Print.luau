@@ -25,7 +25,15 @@ local unicodeConstants = {
 	tau = "τ",
 }
 
--- Wrap child in parentheses if needed
+-- Wraps the rational in paranthesis / brackets if rational
+local function wrapIfRat(node, s)
+	if node.kind == "rat" then
+		return "(" .. s .. ")"
+	end
+	return s
+end
+
+-- Wrap child in parentheses / brackets if needed
 local function maybeParen(child, parentOp, isRight)
 	if child.kind ~= "op" then
 		return Print._toString(child, parentOp)
@@ -79,6 +87,7 @@ end
 -- Checks if the node is a simple variable.
 local function isSimple(n)
 	return n.kind == "num"
+		or n.kind == "rat"
 		or n.kind == "var"
 		or n.kind == "func"
 		or n.kind == "const"
@@ -96,6 +105,10 @@ function Print._toString(node, parentOp)
 
 	if kind == "num" then
 		return node.value
+	end
+	
+	if kind == "rat" then
+		return tostring(node.num) .. "/" .. tostring(node.den)
 	end
 
 	if kind == "var" then
@@ -173,12 +186,16 @@ function Print._toString(node, parentOp)
 				local b = out[i]
 
 				-- number * variable -> 3x
-				if leftNode.kind == "num" and rightNode.kind == "var" then
-					result = a .. b
+				if (leftNode.kind == "num" or leftNode.kind == "rat")
+					and rightNode.kind == "var" then
+
+					result = wrapIfRat(leftNode, a) .. b
 
 					-- variable * number -> 3x
-				elseif leftNode.kind == "num" and isBareVar(rightNode) then
-					result = b .. a
+				elseif (leftNode.kind == "num" or leftNode.kind == "rat")
+					and isBareVar(rightNode) then
+
+					result = a .. wrapIfRat(rightNode, b)
 
 					-- variable * variable
 				elseif isBareVar(leftNode) and isBareVar(rightNode) then
@@ -191,11 +208,11 @@ function Print._toString(node, parentOp)
 					end
 					-- simple * composite -> x(...)
 				elseif isSimple(leftNode) and rightNode.kind == "op" then
-					result = a .. b
+					result = wrapIfRat(leftNode, a) .. b
 
 					-- composite * simple -> (... )x
 				elseif leftNode.kind == "op" and isSimple(rightNode) then
-					result = a .. b
+					result = a .. wrapIfRat(rightNode, b)
 
 					-- composite * composite -> (...)(...)
 				elseif leftNode.kind == "op" and rightNode.kind == "op" then
@@ -370,6 +387,20 @@ function Print._toLatex(node)
 	-------------------------------------------------------
 	if kind == "num" then
 		return node.value
+	end
+	
+	-------------------------------------------------------
+	-- Rationals
+	-------------------------------------------------------
+	if kind == "rat" then
+		local n, d = node.num, node.den
+		if d == 1 then
+			return tostring(n)
+		end
+		if n < 0 then
+			return "-\\frac{" .. tostring(-n) .. "}{" .. tostring(d) .. "}"
+		end
+		return "\\frac{" .. tostring(n) .. "}{" .. tostring(d) .. "}"
 	end
 
 	-------------------------------------------------------

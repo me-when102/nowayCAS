@@ -5,6 +5,8 @@ local Factor = {}
 -- Facorizes expressions.
 -- May be one of the advanced + difficult modules in here
 -------------------------------------------------------
+-- TODO:
+-- Implement rational support
 
 local Canon = require(script.Parent.Canon)
 local Simplify = require(script.Parent.Simplify)

@@ -215,7 +215,7 @@ function Rewrite._matchACSeq(pattern, node, bindings)
 			local slice = {}
 
 			for _, n in ipairs(nList) do
-				if seqKind == "num" and n.kind ~= "num" then
+				if seqKind == "num" and not (n.kind == "num" or n.kind == "rat") then
 					return nil
 				elseif seqKind == "var" and n.kind ~= "var" then
 					return nil
@@ -338,7 +338,7 @@ function Rewrite._match(pattern, node, bindings)
 
 		-- Enforce type constraints based on wildcard kind
 		local kind = classifySingleWildcard(key)
-		if kind == "num" and node.kind ~= "num" then
+		if kind == "num" and not (node.kind == "num" or node.kind == "rat") then
 			return nil
 		elseif kind == "var" and node.kind ~= "var" then
 			return nil
@@ -360,7 +360,13 @@ function Rewrite._match(pattern, node, bindings)
 	if pattern.kind ~= node.kind then return nil end
 
 	if pattern.kind == "num" then
-		return (pattern.value == node.value) and bindings or nil
+		if node.kind == "num" then
+			return (pattern.value == node.value) and bindings or nil
+		elseif node.kind == "rat" then
+			return (node.num == tonumber(pattern.value) and node.den == 1) and bindings or nil
+		else
+			return nil
+		end
 	end
 
 	if pattern.kind == "var" then
@@ -411,6 +417,11 @@ function Rewrite.substitutePattern(node, bindings)
 	-- Numbers unchanged
 	if kind == "num" then
 		return node
+	end
+	
+	-- Rationals unchanged
+	if kind == "rat" then 
+		return node 
 	end
 
 	-- Function: substitute args

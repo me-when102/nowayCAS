@@ -42,6 +42,50 @@ function Node.Num(n)
 	return node
 end
 
+-- Great Common Divisor
+-- You are not getting depended on Util.
+local function gcd(a, b)
+	while b ~= 0 do
+		a, b = b, a % b
+	end
+	return a
+end
+
+-- Constructs a node as a rational number a/b.
+function Node.Rat(n, d)
+	-- Normalize inputs
+	n = tonumber(n)
+	d = tonumber(d)
+
+	if d == 0 then
+		error("Node.Rat: denominator cannot be zero")
+	end
+
+	-- Normalize sign: denominator always positive
+	if d < 0 then
+		n = -n
+		d = -d
+	end
+
+	-- Reduce by gcd
+	local g = gcd(math.abs(n), d)
+	n = n // g
+	d = d // g
+
+	-- Zero is always 0/1
+	if n == 0 then
+		d = 1
+	end
+
+	local key = hashNode("rat", n, d, "")
+	local existing = NODE_CACHE[key]
+	if existing then return existing end
+
+	local node = { kind = "rat", num = n, den = d }
+	NODE_CACHE[key] = node
+	return node
+end
+
 -- Constructs a node as a variable with a name.
 function Node.Var(name) 
 	local key = hashNode("var", name, "", "")

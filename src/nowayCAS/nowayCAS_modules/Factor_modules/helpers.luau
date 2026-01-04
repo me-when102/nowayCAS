@@ -210,6 +210,8 @@ function H.buildMul(f)
 	return result
 end
 
+-- these things to document (help)
+
 function H.buildAdd(nodes)
 	if #nodes == 0 then
 		return Node.Num("0")
@@ -228,6 +230,17 @@ function H.normalizeRemainder(node)
 		n = Canon.canonical(Node.Op("+", n, Node.Num("0")))
 	end
 	return n
+end
+
+-- RATIONAL
+function H.getCoeff(node)
+	if node.kind == "num" then
+		return node.value, 1
+	elseif node.kind == "rat" then
+		return node.num, node.den
+	else
+		return nil
+	end
 end
 
 return H
