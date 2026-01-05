@@ -39,6 +39,7 @@ nowayCAS is a **full-featured symbolic engine** built from the ground up in pure
 
 - **Expression parsing** from strings → optimized **AST → DAG** representation (shared subexpressions for speed & memory)
 - **Natural math syntax** via operator overloading (`x^2 + 2*x + 1`)
+- **Equation support** as two expressions and one relation which can be manipulated.
 - **Symbolic manipulation**:
   - Assumption system (x is positive, negative, etc) with assigning, removing, and checking.
   - Simplification (algebraic identities, rational forms) integrated with assumptions
@@ -47,7 +48,7 @@ nowayCAS is a **full-featured symbolic engine** built from the ground up in pure
   - Variable/expression **substitution** (`:substitute({x: AST_node = 3})`)
 - **Evaluation**: Numerical results with parameter tables (`:eval({x=5})`)
 - **Extensibility**:
-  - Built-in functions & constants (sin, cos, pi, e, etc.)
+  - Built-in functions & constants (sin, cos, pi, tau, etc.)
   - **User-defined functions and constants**
 - **Output formats**:
   - `.toString()` → clean pretty-printed Unicode
