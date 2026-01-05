@@ -5,6 +5,7 @@ local tonumber = tonumber
 local UserFunctions = require(script.Parent.UserFunctions)
 local UserConstants = require(script.Parent.UserConstants)
 local Substitute = require(script.Parent.Substitute)
+local Util = require(script.Parent.Util)
 
 -------------------------------------------------------
 -- Evaluator
@@ -85,21 +86,14 @@ function Eval.eval(node, env)
 		-------------------------------------------------------
 		local def = UserFunctions.lookup(f)
 		if def then
-			-- Evaluate arguments
-			local evaluatedArgs = {}
-			for i, argNode in ipairs(node.args) do
-				evaluatedArgs[i] = argNode
-			end
-
-			-- Build substitution environment
+			-- Build substitution environment directly
 			local subEnv = {}
 			for i, param in ipairs(def.params) do
-				subEnv[param] = evaluatedArgs[i]
+				subEnv[param] = node.args[i]
 			end
 
 			-- Substitute + evaluate
-			local substituted = Substitute.apply(def.body, subEnv)
-			return Eval.eval(substituted, env)
+			return Eval.eval(Substitute.apply(def.body, subEnv), env)
 		end
 
 		-------------------------------------------------------
@@ -173,7 +167,10 @@ function Eval.eval(node, env)
 		-- Log
 		if f == "log10" then return math.log10(arg) end
 		if f == "log" then return math.log(arg, arg2) end
-
+		
+		-- Factorial
+		if f == "factorial" then return Util.factorial(arg) end
+		
 		error("nowayCAS.Eval: unsupported function '" .. f .. "'")
 
 		-------------------------------------------------------

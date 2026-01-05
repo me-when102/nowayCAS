@@ -120,7 +120,20 @@ function Print._toString(node, parentOp)
 	end
 	
 	if kind == "func" then
-
+		
+		-- Special case: factorial
+		if node.name == "factorial" then
+			local arg = node.args[1]
+			local inner = Print._toString(arg)
+			
+			-- Parenthesize if argument is not simple
+			if arg.kind == "op" or arg.kind == "func" then
+				inner = "(" .. inner .. ")"
+			end
+			
+			return inner .. "!"
+		end
+		
 		-- Convert each argument to string
 		local parts = {}
 		for i, a in ipairs(node.args) do
@@ -430,6 +443,19 @@ function Print._toLatex(node)
 		local name = node.name
 		local args = node.args
 		
+		-- Special case: factorial
+		if node.name == "factorial" then
+			local arg = node.args[1]
+			local inner = Print._toLatex(arg)
+
+			-- Parenthesize if needed
+			if arg.kind == "op" then
+				inner = "(" .. inner .. ")"
+			end
+
+			return inner .. "!"
+		end
+
 		-- Special case: log(a, x)
 		if name == "log" and #args == 2 then
 			local base = Print._toLatex(args[1])

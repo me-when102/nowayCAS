@@ -54,9 +54,9 @@ function Simplify.simplify(node)
 	if cached then
 		return cached
 	end
-	
+
 	--node = Canon.canonical(node)
-	
+
 	local simplified
 	if node.kind == "num" then
 		simplified = node
@@ -73,13 +73,13 @@ function Simplify.simplify(node)
 	else
 		error("Simplify: Unknown node kind '" .. tostring(node.kind) .. "'")
 	end
-	
+
 	-- Apply algebraic simplification.
 	simplified = Rewrite.apply(simplified, rules_algebraic.simplify)
-	
+
 	-- Canonicalize AFTER simplification
 	simplified = Canon.canonical(simplified)
-	
+
 	-- Store in memo table
 	SIMPLIFY_CACHE[node] = simplified
 	return simplified
@@ -108,6 +108,52 @@ local function isNumeric(n)
 	return n.kind == "num" or n.kind == "rat"
 end
 
+-- Simplify for Factorial
+local function simplifyFactorial(node)
+	-- Simplify the argument first
+	local arg = Simplify.simplify(node.args[1])
+
+	-- Rebuild node with simplified argument
+	node = Node.Func("factorial", { arg })
+
+	-- factorial of a numeric literal
+	if arg.kind == "num" then
+		local n = tonumber(arg.value)
+
+		-- Only simplify non-negative integers
+		if n and n >= 0 and n % 1 == 0 then
+			
+			-- 0! and 1! -> 1
+			if n == 0 or n == 1 then
+				return Node.Num("1")
+			end
+			
+			return Node.Num(tostring(Util.factorial(n)))
+		end
+
+		return node
+	end
+
+	-- factorial(factorial(n)) where inner is numeric
+	if arg.kind == "func" and arg.name == "factorial" then
+		local inner = arg.args[1]
+
+		if inner.kind == "num" then
+			local n = tonumber(inner.value)
+
+			if n and n >= 0 and n % 1 == 0 then
+				-- factorial(factorial(n)) → factorial(n!)
+				return Node.Func("factorial", {
+					Node.Num(tostring(Util.factorial(n)))
+				})
+			end
+		end
+	end
+
+	-- leave as factorial(arg)
+	return node
+end
+
 -- Simplifies the function node.
 function Simplify._simplifyFunc(node)
 	local name = node.name
@@ -125,12 +171,12 @@ function Simplify._simplifyFunc(node)
 
 	-- get arguments
 	local arg = newArgs[1]
-	
+
 	if not arg then
 		-- zero-arg function: nothing to do
 		return node
 	end
-	
+
 	-- get second argument, not guaranteed
 	local arg2 = newArgs[2]
 
@@ -274,7 +320,7 @@ function Simplify._simplifyFunc(node)
 	if name == "sqrt" and isOne(arg) then
 		return Node.Num("1")
 	end
-	
+
 	-- sqrt(x^2) -> x or -x or abs(x)
 	if name == "sqrt"
 		and arg.kind == "op"
@@ -297,7 +343,7 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 	-- Log Identities
 	-------------------------------------------------------
-	
+
 	-- log10(1) -> 0
 	if name == "log10" and isOne(arg) then
 		return Node.Num("0")
@@ -357,7 +403,7 @@ function Simplify._simplifyFunc(node)
 	if name == "abs" and isZero(arg) then
 		return Node.Num(0)
 	end
-	
+
 	-- abs(x) -> x or -x
 	if name == "abs" then
 		if arg.kind == "var" then
@@ -368,7 +414,7 @@ function Simplify._simplifyFunc(node)
 			end
 		end
 	end
-	
+
 	-- abs(-x) -> abs(x)
 	if name == "abs"
 		and arg.kind == "op"
@@ -418,6 +464,14 @@ function Simplify._simplifyFunc(node)
 		and arg.kind == "func"
 		and arg.name == "abs" then
 		return arg
+	end
+	
+	-------------------------------------------------------
+	-- Factorial
+	-------------------------------------------------------
+
+	if node.name == "factorial" then
+		return simplifyFactorial(node)
 	end
 
 	-------------------------------------------------------
@@ -492,9 +546,9 @@ function Simplify._simplifyOp(node)
 			local sum = tonumber(left.right.value) + tonumber(right.value)
 			return Node.Op("+", left.left, Node.Num(tostring(sum)))
 		end
-		
+
 		-- sin(x)^2 + cos(x)^2 -> 1
-		
+
 		-- checks if node == sin(x)^2
 		local function isSin2(node)
 			return node.kind == "op"
@@ -504,7 +558,7 @@ function Simplify._simplifyOp(node)
 				and node.right.kind == "num"
 				and node.right.value == "2"
 		end
-		
+
 		-- checks if node == cos(x)^2
 		local function isCos2(node)
 			return node.kind == "op"
@@ -535,7 +589,7 @@ function Simplify._simplifyOp(node)
 
 			return Node.Op("-", left, right.right)
 		end
-		
+
 		-- (-1)*x + y -> y - x
 		if left.kind == "op" and left.op == "*"
 			and isNegOne(left.left) then
@@ -598,7 +652,7 @@ function Simplify._simplifyOp(node)
 		if isNegOne(right) then
 			return Node.Op("*", Node.Num("-1"), left)
 		end
-		
+
 		-- -1 * x -> -x
 		if isNegOne(left) then
 			return Node.Op("*", Node.Num("-1"), right)
@@ -610,7 +664,7 @@ function Simplify._simplifyOp(node)
 			and isNegOne(right.left) then
 			return right.right
 		end
-		
+
 		-- (-1) * (u / v) -> -(u / v)
 		if isNegOne(left)
 			and right.kind == "op" and right.op == "/" then
@@ -634,7 +688,7 @@ function Simplify._simplifyOp(node)
 			and left.kind == "op" and left.op == "*" then
 			return Node.Op("*", Node.Num("-1"), left)
 		end
-		
+
 		-- Flatten right: x * (y * z) -> (x * y * z)
 		if right.kind == "op" and right.op == "*" then
 			return Node.Op("*",
@@ -702,7 +756,7 @@ function Simplify._simplifyOp(node)
 		-- First: simplify children
 		local left = Simplify.simplify(node.left)
 		local right = Simplify.simplify(node.right)
-		
+
 		-- x / x -> x if x ~= 0
 		if Util.nodeEquals(left, right) then
 			if left.kind == "var" and Assume.is(left, "nonzero") then
@@ -719,13 +773,13 @@ function Simplify._simplifyOp(node)
 				return Node.Op("/", left.right, right)
 			end
 		end
-		
+
 		-- (u * -1) / v -> -(u / v)
 		if left.kind == "op" and left.op == "*"
 			and isNegOne(left.right) then
 			return Node.Op("*", Node.Num("-1"), Node.Op("/", left.left, right))
 		end
-		
+
 		-- -(u) / v -> -(u / v)
 		if left.kind == "op" and left.op == "*"
 			and isNegOne(left.left) then

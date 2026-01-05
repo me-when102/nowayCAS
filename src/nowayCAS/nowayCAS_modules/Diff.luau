@@ -515,7 +515,16 @@ function Diff._diffFunc(node, var)
 	if f == "ceil" then
 		return Node.Num("0")
 	end
-
+	
+	-- d/dx sign(u) = 0 (almost everywhere)
+	if f == "sign" then
+		return Node.Num("0")
+	end
+	
+	-- d/dx factorial(u) = 0
+	if f == "factorial" then
+		return Node.Num("0")
+	end
 	-------------------------------------------------------
 	-- Unsupported
 	-------------------------------------------------------

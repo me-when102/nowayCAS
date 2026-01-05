@@ -11,7 +11,8 @@ local UserConstants = require(script.Parent.UserConstants)
 -- expression 	-> term (("+" | "-" ) term)*
 -- term 		-> factor (("*" | "/" | implicit) factor)*
 -- factor 		-> power
--- power 		-> primary ("^" power)?
+-- postfix 		-> primary ("!" )*
+-- power 		-> postfix ("^" power)?
 -- primary 		-> number
 --					| identifier
 --					| identifier "(" expression ")" -- function call
@@ -142,13 +143,30 @@ end
 -- power -> primary ("^" power)?
 -- Right-associative
 function Parser._parsePower(stream)
-	local node = Parser._parsePrimary(stream)
+	local node = Parser._parsePostfix(stream)
 
 	local tok = stream:peek()
 	if tok.kind == "operator" and tok.value == "^" then
 		stream:next()
 		local right = Parser._parsePower(stream)
 		node = Node.Op("^", node, right)
+	end
+
+	return node
+end
+
+-- postfix -> primary ("!")*
+function Parser._parsePostfix(stream)
+	local node = Parser._parsePrimary(stream)
+
+	while true do
+		local tok = stream:peek()
+		if tok.kind == "operator" and tok.value == "!" then
+			stream:next()
+			node = Node.Func("factorial", { node })
+		else
+			break
+		end
 	end
 
 	return node

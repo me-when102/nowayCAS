@@ -58,6 +58,15 @@ function Util.gcd(a, b)
 	return a
 end
 
+-- Factorial
+function Util.factorial(n)
+	local r = 1
+	for i = 2, n do
+		r *= i
+	end
+	return r
+end
+
 -- Build a variable or a constant.
 function Util.buildSymbol(name)
 	if name:sub(1,6) == "const:" then
