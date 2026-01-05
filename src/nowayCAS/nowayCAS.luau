@@ -1,15 +1,51 @@
 -- nowayCAS: a symbolic algebra system module in the nowayCAS library
 
 --[[
-
-	Core invariants:
-	    - All expressions are immutable trees.
-	    - Node kinds: "num", "var", "op", "func".
-	    - Operators are binary; functions are unary.
-	    - No node ever stores parent references.
-		- Unary minus is expressed as a multiplication node (left: -1, right: any)
-		- Rationals always contains integers.
-
+    The nowayCAS (Computer Algebra System) system:
+    
+        Invariants:
+            - All expressions are immutable trees (AST).
+            - Node kinds: "num", "var", "op", "func", "const", "rat".
+            - Operators are binary; functions are unary.
+            - No node ever stores parent references.
+            - Unary minus is expressed as a multiplication node (left: -1, right: expr).
+            - Rationals always contain integers (normalized, gcd=1, denominator>0).
+            - Canonicalization is total and idempotent.
+            - Commutative operators store operands in sorted, flattened form.
+            - Associative operators never nest.
+            - Functions never evaluate unless fully numeric.
+            - Equations are not expressions; they form a separate object type.
+            - Arithmetic on equations applies operations to both sides.
+            - Rewriting never mutates existing nodes; all transformations return new trees.
+            - Pretty-printing is pure and uses precedence rules without parent pointers.
+        
+        System:
+            Core:
+                Node.luau        -> AST constructors with DAG caching (no dependency)
+                Token.luau       -> Convert strings into tokens for the parser
+                Parser.luau      -> Convert tokens into AST expressions
+                Util.luau        -> Common helpers
+                Arithmetic.luau  -> Arithmetic between expressions
+                Equation.luau    -> Relational objects (lhs, rhs, rel)
+                
+            Expression transformers:
+                Canon.luau       -> Structural normalization (canonical forms)
+                Simplify.luau    -> Local simplifications and shortening
+                Rewrite.luau     -> Pattern-driven algebraic transformation
+                Substitute.luau  -> Replace variables with new expressions
+                Eval.luau    -> Evaluate expressions numerically with an environment
+                Factor.luau      -> Factor expressions using multiple techniques
+                Assume.luau      -> Assumptions system (domains, inequalities, etc.)
+                
+            Calculus:
+                Diff.luau        -> Derivatives
+            
+            User-defined:
+                UserConstants.luau -> User-defined constants
+                UserFunctions.luau -> User-defined functions
+                
+            Other:
+                Print.luau       -> Formatting and pretty-printing
 ]]
 
 -- the require chain
@@ -31,6 +67,7 @@ UserConstants = require(script.UserConstants)
 Assume = require(script.Assume)
 Equation = require(script.Equation)
 
+-- Expose rules for external API use.
 rules_expand = require(script.Rewrite.rules_expand)
 
 local nowayCAS = {
