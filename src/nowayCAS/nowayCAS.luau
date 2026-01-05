@@ -29,6 +29,7 @@ Arithmetic = require(script.Arithmetic)
 UserFunctions = require(script.UserFunctions)
 UserConstants = require(script.UserConstants)
 Assume = require(script.Assume)
+Equation = require(script.Equation)
 
 rules_expand = require(script.Rewrite.rules_expand)
 
@@ -46,7 +47,8 @@ local nowayCAS = {
 	Print = Print,
 	Arithmetic = Arithmetic,
 	UserFunctions = UserFunctions,
-	Assume = Assume
+	Assume = Assume,
+	Equation, Equation
 }
 
 -------------------------------------------------------
@@ -75,6 +77,10 @@ local tostring = tostring
 -- expression instance
 local Expression = {}
 Expression.__index = Expression
+
+-- equation instance
+local Equation = {}
+Equation.__index = Equation
 
 -- nowayCAS public API
 
@@ -204,9 +210,11 @@ end
 -- Restores previous assumptions afterward.
 -- Parameter tbl is a table with the key as the variable name and the value is a list of temporary assumptions.
 -- Eg: table = {x = {"integer", "positive"}, y = ...}
-function nowayCAS.withAssumptions(tbl, fn)
+
+-- doesn't work, commented for now.
+--[[function nowayCAS.withAssumptions(tbl, fn)
 	return Assume.with(tbl, fn)
-end
+end]]
 
 -- Returns true if the variable satisfies the property, directly or through implication.
 function nowayCAS.is(var, property)
@@ -319,6 +327,12 @@ end
 function Expression:varIs(var, property)
 	return nowayCAS.is(var, property)
 end
+
+-------------------------------------------------------
+-- Public API - Equation Objects
+-------------------------------------------------------
+
+-- TODO: equation external API
 
 -------------------------------------------------------
 -- Metamethods
