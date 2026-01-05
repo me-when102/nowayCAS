@@ -343,39 +343,41 @@ end
 -- Metamethods - Equation
 -------------------------------------------------------
 
--- Returns the expression converted into a pure string.
+-- TODO: polish Equation API
+
+-- Returns the equation converted into a pure string.
 function Equation.__tostring(a)
 	return a:toString()
 end
 
--- Returns an expression added by another thing.
+-- Returns an equation added by an expression.
 function Equation.__add(a, b)
 	return Equation.apply_op(a, "add", b)
 end
 
--- Returns an expression subtracted by another thing.
+-- Returns an equation subtracted by an expression.
 function Equation.__sub(a, b)
 	return Equation.apply_op(a, "sub", b)
 end
 
--- Returns an expression multiplied by another thing.
+-- Returns an equation multiplied by an expression.
 function Equation.__mul(a, b)
 	return Equation.apply_op(a, "mul", b)
 end
 
--- Returns an expression divided by another thing.
+-- Returns an equation divided by an expression.
 function Equation.__div(a, b)
 	return Equation.apply_op(a, "div", b)
 end
 
--- Returns an expression powered by another thing
+-- Returns an equation powered by an expression
 function Equation.__pow(a, b)
 	return Equation.apply_op(a, "pow", b)
 end
 
--- Returns the negated value of the expression.
+-- Returns the negated value of the equation.
 function Equation.__unm(a)
-	return Equation.swap()
+	return a:negate()
 end
 
 -------------------------------------------------------

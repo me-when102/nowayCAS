@@ -3,7 +3,6 @@ local Sum = require(script.Parent.sum)
 local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
 local Util = require(script.Parent.Parent.Util)
-local Print = require(script.Parent.Parent.Print)
 local Trace = require(script.Parent.trace)
 
 local tostring = tostring

@@ -56,13 +56,26 @@ local apply_op_dispatch = {
 
 -- Apply an arithmetic operation to both sides, symmetric in arguments.
 function Equation.apply_op(a, op, b)
-	-- If 'a' is not an equation, but 'b' is, swap them.
+	-- both sides are equations, combine lhs and rhs pairwise.
+	if getmetatable(a) == Equation and getmetatable(b) == Equation then
+		local f = apply_op_dispatch[op]
+		if not f then
+			error("Unknown arithmetic op: " .. tostring(op))
+		end
+
+		return Equation.new(
+			f(a.lhs, b.lhs),
+			f(a.rhs, b.rhs),
+			a.rel -- keep the relation of the left equation
+		)
+	end
+
+	-- only one is an equation, swap if needed.
 	if getmetatable(a) ~= Equation then
-		-- Now 'b' is the equation, and 'a' is the expr.
 		return Equation.apply_op(b, op, a)
 	end
 
-	-- At this point, 'a' is guaranteed to be an equation.
+	-- a is equation, b is expr, apply op to both sides.
 	local eq = a
 	local expr = b
 
@@ -90,6 +103,15 @@ end
 -- Swap the two expressions to opposite sides.
 function Equation:swap()
 	return Equation.new(self.rhs, self.lhs, flip_rel(self.rel))
+end
+
+-- Negates the equation.
+function Equation:negate()
+	return Equation.new(
+		Arithmetic.neg(self.lhs),
+		Arithmetic.neg(self.rhs),
+		self.rel
+	)
 end
 
 -- Converts the equation into a readable string.
