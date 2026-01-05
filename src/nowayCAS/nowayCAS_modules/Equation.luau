@@ -54,17 +54,27 @@ local apply_op_dispatch = {
 	pow = Arithmetic.pow,
 }
 
--- Apply an arithmetic operation to both sides
-function Equation:apply_op(op, expr)
+-- Apply an arithmetic operation to both sides, symmetric in arguments.
+function Equation.apply_op(a, op, b)
+	-- If 'a' is not an equation, but 'b' is, swap them.
+	if getmetatable(a) ~= Equation then
+		-- Now 'b' is the equation, and 'a' is the expr.
+		return Equation.apply_op(b, op, a)
+	end
+
+	-- At this point, 'a' is guaranteed to be an equation.
+	local eq = a
+	local expr = b
+
 	local f = apply_op_dispatch[op]
 	if not f then
 		error("Unknown arithmetic op: " .. tostring(op))
 	end
 
 	return Equation.new(
-		f(self.lhs, expr),
-		f(self.rhs, expr),
-		self.rel
+		f(eq.lhs, expr),
+		f(eq.rhs, expr),
+		eq.rel
 	)
 end
 

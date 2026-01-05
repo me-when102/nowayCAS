@@ -79,8 +79,8 @@ local Expression = {}
 Expression.__index = Expression
 
 -- equation instance
-local Equation = {}
-Equation.__index = Equation
+local EquationObj = {}
+EquationObj.__index = EquationObj
 
 -- nowayCAS public API
 
@@ -332,43 +332,107 @@ end
 -- Public API - Equation Objects
 -------------------------------------------------------
 
--- TODO: equation external API
+-- TODO: expose more API
+
+-- Creates a new equation.
+function nowayCAS.newEquation(lhsExpr, rhsExpr, rel)
+	return Equation.new(lhsExpr.node, rhsExpr.node, rel)
+end
 
 -------------------------------------------------------
--- Metamethods
+-- Metamethods - Equation
 -------------------------------------------------------
 
 -- Returns the expression converted into a pure string.
-function Expression:__tostring()
-	return nowayCAS.toString(self.node)
+function Equation.__tostring(a)
+	return a:toString()
+end
+
+-- Returns an expression added by another thing.
+function Equation.__add(a, b)
+	return Equation.apply_op(a, "add", b)
+end
+
+-- Returns an expression subtracted by another thing.
+function Equation.__sub(a, b)
+	return Equation.apply_op(a, "sub", b)
+end
+
+-- Returns an expression multiplied by another thing.
+function Equation.__mul(a, b)
+	return Equation.apply_op(a, "mul", b)
+end
+
+-- Returns an expression divided by another thing.
+function Equation.__div(a, b)
+	return Equation.apply_op(a, "div", b)
+end
+
+-- Returns an expression powered by another thing
+function Equation.__pow(a, b)
+	return Equation.apply_op(a, "pow", b)
+end
+
+-- Returns the negated value of the expression.
+function Equation.__unm(a)
+	return Equation.swap()
+end
+
+-------------------------------------------------------
+-- Metamethods - Expression
+-------------------------------------------------------
+
+-- Returns the expression converted into a pure string.
+function Expression.__tostring(a)
+	return nowayCAS.toString(a.node)
 end
 
 -- Returns an expression added by another thing.
 function Expression.__add(a, b)
+	if getmetatable(a) == Equation or getmetatable(b) == Equation then
+		return Equation.apply_op(b, "add", a)
+	end
+	
 	local result = nowayCAS.Arithmetic.add(a, b)
 	return Expression.new(result)
 end
 
 -- Returns an expression subtracted by another thing.
 function Expression.__sub(a, b)
+	if getmetatable(a) == Equation or getmetatable(b) == Equation then
+		return Equation.apply_op(b, "sub", a)
+	end
+	
 	local result = nowayCAS.Arithmetic.sub(a, b)
 	return Expression.new(result)
 end
 
 -- Returns an expression multiplied by another thing.
 function Expression.__mul(a, b)
+	if getmetatable(a) == Equation or getmetatable(b) == Equation then
+		return Equation.apply_op(b, "mul", a)
+	end
+	
 	local result = nowayCAS.Arithmetic.mul(a, b)
 	return Expression.new(result)
 end
 
 -- Returns an expression divided by another thing.
 function Expression.__div(a, b)
+	if getmetatable(a) == Equation or getmetatable(b) == Equation then
+		return Equation.apply_op(b, "div", a)
+	end
+
 	local result = nowayCAS.Arithmetic.div(a, b)
 	return Expression.new(result)
 end
 
 -- Returns an expression powered by another thing
 function Expression.__pow(a, b)
+	if getmetatable(a) == Equation or getmetatable(b) == Equation then
+		return Equation.apply_op(b, "pow", a)
+	end
+
 	local result = nowayCAS.Arithmetic.pow(a, b)
 	return Expression.new(result)
 end
