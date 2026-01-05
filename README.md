@@ -62,7 +62,7 @@ All of this runs natively in Roblox Studio - no external services needed.
 nowayCAS exposes a simple, expressive external API for parsing, manipulating, differentiating, simplifying, evaluating, and printing symbolic expressions. Everything begins with `nowayCAS.new(...)`, which parses a string into an immutable expression tree.
 
 
-### 1. Parsing Expressions
+### 1. Parsing Expressions and Equations
 
 ```lua
 -- Parse a string into an immutable expression tree
@@ -72,6 +72,9 @@ print(expr)                 --> 2x^2 + 3x - 5
 print(expr:toLatex())       --> 2x^{2} + 3x - 5
 print(expr:toDAGString())   --> DAG-style structural print
 
+-- Does also parse strings into equations.
+local eq = nowayCAS.new("8x^4 + 5x / sin(x) = ln(y) + 3")
+print(eq)                 --> 8x^4 + 5x / sin(x) = ln(y) + 3
 ```
 
 ### 2. Simplification, Expansion, Factorisation
