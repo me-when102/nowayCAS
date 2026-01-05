@@ -210,10 +210,9 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Enhance simplification by using strategies.
 - Add more factorizing techniques.
   - Rational-aware factorization.
-- Support equations (`x = y + 3`)
+- Extended quations System
   - Solve equations
   - Solve simultaneous questions
-  - Inequalities
 - Factorial (unary operator)
 - Sum and product
 - Polynomial-supported expansions and factorization
