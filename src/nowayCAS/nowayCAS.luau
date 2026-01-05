@@ -122,11 +122,24 @@ EquationObj.__index = EquationObj
 
 -- nowayCAS public API
 
--- Parses a string into an expression.
+-- Parses a string to an expression or an equation.
+-- If the string has a relation (=, >=, >, etc), it constructs an equation object
+-- Else, it constructs an expression object
 function nowayCAS.new(str)
-	local tokens = Token._tokenize(str)
-	local ast = Parser.parse(tokens)
-	return Expression.new(ast)
+	-- detect top-level relation
+	local lhs, rel, rhs = Util.detectRelation(str)
+
+	if rel then
+		-- parse each side as an expression
+		local leftExpr = nowayCAS.newExpression(lhs)
+		local rightExpr = nowayCAS.newExpression(rhs)
+
+		-- build equation
+		return Equation.new(leftExpr.node, rightExpr.node, rel)
+	end
+
+	-- normal expression if not equation
+	return nowayCAS.newExpression(str)
 end
 
 -- Returns the derivative of an AST with respect to a variable.
@@ -272,6 +285,13 @@ end
 -------------------------------------------------------
 -- Public API - Expression Objects
 -------------------------------------------------------
+
+-- Parses the string into a new expression.
+function nowayCAS.newExpression(str)
+	local tokens = Token._tokenize(str)
+	local ast = Parser.parse(tokens)
+	return Expression.new(ast)
+end
 
 -- Creates an expression.
 function Expression.new(node)

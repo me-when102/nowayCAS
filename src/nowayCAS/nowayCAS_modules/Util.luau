@@ -6,12 +6,16 @@ local Node = require(script.Parent.Node)
 -- Utility Helpers
 -------------------------------------------------------
 
+-------------------------------------------------------
+-- Nodes
+-------------------------------------------------------
+
 -- Checks if the instance is a node.
 function Util.isNode(x)
 	return type(x) == "table" and x.kind ~= nil
 end
 
--- Checks if the first node is equal to the second node.
+-- Checks if the first node is structurally identical to the second node.
 function Util.nodeEquals(a, b)
 	if a == b then return true end
 	if a.kind ~= b.kind then return false end
@@ -32,6 +36,8 @@ function Util.nodeEquals(a, b)
 	return false
 end
 
+-- Checks if two arrays of AST nodes are structurally identical.
+-- Each list must have the same length and every corresponding element
 function Util.nodeListEquals(a, b)
 	if #a ~= #b then
 		return false
@@ -44,27 +50,6 @@ function Util.nodeListEquals(a, b)
 	end
 
 	return true
-end
-
--- Great Common Divisor
-function Util.gcd(a, b)
-	a = math.floor(math.abs(a))
-	b = math.floor(math.abs(b))
-
-	while b ~= 0 do
-		a, b = b, a % b
-	end
-
-	return a
-end
-
--- Factorial
-function Util.factorial(n)
-	local r = 1
-	for i = 2, n do
-		r *= i
-	end
-	return r
 end
 
 -- Build a variable or a constant.
@@ -110,6 +95,80 @@ function Util.collectVars(node)
 
 	walk(node)
 	return out
+end
+
+-------------------------------------------------------
+-- Mathematical functions
+-------------------------------------------------------
+
+-- Great Common Divisor
+function Util.gcd(a, b)
+	a = math.floor(math.abs(a))
+	b = math.floor(math.abs(b))
+
+	while b ~= 0 do
+		a, b = b, a % b
+	end
+
+	return a
+end
+
+-- Factorial
+function Util.factorial(n)
+	local r = 1
+	for i = 2, n do
+		r *= i
+	end
+	return r
+end
+
+-------------------------------------------------------
+-- Equation Helpers
+-------------------------------------------------------
+
+-- Detect if the string has a relation and then split into two left and right expressions and one relation if found.
+function Util.detectRelation(str)
+	-- Relations to detect, ordered by length (longest first)
+	local relations = { "<=", ">=", "!=", "<", ">", "=" }
+
+	local depth = 0
+	local i = 1
+	local len = #str
+
+	while i <= len do
+		local c = str:sub(i, i)
+
+		-- Track parentheses depth
+		if c == "(" then
+			depth += 1
+		elseif c == ")" then
+			depth -= 1
+		end
+
+		-- Only detect relations at top level
+		if depth == 0 then
+			-- Try multi-character relations first
+			for _, rel in ipairs(relations) do
+				local rlen = #rel
+				if str:sub(i, i + rlen - 1) == rel then
+					-- Split into lhs, rhs
+					local lhs = str:sub(1, i - 1)
+					local rhs = str:sub(i + rlen)
+
+					-- Trim whitespace
+					lhs = lhs:match("^%s*(.-)%s*$")
+					rhs = rhs:match("^%s*(.-)%s*$")
+
+					return lhs, rel, rhs
+				end
+			end
+		end
+
+		i += 1
+	end
+
+	-- No top-level relation found
+	return nil
 end
 
 -- The Utility sub-library
