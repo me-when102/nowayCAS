@@ -369,12 +369,28 @@ end
 -- Public API - Equation Objects
 -------------------------------------------------------
 
--- TODO: expose more API
-
 -- Creates a new equation.
 function nowayCAS.newEquation(lhsExpr, rhsExpr, rel)
 	return Equation.new(lhsExpr.node, rhsExpr.node, rel)
 end
+
+-- Creates a new equal equation with two expressions.
+function nowayCAS.newEqual(lhs, rhs) return Equation.eq(lhs, rhs) end
+
+-- Creates a new not-equal equation with two expressions.
+function nowayCAS.newNotEqual(lhs, rhs) return Equation.neq(lhs, rhs) end
+
+-- Creates a new less-than equation with two expressions.
+function nowayCAS.newLessThan(lhs, rhs) return Equation.lt(lhs, rhs)  end
+
+-- Creates a new less-than-or-equal-to equation with two expressions.
+function nowayCAS.newLessThanOrEqual(lhs, rhs) return Equation.le(lhs, rhs) end
+
+-- Creates a new greater-than equation with two expressions.
+function nowayCAS.newGreaterThan(lhs, rhs) return Equation.gt(lhs, rhs)  end
+
+-- Creates a new greater-than-or-equal-to equation with two expressions.
+function nowayCAS.newGreaterThanOrEqual(lhs, rhs) return Equation.ge(lhs, rhs) end
 
 -------------------------------------------------------
 -- Metamethods - Equation
