@@ -7,6 +7,7 @@
             - All expressions are immutable trees (AST).
             - Node kinds: "num", "var", "op", "func", "const", "rat".
             - Operators are binary; functions are unary.
+            - Postfix operators are parsed into functions since they are unary.
             - No node ever stores parent references.
             - Unary minus is expressed as a multiplication node (left: -1, right: expr).
             - Rationals always contain integers (normalized, gcd=1, denominator>0).
