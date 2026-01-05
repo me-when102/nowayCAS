@@ -1,7 +1,7 @@
 local Equation = {}
 Equation.__index = Equation
 
-local Canon = require(script.Parent.Canon)
+local Simplify = require(script.Parent.Simplify)
 local Arithmetic = require(script.Parent.Arithmetic)
 local Print = require(script.Parent.Print)
 
@@ -12,9 +12,6 @@ local Print = require(script.Parent.Print)
 
 -- Creates a new equation with the left expression, right expression, and relation.
 function Equation.new(lhs, rhs, rel)
-	lhs = Canon.canonical(lhs)
-	rhs = Canon.canonical(rhs)
-
 	return setmetatable({
 		kind = "Equation",
 		lhs = lhs,
@@ -91,6 +88,15 @@ function Equation.apply_op(a, op, b)
 	)
 end
 
+-- Returns the equation in simplified form.
+function Equation:simplify()
+	return Equation.new(
+		Simplify.simplifyDeep(self.lhs),
+		Simplify.simplifyDeep(self.rhs),
+		self.rel
+	)
+end
+
 -- Swap the relation when they are swapped.
 local function flip_rel(rel)
 	if rel == "<"  then return ">" end
@@ -100,12 +106,12 @@ local function flip_rel(rel)
 	return rel -- == and !=
 end
 
--- Swap the two expressions to opposite sides.
+-- Swap two expressions to opposite sides.
 function Equation:swap()
 	return Equation.new(self.rhs, self.lhs, flip_rel(self.rel))
 end
 
--- Negates the equation.
+-- Returns the equation with both expressions negated.
 function Equation:negate()
 	return Equation.new(
 		Arithmetic.neg(self.lhs),
