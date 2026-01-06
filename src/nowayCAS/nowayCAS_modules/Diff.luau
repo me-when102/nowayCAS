@@ -87,7 +87,7 @@ function Diff._diffOp(node, var)
 			)
 		end
 
-		-- 2) General case: (u^v)' = u^v * (v' ln u + v u'/u)
+		-- General case: (u^v)' = u^v * (v' ln u + v u'/u)
 		return Node.Op("*",
 			Node.Op("^", u, v),
 			Node.Op("+",
