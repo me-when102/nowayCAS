@@ -45,6 +45,19 @@ function Substitute.apply(node, map)
 	if kind == "num" then
 		return node
 	end
+	
+	-- Complex numbers: recurse into real and imag
+	if kind == "complex" then
+		local newReal = Substitute.apply(node.real, map)
+		local newImag = Substitute.apply(node.imag, map)
+
+		-- If nothing changed, return original node
+		if newReal == node.real and newImag == node.imag then
+			return node
+		end
+
+		return Node.Complex(newReal, newImag)
+	end
 
 	-- Rationals unchanged
 	if kind == "rat" then 

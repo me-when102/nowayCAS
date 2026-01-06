@@ -86,6 +86,31 @@ function Node.Rat(n, d)
 	return node
 end
 
+-- Constructs a node as a complex number: real + imag*i
+function Node.Complex(real, imag)
+	-- real and imag must be numeric nodes (num or rat)
+	if real == nil or imag == nil then
+		error("Node.Complex: missing real or imaginary part")
+	end
+
+	-- Hash key: kind | real | imag
+	local key = hashNode("complex", real, imag, "")
+
+	local existing = NODE_CACHE[key]
+	if existing then
+		return existing
+	end
+
+	local node = {
+		kind = "complex",
+		real = real,   -- Node.Num or Node.Rat
+		imag = imag,   -- Node.Num or Node.Rat
+	}
+
+	NODE_CACHE[key] = node
+	return node
+end
+
 -- Constructs a node as a variable with a name.
 function Node.Var(name) 
 	local key = hashNode("var", name, "", "")

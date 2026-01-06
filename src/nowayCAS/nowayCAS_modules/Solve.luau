@@ -3,6 +3,7 @@ local Solve = {}
 local Node = require(script.Parent.Node)
 local Equation = require(script.Parent.Equation)
 local Canon = require(script.Parent.Canon)
+local Util = require(script.Parent.Util)
 
 -------------------------------------------------------
 -- Solver
@@ -35,7 +36,7 @@ local Canon = require(script.Parent.Canon)
 -- (future: factorization-based)
 -------------------------------------------------------
 
--- solve something right now
+-- Solve an expression or an equation.
 function Solve.solve(expr, var)
 	local eq = Solve.normalizeEquation(expr, var)
 	if eq.kind ~= "equation" or eq.rel ~= "==" then
@@ -55,6 +56,7 @@ function Solve.solve(expr, var)
 	end
 end
 
+-- Normalizes the equation in order to be solved
 function Solve.normalizeEquation(expr, var)
 	if expr.kind == "equation" then
 		local rel = expr.rel  -- e.g. "==", "<", "<=", ">", ">=", "!="
@@ -74,17 +76,154 @@ function Solve.normalizeEquation(expr, var)
 	end
 end
 
-function Solve.classifyEquation(eq, var)
-	-- TODO: polynomial extractor
-	return "other"
+-- Returns degree of polynomial in var, or nil if not a polynomial.
+function Solve._degree(expr, var)
+	local kind = expr.kind
+
+	if kind == "num" or kind == "rat" then
+		return 0
+	end
+
+	if kind == "var" then
+		if expr.name == var.name then
+			return 1
+		else
+			return 0
+		end
+	end
+
+	if kind == "op" then
+		local op = expr.op
+		local a, b = expr.left, expr.right
+
+		if op == "+" then
+			local da = Solve._degree(a, var)
+			local db = Solve._degree(b, var)
+			if not da or not db then return nil end
+			return math.max(da, db)
+
+		elseif op == "*" then
+			local da = Solve._degree(a, var)
+			local db = Solve._degree(b, var)
+			if not da or not db then return nil end
+			return da + db
+
+		elseif op == "^" then
+			-- Only allow var^n where n is a numeric literal
+			if a.kind == "var" and a.name == var.name and b.kind == "num" then
+				return tonumber(b.value)
+			else
+				return nil
+			end
+		end
+
+		return nil
+	end
+
+	-- Functions, constants, etc. are not polynomials
+	return nil
 end
 
+-- Determine what type is the equation
+function Solve.classifyEquation(eq, var)
+	local expr = eq.lhs
 
--- easy
-function Solve.solveLinear(eq, var) end
+	-- Try to extract polynomial degree
+	local degree = Solve._degree(expr, var)
+	if not degree then
+		return "other"
+	end
+
+	if degree == 1 then
+		return "linear"
+	elseif degree == 2 then
+		return "quadratic"
+	elseif degree >= 3 then
+		return "polynomial"
+	else
+		return "other"
+	end
+end
+
+-- Solve a linear equation
+function Solve.solveLinear(eq, var)
+	local coeffs = Util.collectCoefficients(eq.lhs, var)
+	if not coeffs then
+		return Solve.unknownSolve(eq, var)
+	end
+
+	local a = coeffs[1] or Node.Num("0")
+	local b = coeffs[0] or Node.Num("0")
+
+	-- a == 0 and b == 0 -> infinite solutions
+	if a.kind == "num" and a.value == "0" and b.kind == "num" and b.value == "0" then
+		return Solve.InfiniteSolutions()
+	end
+
+	-- a == 0 and b != 0 -> no solution
+	if a.kind == "num" and a.value == "0" then
+		return Solve.NoSolution
+	end
+
+	-- x = -b / a
+	local negb = Node.Op("*", Node.Num("-1"), b)
+	local sol = Node.Op("/", negb, a)
+
+	return Solve.solution({ [var.name] = Canon.canonical(sol) })
+end
 
 -- NO WAY! LET'S USE THE QUADRATIC FORMULA AND-
-function Solve.solveQuadratic(eq, var) end
+function Solve.solveQuadratic(eq, var)
+	local coeffs = Util.collectCoefficients(eq.lhs, var)
+	if not coeffs then
+		return Solve.unknownSolve(eq, var)
+	end
+
+	local a = coeffs[2] or Node.Num("0")
+	local b = coeffs[1] or Node.Num("0")
+	local c = coeffs[0] or Node.Num("0")
+
+	-- If a == 0, it's not quadratic -> fallback to linear
+	if a.kind == "num" and a.value == "0" then
+		return Solve.solveLinear(eq, var)
+	end
+
+	-- Build discriminant: b^2 - 4ac
+	local b2 = Node.Op("^", b, Node.Num("2"))
+	local fourac = Node.Op("*", Node.Num("4"), Node.Op("*", a, c))
+	local disc = Node.Op("-", b2, fourac)
+
+	-- sqrt(discriminant)
+	local sqrt_disc = Node.Func("sqrt", { disc })
+
+	-- -b
+	local negb = Node.Op("*", Node.Num("-1"), b)
+
+	-- denominator: 2a
+	local denom = Node.Op("*", Node.Num("2"), a)
+
+	-- Solutions:
+	-- (-b + sqrt(disc)) / (2a)
+	local sol1 = Node.Op("/",
+		Node.Op("+", negb, sqrt_disc),
+		denom
+	)
+
+	-- (-b - sqrt(disc)) / (2a)
+	local sol2 = Node.Op("/",
+		Node.Op("-", negb, sqrt_disc),
+		denom
+	)
+
+	-- Canonicalize both
+	sol1 = Canon.canonical(sol1)
+	sol2 = Canon.canonical(sol2)
+
+	return Solve.solutionSet({
+		Solve.solution({ [var.name] = sol1 }),
+		Solve.solution({ [var.name] = sol2 })
+	})
+end
 
 -- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 function Solve.solvePolynomial(eq, var) end
@@ -95,6 +234,7 @@ function Solve.solvePolynomial(eq, var) end
 -- Solution({ x = expr }, conditions)
 -- SolutionSet({ Solution, Solution, ... })
 -- NoSolution
+-- InfiniteSolutions
 -- UnknownSolve(expr, var)
 -------------------------------------------------------
 
@@ -105,6 +245,7 @@ function Solve.solution(bindings, conditions)
 		conditions = conditions
 	}
 end
+
 function Solve.solutionSet(list) 
 	return {
 		kind = "solutionset",
@@ -113,6 +254,7 @@ function Solve.solutionSet(list)
 end
 
 Solve.NoSolution = { kind = "nosolution" }
+Solve.InfiniteSolutions = { kind = "infinitesolutions" }
 
 function Solve.unknownSolve(expr, var) 
 	return {

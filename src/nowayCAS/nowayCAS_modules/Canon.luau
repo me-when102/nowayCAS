@@ -38,6 +38,11 @@ local function isVar(n)
 	return n.kind == "var"
 end
 
+-- check if node is complex
+local function isComplex(n)
+	return n.kind == "complex"
+end
+
 -- check if the node is rational.
 local function isRat(n)
 	return n.kind == "rat"
@@ -92,6 +97,8 @@ local function canonicalKey(node)
 		return "var:" .. node.name
 	elseif node.kind == "const" then
 		return "const:" .. node.name
+	elseif node.kind == "complex" then
+		return "complex(" .. canonicalKey(node.real) .. "," .. canonicalKey(node.imag) .. ")"
 	elseif node.kind == "func" then
 		local parts = { "func:", node.name, "(" }
 		for i, arg in ipairs(node.args) do
@@ -449,31 +456,14 @@ function Canon.canonical(node)
 		result = node
 
 	elseif kind == "func" then
-		-- Canonicalize each argument
-		local newArgs = {}
-		for i, a in ipairs(node.args) do
-			newArgs[i] = Canon.canonical(a)
-		end
-		
-		-- may be put into a separate function (_canonicalFunc) if another function is added here
-		
-		-- abs(x) -> x if x > 0
-		if node.name == "abs" and #newArgs == 1 then
-			local arg = newArgs[1]
-			if arg.kind == "var" then
-				if Assume.is(arg, "positive") then
-					return arg
-				elseif Assume.is(arg, "negative") then
-					return Node.Op("*", Node.Num("-1"), arg)
-				end
-			end
-		end
+		result = Canon._canonicalFunc(node)
 
-		return Node.Func(node.name, newArgs)
+	elseif kind == "complex" then
+		result = Canon._canonicalComplex(node)
 
 	elseif kind == "op" then
 		result = Canon._canonicalOp(node)
-		
+
 	elseif kind == "rat" then
 		result = Canon._canonicalRat(node)
 	else
@@ -482,6 +472,38 @@ function Canon.canonical(node)
 
 	CANON_CACHE[node] = result
 	return result
+end
+
+function Canon._canonicalFunc(node)
+	-- Canonicalize each argument
+	local newArgs = {}
+	for i, a in ipairs(node.args) do
+		newArgs[i] = Canon.canonical(a)
+	end
+
+	local name = node.name
+
+	-------------------------------------------------------
+	-- Special-case canonical rules for functions
+	-------------------------------------------------------
+
+	-- abs(x) -> x if x > 0
+	if name == "abs" and #newArgs == 1 then
+		local arg = newArgs[1]
+
+		if arg.kind == "var" then
+			if Assume.is(arg, "positive") then
+				return arg
+			elseif Assume.is(arg, "negative") then
+				return Node.Op("*", Node.Num("-1"), arg)
+			end
+		end
+	end
+
+	-------------------------------------------------------
+	-- Default: rebuild function node
+	-------------------------------------------------------
+	return Node.Func(name, newArgs)
 end
 
 -- Canonicalizes the operator
@@ -557,7 +579,7 @@ function Canon._canonicalOp(node)
 	-- DIVISION + RATIONAL CREATION
 	-------------------------------------------------------
 	if op == "/" then
-		
+
 		-- x/x -> 1 if x ~= 0
 		if canonicalKey(left) == canonicalKey(right) then
 			if left.kind == "var" and Assume.is(left, "nonzero") then
@@ -594,6 +616,33 @@ function Canon._canonicalOp(node)
 		-- Otherwise: symbolic division
 		return Node.Op("/", left, right)
 	end
+end
+
+-- Canonicalizes the complex number.
+function Canon._canonicalComplex(node)
+	-- Canonicalize children
+	local real = Canon.canonical(node.real)
+	local imag = Canon.canonical(node.imag)
+
+	-- Case 1: 0 + 0i → 0
+	if real.kind == "num" and real.value == "0"
+		and imag.kind == "num" and imag.value == "0" then
+		return Node.Num("0")
+	end
+
+	-- Case 2: a + 0i → a
+	if imag.kind == "num" and imag.value == "0" then
+		return real
+	end
+
+	-- Case 3: 0 + bi → b*i
+	if real.kind == "num" and real.value == "0" then
+		-- symbolic: b * i
+		return Node.Op("*", imag, Node.Const("i"))
+	end
+
+	-- Otherwise: keep as complex node
+	return Node.Complex(real, imag)
 end
 
 -- Canonicalizes the rational

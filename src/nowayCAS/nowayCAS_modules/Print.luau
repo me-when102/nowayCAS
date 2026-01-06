@@ -106,7 +106,7 @@ function Print._toString(node, parentOp)
 	if kind == "num" then
 		return node.value
 	end
-	
+
 	if kind == "rat" then
 		return tostring(node.num) .. "/" .. tostring(node.den)
 	end
@@ -114,26 +114,55 @@ function Print._toString(node, parentOp)
 	if kind == "var" then
 		return node.name
 	end
-	
+
 	if kind == "const" then
 		return unicodeConstants[node.name] or node.name
 	end
-	
+
+	if kind == "complex" then
+		local realStr = Print._toString(node.real)
+		local imagStr = Print._toString(node.imag)
+
+		-- imag part formatting
+		if imagStr == "1" then
+			imagStr = "i"
+		elseif imagStr == "-1" then
+			imagStr = "-i"
+		else
+			imagStr = imagStr .. "i"
+		end
+
+		-- cases:
+		-- a + bi
+		-- a - bi
+		-- bi
+		-- a
+		if realStr == "0" then
+			return imagStr
+		end
+
+		if node.imag.kind == "num" and node.imag.value:sub(1,1) == "-" then
+			return realStr .. " - " .. imagStr:sub(2)
+		end
+
+		return realStr .. " + " .. imagStr
+	end
+
 	if kind == "func" then
-		
+
 		-- Special case: factorial
 		if node.name == "factorial" then
 			local arg = node.args[1]
 			local inner = Print._toString(arg)
-			
+
 			-- Parenthesize if argument is not simple
 			if arg.kind == "op" or arg.kind == "func" then
 				inner = "(" .. inner .. ")"
 			end
-			
+
 			return inner .. "!"
 		end
-		
+
 		-- Convert each argument to string
 		local parts = {}
 		for i, a in ipairs(node.args) do
@@ -401,7 +430,7 @@ function Print._toLatex(node)
 	if kind == "num" then
 		return node.value
 	end
-	
+
 	-------------------------------------------------------
 	-- Rationals
 	-------------------------------------------------------
@@ -437,12 +466,40 @@ function Print._toLatex(node)
 	end
 
 	-------------------------------------------------------
+	-- Complex
+	-------------------------------------------------------
+	if kind == "complex" then
+		local realStr = Print._toLatex(node.real)
+		local imagStr = Print._toLatex(node.imag)
+
+		-- imag part formatting
+		if imagStr == "1" then
+			imagStr = "i"
+		elseif imagStr == "-1" then
+			imagStr = "-i"
+		else
+			imagStr = imagStr .. "i"
+		end
+
+		-- cases:
+		if realStr == "0" then
+			return imagStr
+		end
+
+		if node.imag.kind == "num" and node.imag.value:sub(1,1) == "-" then
+			return realStr .. " - " .. imagStr:sub(2)
+		end
+
+		return realStr .. " + " .. imagStr
+	end
+
+	-------------------------------------------------------
 	-- Functions
 	-------------------------------------------------------
 	if kind == "func" then
 		local name = node.name
 		local args = node.args
-		
+
 		-- Special case: factorial
 		if node.name == "factorial" then
 			local arg = node.args[1]
@@ -629,6 +686,9 @@ local function nodeToTable(node)
 		t.name = node.name
 	elseif node.kind == "const" then
 		t.name = node.name
+	elseif node.kind == "complex" then
+		t.real = nodeToTable(node.real)
+		t.imag = nodeToTable(node.imag)
 	elseif node.kind == "func" then
 		t.name = node.name
 		t.args = {}
@@ -647,36 +707,38 @@ end
 local function nodeToIndented(node, level, out)
 	level = level or 0
 	local indent = string.rep("  ", level)
+
 	if not node then
 		table_insert(out, indent .. "<nil>")
-		return
-	end
-	if node.kind == "num" then
+
+	elseif node.kind == "num" then
 		table_insert(out, indent .. ("Num value=%s"):format(tostring(node.value)))
-		return
-	end
-	if node.kind == "var" then
+
+	elseif node.kind == "var" then
 		table_insert(out, indent .. ("Var name=%s"):format(tostring(node.name)))
-		return
-	end
-	if node.kind == "const" then
+
+	elseif node.kind == "const" then
 		table_insert(out, indent .. ("Const name=%s"):format(tostring(node.name)))
-		return
-	end
-	if node.kind == "func" then
+
+	elseif node.kind == "complex" then
+		table_insert(out, indent .. "Complex")
+		nodeToIndented(node.real, level + 1, out)
+		nodeToIndented(node.imag, level + 1, out)
+
+	elseif node.kind == "func" then
 		table_insert(out, indent .. ("Func name=%s"):format(tostring(node.name)))
-		for i, a in ipairs(node.args) do
+		for _, a in ipairs(node.args) do
 			nodeToIndented(a, level + 1, out)
 		end
-		return
-	end
-	if node.kind == "op" then
+
+	elseif node.kind == "op" then
 		table_insert(out, indent .. ("Op %s"):format(tostring(node.op)))
 		nodeToIndented(node.left, level + 1, out)
 		nodeToIndented(node.right, level + 1, out)
-		return
+
+	else
+		table_insert(out, indent .. ("<unknown kind=%s>"):format(tostring(node.kind)))
 	end
-	table_insert(out, indent .. ("<unknown kind=%s>"):format(tostring(node.kind)))
 end
 
 -- Public API: returns a table and an indented string

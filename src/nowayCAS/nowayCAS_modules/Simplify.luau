@@ -55,8 +55,6 @@ function Simplify.simplify(node)
 		return cached
 	end
 
-	--node = Canon.canonical(node)
-
 	local simplified
 	if node.kind == "num" then
 		simplified = node
@@ -64,6 +62,8 @@ function Simplify.simplify(node)
 		simplified = node
 	elseif node.kind == "const" then
 		simplified = node
+	elseif node.kind == "complex" then
+		simplified = Simplify._simplifyComplex(node)
 	elseif node.kind == "rat" then
 		simplified = Canon.canonical(node)
 	elseif node.kind == "func" then
@@ -122,12 +122,12 @@ local function simplifyFactorial(node)
 
 		-- Only simplify non-negative integers
 		if n and n >= 0 and n % 1 == 0 then
-			
+
 			-- 0! and 1! -> 1
 			if n == 0 or n == 1 then
 				return Node.Num("1")
 			end
-			
+
 			return Node.Num(tostring(Util.factorial(n)))
 		end
 
@@ -142,7 +142,7 @@ local function simplifyFactorial(node)
 			local n = tonumber(inner.value)
 
 			if n and n >= 0 and n % 1 == 0 then
-				-- factorial(factorial(n)) → factorial(n!)
+				-- factorial(factorial(n)) -> factorial(n!)
 				return Node.Func("factorial", {
 					Node.Num(tostring(Util.factorial(n)))
 				})
@@ -465,7 +465,7 @@ function Simplify._simplifyFunc(node)
 		and arg.name == "abs" then
 		return arg
 	end
-	
+
 	-------------------------------------------------------
 	-- Factorial
 	-------------------------------------------------------
@@ -600,6 +600,14 @@ function Simplify._simplifyOp(node)
 		if right.kind == "op" and right.op == "*"
 			and isNegOne(right.left) then
 			return Node.Op("-", left, right.right)
+		end
+
+		-- (a + bi) + (c + di)
+		if left.kind == "complex" and right.kind == "complex" then
+			return Node.Complex(
+				Node.Op("+", left.real, right.real),
+				Node.Op("+", left.imag, right.imag)
+			)
 		end
 	end
 
@@ -746,6 +754,34 @@ function Simplify._simplifyOp(node)
 				Simplify.simplify(negRight)
 			)
 		end
+
+		-- x * i
+		if right.kind == "const" and right.name == "i" then
+			return Node.Complex(Node.Num("0"), left)
+		end
+
+		-- i * x
+		if left.kind == "const" and left.name == "i" then
+			return Node.Complex(Node.Num("0"), right)
+		end
+
+		if left.kind == "const" and left.name == "i"
+			and right.kind == "const" and right.name == "i" then
+			return Node.Num("-1")
+		end
+
+		-- (a + bi) * (c + di)
+		if left.kind == "complex" and right.kind == "complex" then
+			local ac = Node.Op("*", left.real, right.real)
+			local bd = Node.Op("*", left.imag, right.imag)
+			local ad = Node.Op("*", left.real, right.imag)
+			local bc = Node.Op("*", left.imag, right.real)
+
+			return Node.Complex(
+				Node.Op("-", ac, bd),
+				Node.Op("+", ad, bc)
+			)
+		end
 	end
 
 	-------------------------------------------------------
@@ -884,6 +920,31 @@ function Simplify._simplifyOp(node)
 	end
 
 	return Node.Op(op, left, right)
+end
+
+-- Simplifies the complex number
+function Simplify._simplifyComplex(node)
+	local real = Simplify.simplify(node.real)
+	local imag = Simplify.simplify(node.imag)
+
+	-- 0 + 0i -> 0
+	if real.kind == "num" and real.value == "0"
+		and imag.kind == "num" and imag.value == "0" then
+		return Node.Num("0")
+	end
+
+	-- a + 0i -> a
+	if imag.kind == "num" and imag.value == "0" then
+		return real
+	end
+
+	-- 0 + bi -> b*i
+	if real.kind == "num" and real.value == "0" then
+		return Node.Op("*", imag, Node.Const("i"))
+	end
+
+	-- Otherwise keep as complex node
+	return Node.Complex(real, imag)
 end
 
 --[[

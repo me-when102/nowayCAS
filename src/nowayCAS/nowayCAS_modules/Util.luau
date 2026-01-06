@@ -97,6 +97,89 @@ function Util.collectVars(node)
 	return out
 end
 
+-- Collect polynomial coefficients in var
+-- Returns a table: degree -> coefficient expression
+-- or nil if not a polynomial.
+function Util.collectCoefficients(expr, var)
+	local function collect(node)
+		local kind = node.kind
+
+		-- Constant
+		if kind == "num" or kind == "rat" then
+			return { [0] = node }
+		end
+
+		-- Variable
+		if kind == "var" then
+			if node.name == var.name then
+				return { [1] = Node.Num("1") }
+			else
+				return { [0] = node }
+			end
+		end
+
+		-- Operator
+		if kind == "op" then
+			local op = node.op
+			local a, b = node.left, node.right
+
+			if op == "+" then
+				local ca = collect(a)
+				local cb = collect(b)
+				if not ca or not cb then return nil end
+
+				local out = {}
+				for d, coeff in pairs(ca) do out[d] = coeff end
+				for d, coeff in pairs(cb) do
+					if out[d] then
+						out[d] = Node.Op("+", out[d], coeff)
+					else
+						out[d] = coeff
+					end
+				end
+				return out
+			end
+
+			if op == "*" then
+				local ca = collect(a)
+				local cb = collect(b)
+				if not ca or not cb then return nil end
+
+				local out = {}
+				for da, ca_val in pairs(ca) do
+					for db, cb_val in pairs(cb) do
+						local deg = da + db
+						local prod = Node.Op("*", ca_val, cb_val)
+						if out[deg] then
+							out[deg] = Node.Op("+", out[deg], prod)
+						else
+							out[deg] = prod
+						end
+					end
+				end
+				return out
+			end
+
+			if op == "^" then
+				-- Only allow var^n where n is numeric
+				if a.kind == "var" and a.name == var.name and b.kind == "num" then
+					local n = tonumber(b.value)
+					if not n or n < 0 then return nil end
+					return { [n] = Node.Num("1") }
+				end
+				return nil
+			end
+
+			return nil
+		end
+
+		-- Functions, constants, etc. are not polynomials
+		return nil
+	end
+
+	return collect(expr)
+end
+
 -------------------------------------------------------
 -- Mathematical functions
 -------------------------------------------------------

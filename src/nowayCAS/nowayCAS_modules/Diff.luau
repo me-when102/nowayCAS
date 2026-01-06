@@ -14,6 +14,13 @@ local tonumber = tonumber
 -- Returns a new AST node (never mutates).
 -------------------------------------------------------
 
+-- TODO: Complex Analysis Extensions
+-- Derivatives of explicitly complex functions
+-- Complex logarithm and branch-aware derivatives
+-- Support for Wirtinger derviatives
+-- Domain-sensitive simplification after differentiation
+-- optional extensions into full complex analysis territory
+
 -- Computes the dervative of a node with respect to a variable.
 function Diff.diff(node, var)
 	local key = node
@@ -35,6 +42,11 @@ function Diff.diff(node, var)
 		result = Diff._diffFunc(node, var)
 	elseif node.kind == "const" then
 		result = Node.Num("0")
+	elseif node.kind == "complex" then
+		-- d/dx (a + bi) = (da/dx) + (db/dx)i
+		local dReal = Diff.diff(node.real, var)
+		local dImag = Diff.diff(node.imag, var)
+		result = Node.Complex(dReal, dImag)
 	else
 		error("Diff: Unknown node kind '" .. tostring(node.kind) .. "'")
 	end
@@ -513,12 +525,12 @@ function Diff._diffFunc(node, var)
 	if f == "ceil" then
 		return Node.Num("0")
 	end
-	
+
 	-- d/dx sign(u) = 0 (almost everywhere)
 	if f == "sign" then
 		return Node.Num("0")
 	end
-	
+
 	-- d/dx factorial(u) = 0
 	if f == "factorial" then
 		return Node.Num("0")
