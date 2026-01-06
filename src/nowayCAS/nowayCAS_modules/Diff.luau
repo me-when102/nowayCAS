@@ -108,8 +108,6 @@ function Diff._diffFunc(node, var)
 
 	local args = node.args
 
-	-- Differentiates a function node using the chain rule and built-in function derivatives.
-
 	-------------------------------------------------------
 	-- User-defined Functions
 	-------------------------------------------------------
