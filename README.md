@@ -217,7 +217,6 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Extended quations System
   - Solve equations
   - Solve simultaneous questions
-- Factorial (unary operator)
 - Sum and product
 - Polynomial-supported expansions and factorization
 - Calculus and other things for the calculus suite
