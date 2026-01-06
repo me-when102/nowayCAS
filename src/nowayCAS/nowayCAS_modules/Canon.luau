@@ -109,28 +109,6 @@ local function canonicalKey(node)
 	end
 end
 
--- Sort nodes for canonical ordering
--- Variables alphabetically, numbers last
-local function sortNodes(nodes)
-	table_sort(nodes, function(a, b)
-		if isVar(a) and isVar(b) then
-			return a.name < b.name
-		end
-		if isVar(a) and not isVar(b) then return true end
-		if not isVar(a) and isVar(b) then return false end
-
-		-- NEW: constants
-		if isConst(a) and isConst(b) then
-			return a.name < b.name
-		end
-		if isConst(a) and isNum(b) then return true end
-		if isNum(a) and isConst(b) then return false end
-
-		-- fallback: string compare
-		return canonicalKey(a.kind) < canonicalKey(b.kind)
-	end)
-end
-
 -- Combine numeric constants in addition
 local function combineAdd(nodes)
 	-- running rational sum: sum = sumNum / sumDen
@@ -378,7 +356,7 @@ local function combineLikeTerms(nodes)
 	local buckets = {}
 	local others = {}
 
-	-- 1. Bucket only *symbolic* monomials
+	-- Bucket only symbolic monomials
 	for _, n in ipairs(nodes) do
 		local m = monomialKey(n)
 
@@ -407,7 +385,7 @@ local function combineLikeTerms(nodes)
 		end
 	end
 
-	-- 2. Rebuild each combined symbolic monomial
+	-- Rebuild each combined symbolic monomial
 	for _, b in pairs(buckets) do
 		if not ratIsZero(b.coeff) then
 			local factors = {}
@@ -518,7 +496,7 @@ function Canon._canonicalOp(node)
 	if op == "+" then
 		local items = flatten("+", { left, right })
 		for i,n in ipairs(items) do items[i] = Canon.canonical(n) end
-		sortNodes(items)
+
 		items = combineAdd(items)
 		items = combineLikeTerms(items)
 
@@ -541,7 +519,7 @@ function Canon._canonicalOp(node)
 		for i, n in ipairs(items) do
 			items[i] = Canon.canonical(n)
 		end
-		sortNodes(items)
+
 		items = combineMul(items)
 
 		if #items == 1 then
