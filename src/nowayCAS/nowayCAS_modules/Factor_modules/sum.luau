@@ -7,45 +7,62 @@ local Sum = {}
 
 local table_insert = table.insert
 local table_sort = table.sort
-
 local ipairs = ipairs
 
--- factor a sum node by extracting the greatest common factor and
--- returning common * (sum of remainders); returns original node if no nontrivial factor.
-function Sum.factorSum(node)
+-------------------------------------------------------
+-- Sum
+-- Extracts the greatest common factor from a sum.
+-- Returns the original node if no nontrivial factor exists.
+-------------------------------------------------------
 
+function Sum.factorSum(node)
+	-- Only sums can be factored here
 	if node.kind ~= "op" or node.op ~= "+" then
 		return node
 	end
 
+	-- Flatten the sum
 	local terms = {}
 	H.factor_flatten(node, "+", terms)
 	if #terms < 2 then
 		return node
 	end
 
+	-- Extract term descriptors
 	local extracted = {}
 	for _, t in ipairs(terms) do
 		table_insert(extracted, H.extractTerm(t))
 	end
 
+	-- Compute the greatest common factor
 	local factor = H.commonFactor(extracted)
 
+	-- If factor is trivial, return original
 	if factor.num == 1
 		and next(factor.varExp) == nil
 		and #factor.others == 0 then
 		return node
 	end
 
+	-- Build remainders
 	local newTerms = {}
-	for i, t in ipairs(extracted) do
-		local remainder = {}
-		remainder.num = t.num / factor.num
-		remainder.varExp = {}
+
+	for _, t in ipairs(extracted) do
+		local remainder = {
+			num = t.num / factor.num,
+			varExp = {},
+			others = {}
+		}
+
+		-- subtract exponents
 		for name, exp in pairs(t.varExp) do
-			remainder.varExp[name] = exp - (factor.varExp[name] or 0)
+			local newExp = exp - (factor.varExp[name] or 0)
+			if newExp ~= 0 then
+				remainder.varExp[name] = newExp
+			end
 		end
-		remainder.others = {}
+
+		-- remove matching "others"
 		for _, n in ipairs(t.others) do
 			local remove = false
 			for _, m in ipairs(factor.others) do
@@ -58,17 +75,18 @@ function Sum.factorSum(node)
 				table_insert(remainder.others, n)
 			end
 		end
-		local mulNode = H.buildMul(remainder)
-		table_insert(newTerms, Canon.canonical(mulNode))
+
+		local mulNode = Canon.canonical(H.buildMul(remainder))
+		table_insert(newTerms, mulNode)
 	end
 
-	table_sort(newTerms, function(a, b) return tostring(a) < tostring(b) end)
-
+	-- Build final product: common * (sum of remainders)
 	local common = Canon.canonical(H.buildMul(factor))
 	local distributed = Canon.canonical(H.buildAdd(newTerms))
+
 	local product = Canon.canonical(Node.Op("*", common, distributed))
 
-	-- ensure distributed side is a sum node for consistent comparisons
+	-- Ensure right side is a sum node
 	if product.kind == "op" and product.op == "*" then
 		local L, R = product.left, product.right
 		if not (R.kind == "op" and R.op == "+") then

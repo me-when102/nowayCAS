@@ -3,98 +3,135 @@ local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
 local Util = require(script.Parent.Parent.Util)
 
-local table_insert = table.insert
-
 local tonumber = tonumber
 local ipairs = ipairs
+local table_insert = table.insert
 
 local Bin = {}
 
--- return true if node represents x^2 (a power with numeric exponent 2)
-local function isSquareNode(n)
-	return n and n.kind == "op" and n.op == "^"
-		and n.right and n.right.kind == "num"
-		and tonumber(n.right.value) == 2
+-------------------------------------------------------
+-- Binomial
+-------------------------------------------------------
+
+-- Detect n = +-u^2, returning (true, u, sign)
+local function getSquareBaseSigned(n)
+	-- symbolic square: u^2
+	if n.kind == "op" and n.op == "^" then
+		if n.right.kind == "num" and tonumber(n.right.value) == 2 then
+			return true, n.left, 1
+		end
+	end
+
+	-- numeric square: +-k
+	if n.kind == "num" then
+		local v = tonumber(n.value)
+		if v then
+			local r = math.sqrt(math.abs(v))
+			if r == math.floor(r) then
+				local base = Node.Num(tostring(r))
+				local sign = (v >= 0) and 1 or -1
+				return true, base, sign
+			end
+		end
+	end
+
+	return false, nil, nil
 end
 
--- attempt to factor a two-term (or flattened sum) node using
--- difference-of-square or perfect-square-trinomial patterns; return factored node
+-- Build (u - v)(u + v)
+local function diffOfSquares(u, v)
+    return Canon.canonical(
+        Node.Op("*",
+            Node.Op("-", u, v),
+            Node.Op("+", u, v)
+        )
+    )
+end
+
+-- Build (u +- v)^2
+local function perfectSquare(u, v, sign)
+    local inner = Node.Op(sign, u, v)
+    return Canon.canonical(Node.Op("^", inner, Node.Num("2")))
+end
+
+-- Factorizes the node in binomial if possible.
 function Bin.factorBinomial(node)
-	if node.kind ~= "op" or (node.op ~= "+" and node.op ~= "-") then
-		return nil
-	end
+    -- Only sums or differences can be binomials/trinomials
+    if node.kind ~= "op" or (node.op ~= "+" and node.op ~= "-") then
+        return nil
+    end
 
-	local terms = {}
-	if node.op == "-" then
-		terms[1] = node.left
-		terms[2] = node.right
-	else
-		H.factor_flatten(node, "+", terms)
-	end
+    -- Flatten into terms
+    local terms = {}
+    if node.op == "-" then
+        terms[1] = node.left
+        terms[2] = Node.Op("*", Node.Num("-1"), node.right)
+    else
+        H.factor_flatten(node, "+", terms)
+    end
 
-	local extractedList = {}
+    -- Extract square bases
+	local squareTerms = {}
+	local others = {}
+
 	for _, t in ipairs(terms) do
-		table_insert(extractedList, { node = t, ex = H.extractTerm(t) })
-	end
-
-	-- difference of squares
-	for i = 1, #extractedList do
-		for j = i+1, #extractedList do
-			local Ai, Aj = extractedList[i], extractedList[j]
-			if isSquareNode(Ai.node) and isSquareNode(Aj.node) then
-				local sign_i = Ai.ex.num < 0 and -1 or 1
-				local sign_j = Aj.ex.num < 0 and -1 or 1
-				if sign_i + sign_j == 0 then
-					local u = Ai.node.left
-					local v = Aj.node.left
-					if sign_i < 0 then
-						return Node.Op("*", Node.Op("-", v, u), Node.Op("+", v, u))
-					else
-						return Node.Op("*", Node.Op("-", u, v), Node.Op("+", u, v))
-					end
-				end
-			end
-		end
-	end
-
-	-- perfect square trinomial
-	local squares = {}
-	local crossCandidates = {}
-	for _, item in ipairs(extractedList) do
-		if isSquareNode(item.node) then
-			table_insert(squares, item)
+		local isSq, base, sign = getSquareBaseSigned(t)
+		if isSq then
+			table_insert(squareTerms, { node = t, base = base, sign = sign })
 		else
-			table_insert(crossCandidates, item)
+			table_insert(others, t)
 		end
 	end
 
-	if #squares == 2 and #crossCandidates >= 1 then
-		for _, crossItem in ipairs(crossCandidates) do
-			local u = squares[1].node.left
-			local v = squares[2].node.left
-			local ex = crossItem.ex
-			if math.abs(ex.num) == 2 then
-				local ok = false
-				if u.kind == "var" and v.kind == "var" then
-					ok = (ex.varExp[u.name] == 1) and (ex.varExp[v.name] == 1)
-				else
-					local foundU, foundV = false, false
-					for _, o in ipairs(ex.others) do
-						if Util.nodeEquals(o, u) then foundU = true end
-						if Util.nodeEquals(o, v) then foundV = true end
-					end
-					ok = foundU and foundV
-				end
-				if ok then
-					local sign = (ex.num > 0) and "+" or "-"
-					local inner = Node.Op(sign, u, v)
-					return Node.Op("^", inner, Node.Num("2"))
-				end
-			end
-		end
-	end
+    -- Difference of squares: exactly 2 terms, both squares
+    if #terms == 2 and #squareTerms == 2 then
+        local A = squareTerms[1]
+        local B = squareTerms[2]
 
-	return nil
+        -- Check signs via extracted term
+        local exA = H.extractTerm(A.node)
+        local exB = H.extractTerm(B.node)
+
+        -- We want A - B or B - A
+        if exA.num > 0 and exB.num < 0 then
+            return diffOfSquares(A.base, B.base)
+        elseif exA.num < 0 and exB.num > 0 then
+            return diffOfSquares(B.base, A.base)
+        end
+    end
+
+    -- Perfect square trinomial: exactly 3 terms
+    if #terms == 3 and #squareTerms == 2 and #others == 1 then
+        local u = squareTerms[1].base
+        local v = squareTerms[2].base
+        local mid = others[1]
+
+        local ex = H.extractTerm(mid)
+
+        -- coefficient must be +-2
+        if math.abs(ex.num) == 2 then
+            -- Check mid term contains exactly u and v once
+            local ok = false
+
+            if u.kind == "var" and v.kind == "var" then
+                ok = (ex.varExp[u.name] == 1) and (ex.varExp[v.name] == 1)
+            else
+                local foundU, foundV = false, false
+                for _, o in ipairs(ex.others) do
+                    if Util.nodeEquals(o, u) then foundU = true end
+                    if Util.nodeEquals(o, v) then foundV = true end
+                end
+                ok = foundU and foundV
+            end
+
+            if ok then
+                local sign = (ex.num > 0) and "+" or "-"
+                return perfectSquare(u, v, sign)
+            end
+        end
+    end
+
+    return nil
 end
 
 return Bin

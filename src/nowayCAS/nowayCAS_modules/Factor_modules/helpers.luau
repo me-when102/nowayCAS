@@ -9,6 +9,10 @@ local table_insert = table.insert
 local ipairs = ipairs
 local type = type
 
+-------------------------------------------------------
+-- Factorization Helpers
+-------------------------------------------------------
+
 -- Compute the common factor descriptor for a list of term descriptors.
 -- Input: terms = { { num, varExp, others }, ... }
 -- Output: { num, varExp, others }
@@ -182,7 +186,7 @@ function H.buildMul(f)
 	local varNames = {}
 	for name, exp in pairs(f.varExp) do
 		if exp and exp > 0 then
-			table.insert(varNames, name)
+			table_insert(varNames, name)
 		end
 	end
 	table.sort(varNames)

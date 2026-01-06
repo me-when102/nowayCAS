@@ -66,9 +66,10 @@ local function factorAt(node)
 
 	-- fallback
 	if node.kind == "op" and node.op == "+" then
+		Trace.log("Factor Sum")
 		return Sum.factorSum(node)
 	end
-
+	Trace.log("No Factorization")
 	return node
 end
 
@@ -96,28 +97,14 @@ end
 -- Factorizes the node.
 -- Canonicalize, try pariwse common, top-down bilinear pass, then iterative bottom-up factoring loop.
 function Factor.factor(node)
+	node = Simplify.simplify(node)
+
+	-- one bottom-up factoring pass
+	node = mapNode(node, factorAt)
+
+	-- canonicalize once
 	node = Canon.canonical(node)
 
-	local common = Bil.factorByPairwiseCommon(node)
-	if common then return common end
-
-	-- One top-down pass to catch 4-term groupings before children are changed
-	node = mapNodeTopDown(node, function(n)
-		-- only attempt bilinear grouping here
-		return Bil.factorBilinearGrouping(n)
-	end)
-	node = Canon.canonical(node)
-
-	-- existing bottom-up iterative loop
-	local prev
-	repeat
-		prev = node
-		node = mapNode(node, factorAt)
-		node = Simplify.simplify(node)
-		node = Canon.canonical(node)
-	until Util.nodeEquals(node, prev)
-
-	node = Canon.canonical(node)
 	return node
 end
 

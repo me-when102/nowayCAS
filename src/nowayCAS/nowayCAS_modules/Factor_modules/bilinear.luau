@@ -14,6 +14,10 @@ local table_insert = table.insert
 
 local Bil = {}
 
+-------------------------------------------------------
+-- Bilinear
+-------------------------------------------------------
+
 -- all ways to split 4 items into two pairs for grouping checks
 local pairings = {
 	{{1,2}, {3,4}},
