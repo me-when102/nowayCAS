@@ -82,8 +82,10 @@ print(eq)                 --> 8x^4 + 5x / sin(x) = ln(y) + 3
 ```lua
 local e = nowayCAS.new("(x + 2)(x - 2)")
 
+local f = nowayCAS.new("a*c + a*d + b*c + b*d")
+
 print(e:expand())           --> x^2 - 4
-print(e:factor())           --> (x - 2)(x + 2)
+print(f:factor())           --> (a + b)(c + d)
 
 local e2 = nowayCAS.new("43x + 54x - (8 + 3)")
 print(e2:simplify())         --> 97x - 11

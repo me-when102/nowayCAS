@@ -67,27 +67,58 @@ rules_expand = {
 		return rebuildAssoc("+", products)
 	end),
 
-	-- (A + B + ...) * (C + D + ...) → all pairwise products
+	-- (A + B + ...) * (C + D + ...) -> all pairwise products
 	RF("_x * _y", function(node, m)
-		local left  = node.left
+		local left = node.left
 		local right = node.right
 
-		-- Only expand if BOTH sides are sums
-		if not (left.kind == "op" and left.op == "+") then return node end
-		if not (right.kind == "op" and right.op == "+") then return node end
+		-- Collect terms with signs from an additive chain (+ or -)
+		local function getSignedTerms(expr)
+			local terms = {}
+			local function collect(n, sign)  -- sign: 1 or -1
+				if n.kind == "op" and (n.op == "+" or n.op == "-") then
+					collect(n.left, sign)
+					local rightSign = (n.op == "+") and sign or -sign
+					collect(n.right, rightSign)
+				else
+					-- Leaf term
+					local term = n
+					if sign == -1 then
+						-- Wrap in unary minus: 0 - term
+						term = Node.Op("-", Node.Num(0), n)
+					end
+					table.insert(terms, term)
+				end
+			end
+			collect(expr, 1)
+			return terms
+		end
 
-		local leftTerms  = childrenOf(left, "+")
-		local rightTerms = childrenOf(right, "+")
+		local leftTerms = getSignedTerms(left)
+		local rightTerms = getSignedTerms(right)
 
-		local out = {}
+		-- If neither side has multiple terms, no distribution needed
+		if #leftTerms <= 1 and #rightTerms <= 1 then
+			return node
+		end
+
+		local products = {}
 		for _, a in ipairs(leftTerms) do
 			for _, b in ipairs(rightTerms) do
-				table_insert(out, Node.Op("*", a, b))
+				table.insert(products, Node.Op("*", a, b))
 			end
 		end
 
-		return rebuildAssoc("+", out)
-	end)
+		-- Rebuild as associative +
+		if #products == 0 then
+			return Node.Num(0)
+		end
+		local result = products[1]
+		for i = 2, #products do
+			result = Node.Op("+", result, products[i])
+		end
+		return result
+	end),
 }
 
 return rules_expand
