@@ -1,5 +1,9 @@
 local Solve = {}
 
+local Node = require(script.Parent.Node)
+local Equation = require(script.Parent.Equation)
+local Canon = require(script.Parent.Canon)
+
 -------------------------------------------------------
 -- Solver
 --
@@ -32,16 +36,57 @@ local Solve = {}
 -------------------------------------------------------
 
 -- solve something right now
-function Solve.solve(expr, var) end
+function Solve.solve(expr, var)
+	local eq = Solve.normalizeEquation(expr, var)
+	if eq.kind ~= "equation" or eq.rel ~= "==" then
+		return Solve.unknownSolve(expr, var)
+	end
 
-function Solve.normalizeEquation(expr, var) end
+	local class = Solve.classifyEquation(eq, var)
 
-function Solve.classifyEquation(eq, var) end
+	if class == "linear" then
+		return Solve.solveLinear(eq, var)
+	elseif class == "quadratic" then
+		return Solve.solveQuadratic(eq, var)
+	elseif class == "polynomial" then
+		return Solve.solvePolynomial(eq, var)
+	else
+		return Solve.unknownSolve(expr, var)
+	end
+end
 
+function Solve.normalizeEquation(expr, var)
+	if expr.kind == "equation" then
+		local rel = expr.rel  -- e.g. "==", "<", "<=", ">", ">=", "!="
+
+		if rel == "==" then
+			-- Only equalities can be normalized to lhs - rhs = 0
+			local diff = Node.Op("-", expr.lhs, expr.rhs)
+			return Equation.new(Canon.canonical(diff), Node.Num("0"), "==")
+		else
+			-- Inequalities are not normalized; solver doesn't support them yet
+			return Solve.unknownSolve(expr, var)
+		end
+
+	else
+		-- Raw expression means expr = 0
+		return Equation.new(Canon.canonical(expr), Node.Num("0"), "==")
+	end
+end
+
+function Solve.classifyEquation(eq, var)
+	-- TODO: polynomial extractor
+	return "other"
+end
+
+
+-- easy
 function Solve.solveLinear(eq, var) end
 
+-- NO WAY! LET'S USE THE QUADRATIC FORMULA AND-
 function Solve.solveQuadratic(eq, var) end
 
+-- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 function Solve.solvePolynomial(eq, var) end
 
 -------------------------------------------------------
@@ -53,13 +98,28 @@ function Solve.solvePolynomial(eq, var) end
 -- UnknownSolve(expr, var)
 -------------------------------------------------------
 
-function Solve.solution(bindings, conditions) end
-function Solve.solutionSet(list) end
+function Solve.solution(bindings, conditions) 
+	return {
+		kind = "solution",
+		bindings = bindings,
+		conditions = conditions
+	}
+end
+function Solve.solutionSet(list) 
+	return {
+		kind = "solutionset",
+		list = list
+	}
+end
 
-Solve.NoSolution = ...
+Solve.NoSolution = { kind = "nosolution" }
 
-function Solve.unknownSolve(expr, var) end
+function Solve.unknownSolve(expr, var) 
+	return {
+		kind = "unknownsolve",
+		expr = expr,
+		var = var
+	}
+end
 
 return Solve
-
--- (I'll do this later, got bored today)

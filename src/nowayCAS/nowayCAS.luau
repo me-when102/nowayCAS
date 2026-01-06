@@ -6,9 +6,12 @@
         Invariants:
             - All expressions are immutable trees (AST).
             - Node kinds: "num", "var", "op", "func", "const", "rat".
+            - For operator node kinds, the operator is represented as a literal string with the symbol on it.
+            - For first-class objects, they have a { kind } that outputs their type in full with no captials.
             - Operators are binary; functions are unary.
             - Postfix operators are parsed into functions since they are unary.
             - No node ever stores parent references.
+            - Number nodes store their numeric value as a string literal and not a Lua number.
             - Unary minus is expressed as a multiplication node (left: -1, right: expr).
             - Rationals always contain integers (normalized, gcd=1, denominator>0).
             - Canonicalization is total and idempotent.
@@ -16,10 +19,14 @@
             - Associative operators never nest.
             - Functions never evaluate unless fully numeric.
             - Equations are not expressions; they form a separate object type.
+            - The relations of the equation are represented by their literal comparison operators in strings.
             - Arithmetic on equations applies operations to both sides.
             - Rewriting never mutates existing nodes; all transformations return new trees.
             - Pretty-printing is pure and uses precedence rules without parent pointers.
-        
+        	- Simplification never mutates nodes.
+			- Simplification always returns a new or original node.
+			- Simplification recursively simplifies children before applying rules.
+			
         System:
             Core:
                 Node.luau        -> AST constructors with DAG caching (no dependency)
@@ -295,7 +302,7 @@ end
 
 -- Creates an expression.
 function Expression.new(node)
-	return setmetatable({ node = node }, Expression)
+	return setmetatable({ kind = "expression", node = node }, Expression)
 end
 
 -- Returns the derivative of an expression with respect to a variable.

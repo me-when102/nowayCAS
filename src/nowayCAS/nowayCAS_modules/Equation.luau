@@ -13,7 +13,7 @@ local Print = require(script.Parent.Print)
 -- Creates a new equation with the left expression, right expression, and relation.
 function Equation.new(lhs, rhs, rel)
 	return setmetatable({
-		kind = "Equation",
+		kind = "equation",
 		lhs = lhs,
 		rhs = rhs,
 		rel = rel or "==",
