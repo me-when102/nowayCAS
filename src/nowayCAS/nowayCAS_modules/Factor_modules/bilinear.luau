@@ -25,7 +25,7 @@ local pairings = {
 function Bil.factorByPairwiseCommon(node)
 	if not (node and node.kind == "op" and node.op == "+") then return nil end
 
-	-- 1) Flatten and extract
+	-- Flatten and extract
 	local terms = {}
 	H.factor_flatten(node, "+", terms)
 	if #terms < 2 then return nil end
@@ -36,12 +36,12 @@ function Bil.factorByPairwiseCommon(node)
 		extracted[i].node = Canon.canonical(t)
 	end
 
-	-- 2) Collect candidate factors from all pairs (use commonFactor logic)
+	-- Collect candidate factors from all pairs (use commonFactor logic)
 	local candidateKeys = {}
 	local candidateNodes = {}
 	for i = 1, #extracted-1 do
 		for j = i+1, #extracted do
-			local cf = H.commonFactor({extracted[i], extracted[j]}) -- reuse your commonFactor
+			local cf = H.commonFactor({extracted[i], extracted[j]})
 			-- ignore trivial factor (1)
 			if not (cf.num == 1 and next(cf.varExp) == nil and #cf.others == 0) then
 				local key = tostring(Canon.canonical(H.buildMul(cf)))
@@ -51,7 +51,7 @@ function Bil.factorByPairwiseCommon(node)
 		end
 	end
 
-	-- 3) Score candidates by how many terms they divide
+	-- Score candidates by how many terms they divide
 	local scored = {}
 	for key, cf in pairs(candidateKeys) do
 		local count = 0
@@ -65,13 +65,13 @@ function Bil.factorByPairwiseCommon(node)
 
 	if #scored == 0 then return nil end
 
-	-- 4) Sort candidates by count desc, then by string length (prefer larger)
+	-- Sort candidates by count desc, then by string length (prefer larger)
 	table_sort(scored, function(a,b)
 		if a.count ~= b.count then return a.count > b.count end
 		return #a.key > #b.key
 	end)
 
-	-- 5) Try each candidate: build remainders for terms it divides and assemble product
+	-- Try each candidate: build remainders for terms it divides and assemble product
 	for _, cand in ipairs(scored) do
 		local Fdesc = cand.factor
 		local Fnode = Canon.canonical(H.buildMul(Fdesc))
