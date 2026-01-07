@@ -73,7 +73,9 @@
                 Parser.luau      -> Convert tokens into AST expressions
                 Util.luau        -> Common helpers
                 Arithmetic.luau  -> Arithmetic between expressions
+                Expression.luau  -> Node objects (node)
                 Equation.luau    -> Relational objects (lhs, rhs, rel)
+                Complex.luau 	 -> Complex number object model (numeric)
                 
             Expression transformers:
                 Canon.luau       -> Structural normalization (canonical forms)
@@ -83,7 +85,10 @@
                 Eval.luau    -> Evaluate expressions numerically with an environment
                 Factor.luau      -> Factor expressions using multiple techniques
                 Assume.luau      -> Assumptions system (domains, inequalities, etc.)
-                
+               
+            Solving:
+            	Solve.luau		 -> Equation solving engine
+            	
             Calculus:
                 Diff.luau        -> Derivatives
             
@@ -115,6 +120,7 @@ Assume = require(script.Assume)
 Equation = require(script.Equation)
 Expression = require(script.Expression)
 Solve = require(script.Solve)
+Complex = require(script.Complex)
 
 -- Expose rules for external API use.
 rules_expand = require(script.Rewrite.rules_expand)
@@ -124,6 +130,7 @@ local nowayCAS = {
 	Node = Node,
 	Token = Token,
 	Parser = Parser,
+	Canon = Canon,
 	Simplify = Simplify,
 	Diff = Diff,
 	Eval = Eval,
@@ -133,10 +140,12 @@ local nowayCAS = {
 	Print = Print,
 	Arithmetic = Arithmetic,
 	UserFunctions = UserFunctions,
+	UserConstants = UserConstants,
 	Assume = Assume,
 	Equation = Equation,
 	Expression = Expression,
-	Solve = Solve
+	Solve = Solve,
+	Complex = Complex
 }
 
 -------------------------------------------------------
