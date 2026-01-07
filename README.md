@@ -218,8 +218,8 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Enhance simplification by using strategies.
 - Add more factorizing techniques.
   - Rational-aware factorization.
-- Extended quations System
-  - Solve equations
+- Extended Equations System
+  - Support generalized polynomial solving.
   - Solve simultaneous questions
 - Sum and product
 - Polynomial-supported expansions and factorization
@@ -227,6 +227,7 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Add any remaining functions (`math.min` and `math.max`) missing in the library.
 - Complex Analysis Extensions
 - LaTeX to AST parsing.
+- Add safe guards.
 
 ### Long-Term
 - Rational function algebra

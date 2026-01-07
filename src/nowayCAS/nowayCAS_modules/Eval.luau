@@ -14,6 +14,95 @@ local Util = require(script.Parent.Util)
 -- Example: Eval.eval(ast, { x = 3 })
 -------------------------------------------------------
 
+-------------------------------------------------------
+-- Main Evaluation System
+-------------------------------------------------------
+
+-- Internal complex representation for Eval: { real = number, imag = number, _complex = true }
+
+local function isComplex(x)
+	return type(x) == "table" and x._complex == true
+end
+
+local function C(real, imag)
+	return { real = real, imag = imag, _complex = true }
+end
+
+local function toComplex(x)
+	if isComplex(x) then
+		return x
+	else
+		return C(x, 0)
+	end
+end
+
+local function complexAdd(a, b)
+	a, b = toComplex(a), toComplex(b)
+	return C(a.real + b.real, a.imag + b.imag)
+end
+
+local function complexSub(a, b)
+	a, b = toComplex(a), toComplex(b)
+	return C(a.real - b.real, a.imag - b.imag)
+end
+
+local function complexMul(a, b)
+	a, b = toComplex(a), toComplex(b)
+	return C(
+		a.real * b.real - a.imag * b.imag,
+		a.real * b.imag + a.imag * b.real
+	)
+end
+
+local function complexDiv(a, b)
+	a, b = toComplex(a), toComplex(b)
+	local denom = b.real * b.real + b.imag * b.imag
+	return C(
+		(a.real * b.real + a.imag * b.imag) / denom,
+		(a.imag * b.real - a.real * b.imag) / denom
+	)
+end
+
+local function complexPow(a, b)
+	-- For now: only support real exponent on complex base
+	a = toComplex(a)
+	if isComplex(b) then
+		error("nowayCAS.Eval: complex exponent not supported yet")
+	end
+	-- Convert to polar: a = r * e^(iθ), a^b = r^b * e^(i b θ)
+	local r = math.sqrt(a.real * a.real + a.imag * a.imag)
+	local theta = math.atan2(a.imag, a.real)
+	local rb = r ^ b
+	return C(
+		rb * math.cos(b * theta),
+		rb * math.sin(b * theta)
+	)
+end
+
+local function complexSqrt(x)
+	if isComplex(x) then
+		-- general complex sqrt
+		local r = math.sqrt(x.real * x.real + x.imag * x.imag)
+		local theta = math.atan2(x.imag, x.real) / 2
+		local root = math.sqrt(r)
+		return C(root * math.cos(theta), root * math.sin(theta))
+	else
+		-- real input
+		if x >= 0 then
+			return math.sqrt(x)
+		else
+			-- sqrt(-a) = i * sqrt(a)
+			local a = -x
+			local r = math.sqrt(a)
+			return C(0, r)
+		end
+	end
+end
+
+-------------------------------------------------------
+-- Main Evaluation System
+-------------------------------------------------------
+
 local BUILTIN_CONST = {
 	pi = math.pi,
 	phi = (1 + math.sqrt(5)) / 2,
@@ -106,11 +195,12 @@ function Eval.eval(node, env)
 		end
 
 		-- get arguments
-		local arg: number = args[1]
-		local arg2: number = args[2]
+		local arg = args[1]
+		local arg2 = args[2]
 
-		if type(arg) ~= "number" then
-			error("nowayCAS.Eval: function '" .. f .. "' expected numeric argument")
+		-- allow complex for sqrt only
+		if f ~= "sqrt" and isComplex(arg) then
+			error("nowayCAS.Eval: function '" .. f .. "' expected real argument")
 		end
 
 		-- Basic trig
@@ -158,7 +248,7 @@ function Eval.eval(node, env)
 		if f == "ln"   then return math.log(arg) end
 
 		-- Misc
-		if f == "sqrt" then return math.sqrt(arg) end
+		if f == "sqrt" then return complexSqrt(arg) end
 		if f == "abs"  then return math.abs(arg) end
 		if f == "floor" then return math.floor(arg) end
 		if f == "ceil"  then return math.ceil(arg) end
@@ -181,11 +271,40 @@ function Eval.eval(node, env)
 		local left = Eval.eval(node.left, env)
 		local right = Eval.eval(node.right, env)
 
-		if op == "+" then return left + right end
-		if op == "-" then return left - right end
-		if op == "*" then return left * right end
-		if op == "/" then return left / right end
-		if op == "^" then return left ^ right end
+		if op == "+" then
+			if isComplex(left) or isComplex(right) then
+				return complexAdd(left, right)
+			end
+			return left + right
+		end
+
+		if op == "-" then
+			if isComplex(left) or isComplex(right) then
+				return complexSub(left, right)
+			end
+			return left - right
+		end
+
+		if op == "*" then
+			if isComplex(left) or isComplex(right) then
+				return complexMul(left, right)
+			end
+			return left * right
+		end
+
+		if op == "/" then
+			if isComplex(left) or isComplex(right) then
+				return complexDiv(left, right)
+			end
+			return left / right
+		end
+
+		if op == "^" then
+			if isComplex(left) or isComplex(right) then
+				return complexPow(left, right)
+			end
+			return left ^ right
+		end
 
 		error("nowayCAS.Eval: unsupported operator '" .. op .. "'")
 	end
@@ -193,5 +312,5 @@ function Eval.eval(node, env)
 	error("nowayCAS.Eval: unknown node kind '" .. tostring(kind) .. "'")
 end
 
--- The Evaluator sub-library.
+-- The Evaluator sub-library
 return Eval
