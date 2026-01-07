@@ -357,12 +357,14 @@ function nowayCAS.newGreaterThan(lhs, rhs) return Equation.gt(lhs, rhs)  end
 -- Creates a new greater-than-or-equal-to equation with two expressions.
 function nowayCAS.newGreaterThanOrEqual(lhs, rhs) return Equation.ge(lhs, rhs) end
 
--- Solves the equation for a variable.
+-- Returns a solve, solveset table, or other special table from solving the equation for a variable.
+-- The variable must be a single variable node.
 function nowayCAS.solveEquation(expr, var)
 	Solve.solve(expr, var)
 end
 
--- Solves the equation for a variable.
+-- Returns a solve, solveset table, or other special table from solving the equation for a variable.
+-- The variable must be a single variable node.
 function Equation:solve(var)
 	return Solve.solve(self, var)
 end
@@ -370,8 +372,6 @@ end
 -------------------------------------------------------
 -- Metamethods - Equation
 -------------------------------------------------------
-
--- TODO: polish Equation API
 
 -- Returns the equation converted into a pure string.
 function Equation.__tostring(a)

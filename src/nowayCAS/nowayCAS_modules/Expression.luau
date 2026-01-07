@@ -110,7 +110,8 @@ function Expression:varIs(var, property)
 	return Assume.is(var, property)
 end
 
--- Solves the expression for variable.
+-- Returns a solve, solveset table, or other special table from solving the expression (converted into an equation) for a variable.
+-- The variable must be a single variable node.
 function Expression:solve(var)
 	return Solve.solve(self.node, var)
 end
