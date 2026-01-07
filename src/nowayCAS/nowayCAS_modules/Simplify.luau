@@ -31,6 +31,7 @@ local function toRat(n)
 	end
 end
 
+-- Performs a fixed-point simplification with optional map steps.
 function Simplify.simplifyDeep(node, maxSteps)
 	maxSteps = maxSteps or 20
 	local steps = 0
@@ -477,11 +478,22 @@ function Simplify._simplifyFunc(node)
 	-------------------------------------------------------
 	-- No function-specific rule applied
 	-------------------------------------------------------
-	if node.args ~= nil then
-		return node
+
+	-- Check if any argument changed
+	local changed = false
+	for i = 1, #args do
+		if args[i] ~= newArgs[i] then
+			changed = true
+			break
+		end
 	end
 
-	return Node.Func(name, arg)
+	-- If arguments changed, rebuild the function node
+	if changed then
+		return Node.Func(name, newArgs)
+	else
+		return node
+	end
 end
 
 -- Simplifies the operator node.

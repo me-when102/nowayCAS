@@ -3,6 +3,7 @@ local Solve = {}
 local Node = require(script.Parent.Node)
 local Equation = require(script.Parent.Equation)
 local Canon = require(script.Parent.Canon)
+local Simplify = require(script.Parent.Simplify)
 local Util = require(script.Parent.Util)
 
 -------------------------------------------------------
@@ -39,12 +40,13 @@ local Util = require(script.Parent.Util)
 -- Solve an expression or an equation.
 function Solve.solve(expr, var)
 	local eq = Solve.normalizeEquation(expr, var)
+
 	if eq.kind ~= "equation" or eq.rel ~= "==" then
 		return Solve.unknownSolve(expr, var)
 	end
 
 	local class = Solve.classifyEquation(eq, var)
-
+	print("class:", class)
 	if class == "linear" then
 		return Solve.solveLinear(eq, var)
 	elseif class == "quadratic" then
@@ -92,11 +94,21 @@ function Solve._degree(expr, var)
 		end
 	end
 
+	if kind == "complex" then
+		return 0
+	end
+
 	if kind == "op" then
 		local op = expr.op
 		local a, b = expr.left, expr.right
 
 		if op == "+" then
+			local da = Solve._degree(a, var)
+			local db = Solve._degree(b, var)
+			if not da or not db then return nil end
+			return math.max(da, db)
+
+		elseif op == "-" then
 			local da = Solve._degree(a, var)
 			local db = Solve._degree(b, var)
 			if not da or not db then return nil end
@@ -109,12 +121,21 @@ function Solve._degree(expr, var)
 			return da + db
 
 		elseif op == "^" then
-			-- Only allow var^n where n is a numeric literal
+			-- x^n
 			if a.kind == "var" and a.name == var.name and b.kind == "num" then
 				return tonumber(b.value)
-			else
-				return nil
 			end
+
+			-- (-1 * x)^n  or  (c * x)^n
+			if a.kind == "op" and a.op == "*" then
+				-- Look for x inside the product
+				local da = Solve._degree(a, var)
+				if da == 1 and b.kind == "num" then
+					return tonumber(b.value)
+				end
+			end
+
+			return nil
 		end
 
 		return nil
@@ -215,9 +236,9 @@ function Solve.solveQuadratic(eq, var)
 		denom
 	)
 
-	-- Canonicalize both
-	sol1 = Canon.canonical(sol1)
-	sol2 = Canon.canonical(sol2)
+	-- Simplify both
+	sol1 = Simplify.simplifyDeep(sol1)
+	sol2 = Simplify.simplifyDeep(sol2)
 
 	return Solve.solutionSet({
 		Solve.solution({ [var.name] = sol1 }),
@@ -238,19 +259,103 @@ function Solve.solvePolynomial(eq, var) end
 -- UnknownSolve(expr, var)
 -------------------------------------------------------
 
-function Solve.solution(bindings, conditions) 
-	return {
+-------------------------------------------------------
+-- Solution Metatable
+-------------------------------------------------------
+
+local SolutionMT = {}
+SolutionMT.__index = function(t, key)
+	-- direct access: sol.x
+	if t.bindings and t.bindings[key] then
+		return t.bindings[key]
+	end
+
+	-- method access: sol:get("x")
+	return rawget(SolutionMT, key)
+end
+
+function SolutionMT:get(var)
+	return self.bindings[var]
+end
+
+function SolutionMT:__tostring()
+	local parts = {}
+	for var, expr in pairs(self.bindings) do
+		table.insert(parts, var .. " = " .. tostring(expr))
+	end
+	return "(" .. table.concat(parts, ", ") .. ")"
+end
+
+function SolutionMT:variables()
+	local vars = {}
+	for k in pairs(self.bindings) do
+		vars[#vars+1] = k
+	end
+	return vars
+end
+
+-------------------------------------------------------
+-- Solution Set Metatable
+-------------------------------------------------------
+
+local SolutionSetMT = {}
+SolutionSetMT.__index = function(t, key)
+	-- allow numeric indexing: solset[1]
+	if type(key) == "number" then
+		return t.list[key]
+	end
+
+	-- method access
+	return rawget(SolutionSetMT, key)
+end
+
+function SolutionSetMT:first()
+	return self.list[1]
+end
+
+function SolutionSetMT:get(var)
+	-- numeric index → return that solution
+	if type(var) == "number" then
+		return self.list[var]
+	end
+
+	-- variable name → return all values for that variable
+	local out = {}
+	for i, sol in ipairs(self.list) do
+		out[i] = sol[var]
+	end
+	return out
+end
+
+function SolutionSetMT:all()
+	return self.list
+end
+
+function SolutionSetMT:__tostring()
+	local out = {}
+	for i, sol in ipairs(self.list) do
+		out[#out+1] = tostring(sol)
+	end
+	return "{ " .. table.concat(out, ", ") .. " }"
+end
+
+-------------------------------------------------------
+-- Actual Constructors
+-------------------------------------------------------
+
+function Solve.solution(bindings, conditions)
+	return setmetatable({
 		kind = "solution",
 		bindings = bindings,
 		conditions = conditions
-	}
+	}, SolutionMT)
 end
 
-function Solve.solutionSet(list) 
-	return {
+function Solve.solutionSet(list)
+	return setmetatable({
 		kind = "solutionset",
 		list = list
-	}
+	}, SolutionSetMT)
 end
 
 Solve.NoSolution = { kind = "nosolution" }
@@ -264,4 +369,5 @@ function Solve.unknownSolve(expr, var)
 	}
 end
 
+-- The Solve sub-library
 return Solve

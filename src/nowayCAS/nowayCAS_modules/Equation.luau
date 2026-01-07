@@ -7,8 +7,18 @@ local Print = require(script.Parent.Print)
 
 -------------------------------------------------------
 -- Equations
--- Equations are not node kinds and not booleans.
 -------------------------------------------------------
+
+-- Normalizes relation strings:
+-- "="  -> "=="
+-- "==" -> "=="
+-- "<", "<=", ">", ">=", "!=" stay unchanged
+function Equation.normalizeRel(rel)
+	if rel == "=" then
+		return "=="
+	end
+	return rel
+end
 
 -- Creates a new equation with the left expression, right expression, and relation.
 function Equation.new(lhs, rhs, rel)
@@ -16,7 +26,7 @@ function Equation.new(lhs, rhs, rel)
 		kind = "equation",
 		lhs = lhs,
 		rhs = rhs,
-		rel = rel or "==",
+		rel = Equation.normalizeRel(rel or "=="),
 	}, Equation)
 end
 

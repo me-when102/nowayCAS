@@ -94,7 +94,7 @@ function Rewrite._rewrite(node, rules)
 	return node, false
 end
 
--- Repeatedly apply rules until stable
+-- Performs a rewrite on a node with a set of rules.
 function Rewrite.apply(node, rules)
 	while true do
 		local next, changed = Rewrite._rewrite(node, rules)

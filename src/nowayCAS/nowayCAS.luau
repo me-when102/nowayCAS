@@ -88,6 +88,7 @@ UserFunctions = require(script.UserFunctions)
 UserConstants = require(script.UserConstants)
 Assume = require(script.Assume)
 Equation = require(script.Equation)
+Solve = require(script.Solve)
 
 -- Expose rules for external API use.
 rules_expand = require(script.Rewrite.rules_expand)
@@ -107,7 +108,8 @@ local nowayCAS = {
 	Arithmetic = Arithmetic,
 	UserFunctions = UserFunctions,
 	Assume = Assume,
-	Equation, Equation
+	Equation = Equation,
+	Solve = Solve
 }
 
 -------------------------------------------------------
@@ -314,99 +316,6 @@ function nowayCAS.newExpression(str)
 	return Expression.new(ast)
 end
 
--- Creates an expression.
-function Expression.new(node)
-	return setmetatable({ kind = "expression", node = node }, Expression)
-end
-
--- Returns the derivative of an expression with respect to a variable.
-function Expression:diff(var)
-	local raw = nowayCAS.Diff.diff(self.node, var or "x")
-	return Expression.new(nowayCAS.simplify(raw))
-end
-
--- Returns the n-th derivative of an expression with respect to a variable.
-function Expression:diffN(var, n)
-	local raw = nowayCAS.Diff.diffN(self.node, var or "x", n)
-	return Expression.new(nowayCAS.simplify(raw))
-end
-
--- Returns the expression in simplified form.
-function Expression:simplify()
-	return Expression.new(nowayCAS.simplify(self.node))
-end
-
--- Returns the expression in expanded form.
-function Expression:expand()
-	return Expression.new(nowayCAS.expand(self.node))
-end
-
--- Returns the expression in factorized form.
-function Expression:factor()
-	return Expression.new(nowayCAS.factor(self.node))
-end
-
--- Returns an expression with variables subsituted according to the map.
--- The map contains a key that is the variable name, with a value containing another AST node which it will be converted to.
--- For example: { x = expr1.node, y = expr2.node }
-function Expression:substitute(map)
-	return Expression.new(nowayCAS.Substitute.apply(self.node, map))
-end
-
--- Returns a number of the expression to be evaluated with an environment table.
--- The environment table contains a key which is the variable name, which a value that is a native Lua number.
--- For example: { x = 2, y = math.pi }
-function Expression:eval(env)
-	return nowayCAS.eval(self.node, env)
-end
-
--- Returns the expression converted into a pure string.
-function Expression:toString()
-	return nowayCAS.toString(self.node)
-end
-
--- Returns the expression converted into LaTeX format in string.
-function Expression:toLatex()
-	return nowayCAS.toLatex(self.node)
-end
-
--- Returns the expression converted into a DAG format.
-function Expression:toDAGString()
-	return nowayCAS.toDAGString(self.node)
-end
-
--- Returns the expression converted into an AST Representation (for debug purposes).
--- Index the result with indented or raw to get its result.
--- Indented: Returns the formatted table.
--- Raw: Returns the luau table.
-function Expression:toASTRepresentation()
-	return nowayCAS.toASTRepresentation(self.node)
-end
-
--- Determines if all variables of the expression satisfy the property.
-function Expression:is(property)
-	local vars = Util.collectVars(self.node)
-
-	-- No variables -> expression is trivially in the domain
-	if #vars == 0 then
-		return true
-	end
-
-	for _, var in ipairs(vars) do
-		if not nowayCAS.is(var, property) then
-			return false
-		end
-	end
-
-	return true
-end
-
-
--- Determines if the variable in the expression satisfy the property.
-function Expression:varIs(var, property)
-	return nowayCAS.is(var, property)
-end
-
 -------------------------------------------------------
 -- Public API - Equation Objects
 -------------------------------------------------------
@@ -433,6 +342,16 @@ function nowayCAS.newGreaterThan(lhs, rhs) return Equation.gt(lhs, rhs)  end
 
 -- Creates a new greater-than-or-equal-to equation with two expressions.
 function nowayCAS.newGreaterThanOrEqual(lhs, rhs) return Equation.ge(lhs, rhs) end
+
+-- Solves the equation for a variable.
+function nowayCAS.solveEquation(expr, var)
+	Solve.solve(expr, var)
+end
+
+-- Solves the equation for a variable.
+function Equation:solve(var)
+	return Solve.solve(self, var)
+end
 
 -------------------------------------------------------
 -- Metamethods - Equation
@@ -489,7 +408,7 @@ function Expression.__add(a, b)
 	if getmetatable(a) == Equation or getmetatable(b) == Equation then
 		return Equation.apply_op(b, "add", a)
 	end
-	
+
 	local result = nowayCAS.Arithmetic.add(a, b)
 	return Expression.new(result)
 end
@@ -499,7 +418,7 @@ function Expression.__sub(a, b)
 	if getmetatable(a) == Equation or getmetatable(b) == Equation then
 		return Equation.apply_op(b, "sub", a)
 	end
-	
+
 	local result = nowayCAS.Arithmetic.sub(a, b)
 	return Expression.new(result)
 end
@@ -509,7 +428,7 @@ function Expression.__mul(a, b)
 	if getmetatable(a) == Equation or getmetatable(b) == Equation then
 		return Equation.apply_op(b, "mul", a)
 	end
-	
+
 	local result = nowayCAS.Arithmetic.mul(a, b)
 	return Expression.new(result)
 end
