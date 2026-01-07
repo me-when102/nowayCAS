@@ -108,6 +108,68 @@ end
 
 -------------------------------------------------------
 -- Pattern-matching system
+--
+-- This is going to be documented.
+--
+-- Single-node wildcards:
+--
+--		_x -> matches any node
+--		_n -> matches numeric nodes (num or rat)
+--		_v -> matches variable nodes
+--
+--		These binds a single node. If the same wildcard
+--		appears multiple times, all occurrences must
+--		match the same node (structural equality).
+--
+-- Sequence wildcards:
+--
+--		_xs -> matches a sequence of any nodes
+--		_ns -> matches a sequence of numeric nodes
+--		_vs -> matches a sequence of variable nodes
+--
+--		These only appear inside:
+--			- function argument lists
+--			- AC operator children (eg: +, *)
+--		They bind a list of nodes. When substituted,
+--		the list is spliced into the surrounding structure.
+--
+-- Associative-Commutative (AC) matching:
+--
+--		Operators + and * are treated as AC:
+--			- children are flattened (a+(b+c) -> {a,b,c})
+--			- order does not matter
+--			- sequence wildcards may absorb multiple children
+--
+--		Example:
+--			Pattern: 	_x + ys
+--			Node: 		a + b + c
+--			Bindings: 	_x = a
+--					  	_ys = {b, c}
+--
+-- Non-AC operators:
+--		-, /, and all function calls match structurally:
+--			- left/right must match exactly
+--			- no reordering or flattening
+--
+-- Replacement:
+--    	Rewrite.substitutePattern() replaces wildcards
+--    	using the bindings produced by _match().
+--    	Sequence wildcards splice their lists into:
+--      	- function argument lists
+--      	- AC operator chains
+--
+-- Rule constructors:
+--      Rewrite.Rule(patternStr, replaceStr)
+--        -> both parsed by DSL.parse()
+--
+--      Rewrite.RuleFn(patternStr, fn)
+--        -> fn receives (node, bindings)
+--
+--    	Example:
+--      	Rewrite.R("_x + 0", "_x")
+--      	Rewrite.RF("_n * _x", function(node, b)
+--          	return Node.Op("*", b["_n"], b["_x"])
+--      	end)
 -------------------------------------------------------
 
 -- Checks if the name is a wildcard (starts with "_")
@@ -270,7 +332,7 @@ function Rewrite._matchAC(pattern, node, bindings)
 		return Rewrite._matchACSeq(pattern, node, bindings)
 	end
 
-	-- No sequence wildcard → fixed-length AC matching
+	-- No sequence wildcard -> fixed-length AC matching
 	if #pChildren ~= #nChildren then return nil end
 	return Rewrite._matchMultiset(pChildren, nChildren, bindings)
 end
