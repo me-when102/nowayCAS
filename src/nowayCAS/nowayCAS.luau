@@ -146,7 +146,7 @@ local nowayCAS = {
 
 -- Converts a value (including complex numbers) into a human-readable string.
 function nowayCAS.valueToString(x)
-	Print.value(x)
+	return Print.value(x)
 end
 
 -------------------------------------------------------
