@@ -140,21 +140,6 @@ local nowayCAS = {
 }
 
 -------------------------------------------------------
--- Caching
--------------------------------------------------------
-
--- table
-
-local table_insert = table.insert
-local table_remove = table.remove
-
--- other things
-
-local type = type
-local tonumber = tonumber
-local tostring = tostring
-
--------------------------------------------------------
 -- Public API
 -------------------------------------------------------
 -- Generic API
