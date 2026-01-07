@@ -6,7 +6,7 @@
         Invariants:
         	AST Structure and Node Semantics:
 	            - All expressions are immutable trees (AST).
-	            - Node kinds: "num", "var", "op", "func", "const", "rat".
+	            - Node kinds: "num", "var", "op", "func", "const", "rat", "complex".
 	            - For operator node kinds, the operator is represented as a literal string with the symbol on it.
 	            - For first-class objects, they have a { kind } that outputs their type in full with no captials.
 	            - Operators are binary; functions are unary.
@@ -64,7 +64,7 @@
 				- Expression methods never mutate the underlying Node.
 
 			Complex Numbers:
-				- Complex number as an AST node is symbolic, and complex numbers as objects are numeric.
+				- Complex number as an AST node are symbolic, and complex numbers as objects are numeric.
 			
         System:
             Core:
