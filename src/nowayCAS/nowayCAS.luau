@@ -20,6 +20,8 @@
 	            
 	        Canonicalization Rules:
 	            - Canonicalization is total and idempotent.
+	            - Canonicalization never calls Simplify.
+	            - Canonicalization only structures expressions and not algebraic meaning.
 	            - Commutative operators store operands in sorted, flattened form.
 	            - Associative operators never nest.
 	            - Functions never evaluate unless fully numeric.
@@ -28,19 +30,39 @@
 	            - Equations are not expressions; they form a separate object type.
 	            - The relations of the equation are represented by their literal comparison operators in strings.
 	            - Arithmetic on equations applies operations to both sides.
+	            - Equation.lhs and Equation.rhs are always nodes.
 	        
-	        Rewriting and Transofmration Purity:
+	        Rewriting:
 	            - Rewriting never mutates existing nodes; all transformations return new trees.
-	            - Pretty-printing is pure and uses precedence rules without parent pointers.
+	            - Rewrite rules must be terminating (no infinite self-application)
+	            - Rewrite never assumes canonical form; it must work on arbitrary trees.
+	            - Rewrite must not depend on Simplify or Canon to function correctly.
+	            - Rewrite patterns match only structural shapes, not semantic meaning.
+	        
+	        Print / Pretty-printer:
+	        	- Print never mutates nodes or expressions.
+	        	- Print never performs simplification or canonicalization
+	        	- Print never inspects Equation or Solution internals beyond reading fields.
+	        	- Print always respects operator precedence and associativity.
+	        	- Pretty-printing is pure and uses precedence rules without parent pointers.
             
             Simplification Semantics:
 	        	- Simplification never mutates nodes.
 				- Simplification always returns a new or original node.
 				- Simplification recursively simplifies children before applying rules.
+				- Simplify never changes the mathematical meaning of an expression
 			
 			Solving Semantics:
-				- Solving always return a table and not a node.
+				- Solving always return solutions, solution sets, or special tables, and not a node.
+				- Solvers never mutate the input equation.
+				- Solvers always operate on canonicalized expressions.
+				- Solvers never simplify the input equation, only the output expressions
+				- UnknownSolve is always returned for unsupported equation types.
 			
+			Expression Object Model:
+				- Expression objects never store raw Lua values; they always wrap AST trees.
+				- Expression methods never mutate the underlying Node.
+
         System:
             Core:
                 Node.luau        -> AST constructors with DAG caching (no dependency)
