@@ -39,7 +39,9 @@ nowayCAS is a **full-featured symbolic engine** built from the ground up in pure
 
 - **Expression parsing** from strings → optimized **AST → DAG** representation (shared subexpressions for speed & memory)
 - **Natural math syntax** via operator overloading (`x^2 + 2*x + 1`)
-- **Equation support** as two expressions and one relation which can be manipulated.
+- **Equation support**:
+  * First class objects representing two expressions and one relation which can be manipulated.
+  * Solving equations that returns solution tables.
 - **Symbolic manipulation**:
   - Assumption system (x is positive, negative, etc) with assigning, removing, and checking.
   - Simplification (algebraic identities, rational forms) integrated with assumptions
@@ -222,9 +224,8 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Sum and product
 - Polynomial-supported expansions and factorization
 - Calculus and other things for the calculus suite
-- Improving the rewrite engine with full pattern-matching
 - Add any remaining functions (`math.min` and `math.max`) missing in the library.
-- Complex numbers
+- Complex Analysis Extensions
 - LaTeX to AST parsing.
 
 ### Long-Term
@@ -238,6 +239,7 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
   - Cross product
 - Piecewise Functions (f(x) = (cond1, expr1, cond2, expr2, ...))
 - Limits
+- Integrals 
 - Series Expansions (like Taylor/Maclaurin Series and Series simplifications)
 - Logical Expressions (`and`, `or`, `not`)
 
