@@ -1,6 +1,8 @@
 # Installing nowayCAS
+
 nowayCAS is a pure-Luau symbolic math engine designed to run inside Roblox Studio or any Luau environment.
 There are **no external dependencies**, just install the module and start computing.
+
 ---
 
 ## 📦 Option 1: Install via Roblox Studio (recommended)
