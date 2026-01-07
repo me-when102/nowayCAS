@@ -162,6 +162,9 @@ end
 -- Node Manipulation
 -------------------------------------------------------
 
+-- TODO: constructor semantics problem: find a way to access symbolic complex numbers without awkwardness
+-- context: the system supports complex numbers (Node.Complex(real, imag))
+
 -- Parses a string to an expression or an equation.
 -- If the string has a relation (=, >=, >, etc), it constructs an equation object
 -- Else, it constructs an expression object
