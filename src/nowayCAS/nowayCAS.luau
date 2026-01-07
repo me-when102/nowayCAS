@@ -19,7 +19,7 @@
 	            - Rationals always contain integers (normalized, gcd=1, denominator>0).
 	            
 	        Canonicalization Rules:
-	            - Canonicalization is total and idempotent.
+	            - Canonicalization is defined for all valid ASTs and always idempotent.
 	            - Canonicalization never calls Simplify.
 	            - Canonicalization only structures expressions and not algebraic meaning.
 	            - Commutative operators store operands in sorted, flattened form.
