@@ -63,6 +63,9 @@
 				- Expression objects never store raw Lua values; they always wrap AST trees.
 				- Expression methods never mutate the underlying Node.
 
+			Complex Numbers:
+				- Complex number as an AST node is symbolic, and complex numbers as objects are numeric.
+			
         System:
             Core:
                 Node.luau        -> AST constructors with DAG caching (no dependency)
@@ -154,6 +157,12 @@ local tostring = tostring
 -------------------------------------------------------
 -- Public API
 -------------------------------------------------------
+-- Generic API
+
+-- Converts a value (including complex numbers) into a human-readable string.
+function nowayCAS.valueToString(x)
+	Print.value(x)
+end
 
 -------------------------------------------------------
 -- Node Manipulation
