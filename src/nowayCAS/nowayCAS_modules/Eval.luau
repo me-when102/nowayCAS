@@ -193,5 +193,5 @@ function Eval.eval(node, env)
 	error("nowayCAS.Eval: unknown node kind '" .. tostring(kind) .. "'")
 end
 
--- The Evaluator sub-library
+-- The Evaluator sub-library.
 return Eval

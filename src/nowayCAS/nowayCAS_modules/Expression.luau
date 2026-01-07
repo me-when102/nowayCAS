@@ -120,4 +120,5 @@ function Expression:variables()
 	return Util.collectVars(self.node)
 end
 
+-- The Expression sub-library.
 return Expression

@@ -135,4 +135,5 @@ function Equation:toString()
 	return Print._toString(self.lhs) .. " " .. self.rel .. " " .. Print._toString(self.rhs)
 end
 
+-- The Equation sub-library.
 return Equation

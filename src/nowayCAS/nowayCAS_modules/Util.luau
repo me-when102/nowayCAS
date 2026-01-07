@@ -254,5 +254,5 @@ function Util.detectRelation(str)
 	return nil
 end
 
--- The Utility sub-library
+-- The Utility sub-library.
 return Util

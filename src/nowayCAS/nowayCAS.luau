@@ -88,6 +88,7 @@ UserFunctions = require(script.UserFunctions)
 UserConstants = require(script.UserConstants)
 Assume = require(script.Assume)
 Equation = require(script.Equation)
+Expression = require(script.Expression)
 Solve = require(script.Solve)
 
 -- Expose rules for external API use.
@@ -109,6 +110,7 @@ local nowayCAS = {
 	UserFunctions = UserFunctions,
 	Assume = Assume,
 	Equation = Equation,
+	Expression = Expression,
 	Solve = Solve
 }
 
@@ -134,16 +136,6 @@ local tostring = tostring
 -------------------------------------------------------
 -- Node Manipulation
 -------------------------------------------------------
-
--- expression instance
-local Expression = {}
-Expression.__index = Expression
-
--- equation instance
-local EquationObj = {}
-EquationObj.__index = EquationObj
-
--- nowayCAS public API
 
 -- Parses a string to an expression or an equation.
 -- If the string has a relation (=, >=, >, etc), it constructs an equation object

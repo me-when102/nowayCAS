@@ -5,6 +5,7 @@ local Equation = require(script.Parent.Equation)
 local Canon = require(script.Parent.Canon)
 local Simplify = require(script.Parent.Simplify)
 local Util = require(script.Parent.Util)
+local Print = require(script.Parent.Print)
 
 -------------------------------------------------------
 -- Solver
@@ -58,7 +59,7 @@ function Solve.solve(expr, var)
 	end
 end
 
--- Normalizes the equation in order to be solved
+-- Normalizes the equation in order to be solved.
 function Solve.normalizeEquation(expr, var)
 	if expr.kind == "equation" then
 		local rel = expr.rel  -- e.g. "==", "<", "<=", ">", ">=", "!="
@@ -145,7 +146,7 @@ function Solve._degree(expr, var)
 	return nil
 end
 
--- Determine what type is the equation
+-- Determine what type is the equation.
 function Solve.classifyEquation(eq, var)
 	local expr = eq.lhs
 
@@ -166,7 +167,7 @@ function Solve.classifyEquation(eq, var)
 	end
 end
 
--- Solve a linear equation
+-- Solve a linear equation.
 function Solve.solveLinear(eq, var)
 	local coeffs = Util.collectCoefficients(eq.lhs, var)
 	if not coeffs then
@@ -193,7 +194,7 @@ function Solve.solveLinear(eq, var)
 	return Solve.solution({ [var.name] = Canon.canonical(sol) })
 end
 
--- NO WAY! LET'S USE THE QUADRATIC FORMULA AND-
+-- Solve a quadratic equation.
 function Solve.solveQuadratic(eq, var)
 	local coeffs = Util.collectCoefficients(eq.lhs, var)
 	if not coeffs then
@@ -246,11 +247,13 @@ function Solve.solveQuadratic(eq, var)
 	})
 end
 
--- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-function Solve.solvePolynomial(eq, var) end
+-- TODO: implement full polynomial solving
+function Solve.solvePolynomial(eq, var) 
+	return Solve.unknownSolve(eq, var)
+end
 
 -------------------------------------------------------
--- Solve Node Constructors
+-- Solve Node Constructors and External API
 -- Node constructors for solutions
 -- Solution({ x = expr }, conditions)
 -- SolutionSet({ Solution, Solution, ... })
@@ -261,9 +264,12 @@ function Solve.solvePolynomial(eq, var) end
 
 -------------------------------------------------------
 -- Solution Metatable
+-- Represents a single solution.
 -------------------------------------------------------
 
 local SolutionMT = {}
+
+-- Field/method lookup: sol.x or sol:get("x")
 SolutionMT.__index = function(t, key)
 	-- direct access: sol.x
 	if t.bindings and t.bindings[key] then
@@ -274,18 +280,12 @@ SolutionMT.__index = function(t, key)
 	return rawget(SolutionMT, key)
 end
 
+-- Returns the expression bound to a varaible name.
 function SolutionMT:get(var)
 	return self.bindings[var]
 end
 
-function SolutionMT:__tostring()
-	local parts = {}
-	for var, expr in pairs(self.bindings) do
-		table.insert(parts, var .. " = " .. tostring(expr))
-	end
-	return "(" .. table.concat(parts, ", ") .. ")"
-end
-
+-- Returns a list of all variable names in this solution.
 function SolutionMT:variables()
 	local vars = {}
 	for k in pairs(self.bindings) do
@@ -294,11 +294,40 @@ function SolutionMT:variables()
 	return vars
 end
 
+-- Returns the solution as a string formatted as "(x = ..., y = ...)".
+function SolutionMT:__tostring()
+	local parts = {}
+	for var, expr in pairs(self.bindings) do
+		table.insert(parts, var .. " = " .. Print._toString(expr))
+	end
+	return "(" .. table.concat(parts, ", ") .. ")"
+end
+
+-- Returns the solution as a string formatted as "(x = ..., y = ...)".
+function SolutionMT:toString()
+	local parts = {}
+	for var, expr in pairs(self.bindings) do
+		table.insert(parts, var .. " = " .. Print._toString(expr))
+	end
+	return "(" .. table.concat(parts, ", ") .. ")"
+end
+
+-- Returns the solution formatted in LaTeX.
+function SolutionMT:toLatex()
+	local parts = {}
+	for var, expr in pairs(self.bindings) do
+		table.insert(parts, var .. " = " .. Print._toLatex(expr))
+	end
+	return "\\left(" .. table.concat(parts, ",\\; ") .. "\\right)"
+end
+
 -------------------------------------------------------
 -- Solution Set Metatable
 -------------------------------------------------------
 
 local SolutionSetMT = {}
+
+-- Field/method lookup + numeric indexing: solset[1]
 SolutionSetMT.__index = function(t, key)
 	-- allow numeric indexing: solset[1]
 	if type(key) == "number" then
@@ -309,17 +338,19 @@ SolutionSetMT.__index = function(t, key)
 	return rawget(SolutionSetMT, key)
 end
 
+-- Returns the first solution in the set.
 function SolutionSetMT:first()
 	return self.list[1]
 end
 
+-- Returns a solution by index, or all values of a variable across solutions.
 function SolutionSetMT:get(var)
-	-- numeric index → return that solution
+	-- numeric index -> return that solution
 	if type(var) == "number" then
 		return self.list[var]
 	end
 
-	-- variable name → return all values for that variable
+	-- variable name -> return all values for that variable
 	local out = {}
 	for i, sol in ipairs(self.list) do
 		out[i] = sol[var]
@@ -327,10 +358,12 @@ function SolutionSetMT:get(var)
 	return out
 end
 
+-- Returns the raw list of solutions.
 function SolutionSetMT:all()
 	return self.list
 end
 
+-- Returns the solution set converted into a string.
 function SolutionSetMT:__tostring()
 	local out = {}
 	for i, sol in ipairs(self.list) do
@@ -339,10 +372,29 @@ function SolutionSetMT:__tostring()
 	return "{ " .. table.concat(out, ", ") .. " }"
 end
 
+-- Returns the solution set converted into a string.
+function SolutionSetMT:toString()
+	local out = {}
+	for i, sol in ipairs(self.list) do
+		out[#out+1] = tostring(sol)
+	end
+	return "{ " .. table.concat(out, ", ") .. " }"
+end
+
+-- Returns the solution set formatted in LaTeX.
+function SolutionSetMT:toLatex()
+	local out = {}
+	for i, sol in ipairs(self.list) do
+		out[#out+1] = sol:toLatex()
+	end
+	return "{ " .. table.concat(out, ", ") .. " }"
+end
+
 -------------------------------------------------------
 -- Actual Constructors
 -------------------------------------------------------
 
+-- Constructs a solution.
 function Solve.solution(bindings, conditions)
 	return setmetatable({
 		kind = "solution",
@@ -351,6 +403,7 @@ function Solve.solution(bindings, conditions)
 	}, SolutionMT)
 end
 
+-- Constructs a solution set.
 function Solve.solutionSet(list)
 	return setmetatable({
 		kind = "solutionset",
@@ -358,9 +411,13 @@ function Solve.solutionSet(list)
 	}, SolutionSetMT)
 end
 
+-- No solution table.
 Solve.NoSolution = { kind = "nosolution" }
+
+-- Infinite solutions table.
 Solve.InfiniteSolutions = { kind = "infinitesolutions" }
 
+-- Constructs an unknown solve.
 function Solve.unknownSolve(expr, var) 
 	return {
 		kind = "unknownsolve",
@@ -369,5 +426,5 @@ function Solve.unknownSolve(expr, var)
 	}
 end
 
--- The Solve sub-library
+-- The Solve sub-library.
 return Solve

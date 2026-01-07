@@ -12,7 +12,7 @@ UserFunctions.registry = {}
 -- Name: the name of the function, eg: 'f' = "f(...params)" when called.
 -- Params: the parameters to substitute into the bodyString.
 -- bodyString: the contents of the function as an AST node, eg: 7x + 3
--- Eg: f(7, 4) = (2*(3y + 7x)) / 3 (x, y are params, f is name, (2*(3y + 7x)) / 3 is bodyString).
+-- Eg: f(7, 4) = (2*(3y + 7x)) / 3 (x, y are params, f is name, (2*(3y + 7x)) / 3 is bodyAST).
 function UserFunctions.define(name, params, bodyAST)
 	UserFunctions.registry[name] = {
 		params = params,
@@ -25,5 +25,5 @@ function UserFunctions.lookup(name)
 	return UserFunctions.registry[name]
 end
 
--- The User-defined Functions sub library.
+-- The User-defined Functions sub-library.
 return UserFunctions

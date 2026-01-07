@@ -108,4 +108,5 @@ function Factor.factor(node)
 	return node
 end
 
+-- The Factor sub-library.
 return Factor
