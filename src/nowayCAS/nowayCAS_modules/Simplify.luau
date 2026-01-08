@@ -1074,6 +1074,51 @@ function Simplify._simplifyOp(node)
 	end
 
 	-------------------------------------------------------
+	-- Comparison Operators
+	-------------------------------------------------------
+	if op == "<" or op == "<=" or op == ">" or op == ">=" or op == "==" or op == "!=" then
+		local L = left
+		local R = right
+
+		-- simplify if both sides are the same variable
+		if Util.nodeEquals(L, R) then
+			if op == "==" or op == "<=" or op == ">=" then
+				return Node.Const("true")
+			else
+				return Node.Const("false")
+			end
+		end
+
+		-- simplify according to the assumptions about sign
+		if L.kind == "var" and R.kind == "num" then
+			local x = L.name
+			local n = tonumber(R.value)
+
+			if n == 0 then
+				if Assume.is(x, "positive") then
+					if op == ">" or op == ">=" then return Node.Const("true") end
+					if op == "<" or op == "<=" then return Node.Const("false") end
+				end
+
+				if Assume.is(x, "negative") then
+					if op == "<" or op == "<=" then return Node.Const("true") end
+					if op == ">" or op == ">=" then return Node.Const("false") end
+				end
+
+				if Assume.is(x, "zero") then
+					if op == "==" then return Node.Const("true") end
+					if op == "!=" then return Node.Const("false") end
+				end
+
+				if Assume.is(x, "nonzero") then
+					if op == "==" then return Node.Const("false") end
+					if op == "!=" then return Node.Const("true") end
+				end
+			end
+		end
+	end
+
+	-------------------------------------------------------
 	-- No simplification applied -> rebuild if needed
 	-------------------------------------------------------
 	if left == node.left and right == node.right then
