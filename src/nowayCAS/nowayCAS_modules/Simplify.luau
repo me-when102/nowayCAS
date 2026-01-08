@@ -119,6 +119,16 @@ local function isNumeric(n)
 	return n.kind == "num" or n.kind == "rat"
 end
 
+-- Checks if the node is constant and is true.
+local function isTrue(n)
+	return n.kind == "const" and n.name == "true"
+end
+
+-- Checks if the node is constant and is false.
+local function isFalse(n)
+	return n.kind == "const" and n.name == "false"
+end
+
 -- Simplify for Factorial
 local function simplifyFactorial(node)
 	-- Simplify the argument first
@@ -483,6 +493,47 @@ function Simplify._simplifyFunc(node)
 
 	if node.name == "factorial" then
 		return simplifyFactorial(node)
+	end
+	
+	-------------------------------------------------------
+	-- Boolean NOT
+	-------------------------------------------------------
+	if name == "not" then
+		-- not true -> false
+		if isTrue(arg) then
+			return Node.Const("false")
+		end
+
+		-- not false -> true
+		if isFalse(arg) then
+			return Node.Const("true")
+		end
+
+		-- not (not x) -> x
+		if arg.kind == "func" and arg.name == "not" then
+			return arg.args[1]
+		end
+
+		-- not(<comparison>) -> inverted comparison
+		if arg.kind == "op" then
+			local op = arg.op
+			local L = arg.left
+			local R = arg.right
+
+			if op == "<"  then return Node.Op(">=", L, R) end
+			if op == "<=" then return Node.Op(">",  L, R) end
+			if op == ">"  then return Node.Op("<=", L, R) end
+			if op == ">=" then return Node.Op("<",  L, R) end
+			if op == "==" then return Node.Op("!=", L, R) end
+			if op == "!=" then return Node.Op("==", L, R) end
+		end
+
+		-- no rule matched: rebuild if args changed
+		if arg ~= node.args[1] then
+			return Node.Func("not", { arg })
+		else
+			return node
+		end
 	end
 
 	-------------------------------------------------------
@@ -958,6 +1009,68 @@ function Simplify._simplifyOp(node)
 			local newExp = tonumber(left.right.value) * tonumber(right.value)
 			return Node.Op("^", left.left, Node.Num(tostring(newExp)))
 		end
+	end
+	
+	-------------------------------------------------------
+	-- Boolean AND
+	-------------------------------------------------------
+	if op == "and" then
+		-- true and x -> x
+		if isTrue(left) then
+			return right
+		end
+
+		-- false and x -> false
+		if isFalse(left) then
+			return Node.Const("false")
+		end
+
+		-- x and true -> x
+		if isTrue(right) then
+			return left
+		end
+
+		-- x and false -> false
+		if isFalse(right) then
+			return Node.Const("false")
+		end
+
+		-- no rule matched: rebuild if changed
+		if left == node.left and right == node.right then
+			return node
+		end
+		return Node.Op("and", left, right)
+	end
+
+	-------------------------------------------------------
+	-- Boolean OR
+	-------------------------------------------------------
+	if op == "or" then
+		-- true or x -> true
+		if isTrue(left) then
+			return Node.Const("true")
+		end
+
+		-- false or x -> x
+		if isFalse(left) then
+			return right
+		end
+
+		-- x or true -> true
+		if isTrue(right) then
+			return Node.Const("true")
+		end
+
+		-- x or false -> x
+		if isFalse(right) then
+			return left
+		end
+
+		-- no rule matched: rebuild if changed
+		if left == node.left and right == node.right then
+			return node
+		end
+		return Node.Op("or", left, right)
 	end
 
 	-------------------------------------------------------

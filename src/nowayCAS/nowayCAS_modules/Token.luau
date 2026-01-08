@@ -144,7 +144,7 @@ function Token._tokenize(input: string)
 		-------------------------------------------------------
 		-- Operators
 		-------------------------------------------------------
-		if c == "+" or c == "-" or c == "*" or c == "/" or c == "^" or c == "!" then
+		if c == "+" or c == "-" or c == "*" or c == "/" or c == "^" then
 			table_insert(tokens, makeToken("operator", c))
 			advance()
 			continue
@@ -170,7 +170,7 @@ function Token._tokenize(input: string)
 			advance()
 			continue
 		end
-		
+
 		-------------------------------------------------------
 		-- Braces for piecewise
 		-------------------------------------------------------

@@ -631,8 +631,42 @@ function Canon._canonicalOp(node)
 	-- LOGICAL OPERATORS
 	-------------------------------------------------------
 	if op == "and" or op == "or" then
-		-- Canonicalize children but keep structure
-		return Node.Op(op, left, right)
+		-- Flatten associative chains
+		local items = flatten(op, { left, right })
+
+		-- Canonicalize children
+		for i, n in ipairs(items) do
+			items[i] = Canon.canonical(n)
+		end
+
+		-- Remove duplicates (idempotence)
+		local seen = {}
+		local unique = {}
+		for _, n in ipairs(items) do
+			local key = canonicalKey(n)
+			if not seen[key] then
+				seen[key] = true
+				table_insert(unique, n)
+			end
+		end
+
+		-- Sort operands deterministically
+		table_sort(unique, function(a, b)
+			return canonicalKey(a) < canonicalKey(b)
+		end)
+
+		-- If only one operand remains, return it
+		if #unique == 1 then
+			return unique[1]
+		end
+
+		-- Rebuild left-associative tree
+		local acc = unique[1]
+		for i = 2, #unique do
+			acc = Node.Op(op, acc, unique[i])
+		end
+
+		return acc
 	end
 end
 
@@ -642,18 +676,18 @@ function Canon._canonicalComplex(node)
 	local real = Canon.canonical(node.real)
 	local imag = Canon.canonical(node.imag)
 
-	-- Case 1: 0 + 0i → 0
+	-- Case 1: 0 + 0i -> 0
 	if real.kind == "num" and real.value == "0"
 		and imag.kind == "num" and imag.value == "0" then
 		return Node.Num("0")
 	end
 
-	-- Case 2: a + 0i → a
+	-- Case 2: a + 0i -> a
 	if imag.kind == "num" and imag.value == "0" then
 		return real
 	end
 
-	-- Case 3: 0 + bi → b*i
+	-- Case 3: 0 + bi -> b*i
 	if real.kind == "num" and real.value == "0" then
 		-- symbolic: b * i
 		return Node.Op("*", imag, Node.Const("i"))
@@ -696,20 +730,46 @@ function Canon._canonicalRat(node)
 	return Node.Rat(n, d)
 end
 
--- Canonicalizes the piecewise
+-- Canonicalizes the piecewise function.
 function Canon._canonicalPiecewise(node)
-    local newBranches = {}
+	
+	-- Flatten nested piecewise: distribute guards
+	local function distribute(cond, expr)
+		-- If expr is not piecewise, keep as-is
+		if expr.kind ~= "piecewise" then
+			return { { cond, expr } }
+		end
 
-    for _, pair in ipairs(node.branches) do
-        local cond = Canon.canonical(pair[1])
-        local expr = Canon.canonical(pair[2])
+		-- Otherwise: distribute cond over each branch
+		local out = {}
+		for _, inner in ipairs(expr.branches) do
+			local innerCond = inner[1]
+			local innerExpr = inner[2]
 
-		-- For now: just canonicalize children, don't distribute.
-		-- TODO: implement logical operators for this.
-        table_insert(newBranches, { cond, expr })
-    end
+			-- newCond = cond AND innerCond
+			local newCond = Node.Op("and", cond, innerCond)
+			newCond = Canon.canonical(newCond)
 
-    return Node.Piecewise(newBranches)
+			table_insert(out, { newCond, innerExpr })
+		end
+		return out
+	end
+
+	local newBranches = {}
+
+	for _, pair in ipairs(node.branches) do
+		local cond = Canon.canonical(pair[1])
+		local expr = Canon.canonical(pair[2])
+
+		-- Distribute if needed
+		local expanded = distribute(cond, expr)
+
+		for _, b in ipairs(expanded) do
+			table_insert(newBranches, b)
+		end
+	end
+
+	return Node.Piecewise(newBranches)
 end
 
 -- The Canonical sub-library.
