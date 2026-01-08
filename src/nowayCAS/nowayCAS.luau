@@ -6,18 +6,27 @@
         Invariants:
         	AST Structure and Node Semantics:
 	            - All expressions are immutable trees (AST).
-	            - Node kinds: "num", "var", "op", "func", "const", "rat", "complex".
+	            - Node kinds: "num", "var", "op", "func", "const", "rat", "complex", "piecewise".
 	            - For operator node kinds, the operator is represented as a literal string with the symbol on it.
-	            - For first-class objects, they have a { kind } that outputs their type in full with no captials.
+	            - For first-class objects, they have a { kind = "..." } that outputs their type in full with no captials.
 	            - Operators are binary; functions are unary.
 	            - Postfix operators are parsed into functions since they are unary.
 	            - No node ever stores parent references.
+	            - No node may contain raw Lua tables except for func.args and piecewise.branches.
 	        
 	        Numeric Representation:
 	            - Number nodes store their numeric value as a string literal and not a Lua number.
 	            - Unary minus is expressed as a multiplication node (left: -1, right: expr).
 	            - Rationals always contain integers (normalized, gcd=1, denominator>0).
-	            
+	        
+	        Piecewise Semantics (untightened as for now):
+	        	- Piecewise nodes store an ordered list of { condition, expression } pairs.
+	        	- Conditions are AST nodes representing boolean expressions.
+	        	- A final unconditional branch may be represented as { true, expr }.
+	        	- Piecewise nodes are first-class expressions and may appear anywhere.
+	        	- Solvers must propagate conditions into solution sets.
+	        	- Simplify distributes over piecewise branches.
+	        	
 	        Canonicalization Rules:
 	            - Canonicalization is defined for all valid ASTs and always idempotent.
 	            - Canonicalization never calls Simplify.
@@ -25,6 +34,9 @@
 	            - Commutative operators store operands in sorted, flattened form.
 	            - Associative operators never nest.
 	            - Functions never evaluate unless fully numeric.
+	            - Canonicalization flattens nested piecewise nodes.
+	            - Contradictory branches may be pruned (?).
+	            - Branch order is preserved unless contradictions are detected.
 	            
 	        Equations and Relational Semantics:
 	            - Equations are not expressions; they form a separate object type.
@@ -64,7 +76,8 @@
 				- Expression methods never mutate the underlying Node.
 
 			Complex Numbers:
-				- Complex number as an AST node are symbolic, and complex numbers as objects are numeric.
+				- Complex numbers as an AST node are symbolic, and complex numbers as objects are numeric.
+				- Complex nodes store real and imag as AST nodes, not Lua numbers.
 			
         System:
             Core:
@@ -169,7 +182,9 @@ end
 -- If the string has a relation (=, >=, >, etc), it constructs an equation object
 -- Else, it constructs an expression object
 function nowayCAS.new(str)
+	-- TODO: disabled.
 	-- detect top-level relation
+	--[[
 	local lhs, rel, rhs = Util.detectRelation(str)
 
 	if rel then
@@ -180,7 +195,7 @@ function nowayCAS.new(str)
 		-- build equation
 		return Equation.new(leftExpr.node, rightExpr.node, rel)
 	end
-
+	]]
 	-- normal expression if not equation
 	return nowayCAS.newExpression(str)
 end
