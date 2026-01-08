@@ -222,9 +222,9 @@ function Util.detectRelation(str)
 		local c = str:sub(i, i)
 
 		-- Track parentheses depth
-		if c == "(" then
+		if c == "(" or c == "{" or c == "[" then
 			depth += 1
-		elseif c == ")" then
+		elseif c == ")" or c == "}" or c == "]" then
 			depth -= 1
 		end
 

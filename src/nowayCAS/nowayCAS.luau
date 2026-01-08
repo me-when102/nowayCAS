@@ -182,9 +182,7 @@ end
 -- If the string has a relation (=, >=, >, etc), it constructs an equation object
 -- Else, it constructs an expression object
 function nowayCAS.new(str)
-	-- TODO: disabled.
 	-- detect top-level relation
-	--[[
 	local lhs, rel, rhs = Util.detectRelation(str)
 
 	if rel then
@@ -195,7 +193,7 @@ function nowayCAS.new(str)
 		-- build equation
 		return Equation.new(leftExpr.node, rightExpr.node, rel)
 	end
-	]]
+
 	-- normal expression if not equation
 	return nowayCAS.newExpression(str)
 end
