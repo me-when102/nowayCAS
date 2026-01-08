@@ -81,6 +81,21 @@ function Rewrite._rewrite(node, rules)
 		if changed then
 			node = Node.Func(node.name, newArgs)
 		end
+	elseif node.kind == "piecewise" then
+		local changed = false
+		local newBranches = {}
+
+		for i, pair in ipairs(node.branches) do
+			local cond, cChanged = Rewrite._rewrite(pair[1], rules)
+			local expr, eChanged = Rewrite._rewrite(pair[2], rules)
+
+			changed = changed or cChanged or eChanged
+			newBranches[i] = { cond, expr }
+		end
+
+		if changed then
+			node = Node.Piecewise(newBranches)
+		end
 	end
 
 	-- Then try rules at this node
@@ -530,6 +545,17 @@ function Rewrite.substitutePattern(node, bindings)
 		return Node.Op(node.op, left, right)
 	end
 
+	-- Piecewise: substitute inside branches
+	if kind == "piecewise" then
+		local newBranches = {}
+		for i, pair in ipairs(node.branches) do
+			local cond = Rewrite.substitutePattern(pair[1], bindings)
+			local expr = Rewrite.substitutePattern(pair[2], bindings)
+			newBranches[i] = { cond, expr }
+		end
+		return Node.Piecewise(newBranches)
+	end
+
 	return node
 end
 
@@ -567,5 +593,5 @@ end
 Rewrite.R = Rewrite.Rule
 Rewrite.RF = Rewrite.RuleFn
 
--- The Rewrite sub-library
+-- The Rewrite sub-library.
 return Rewrite

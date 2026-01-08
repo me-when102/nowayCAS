@@ -8,6 +8,29 @@ local Node = require(script.Parent.Node)
 -- Example: substitute(x^2 + 3x, { x = (y+1) })
 -------------------------------------------------------
 
+-- Apply substitution to piecewise.
+function Substitute._applyPiecewise(node, map)
+	local newBranches = {}
+	local changed = false
+
+	for i, pair in ipairs(node.branches) do
+		local cond = Substitute.apply(pair[1], map)
+		local expr = Substitute.apply(pair[2], map)
+
+		if cond ~= pair[1] or expr ~= pair[2] then
+			changed = true
+		end
+
+		newBranches[i] = { cond, expr }
+	end
+
+	if not changed then
+		return node
+	end
+
+	return Node.Piecewise(newBranches)
+end
+
 -- Substitute variables according to a map:
 --   { x = Node(...), y = Node(...), ... }
 function Substitute.apply(node, map)
@@ -89,6 +112,11 @@ function Substitute.apply(node, map)
 		local left = Substitute.apply(node.left, map)
 		local right = Substitute.apply(node.right, map)
 		return Node.Op(node.op, left, right)
+	end
+
+	-- Piecewise: Substitute inside branches.
+	if kind == "piecewise" then
+		return Substitute._applyPiecewise(node, map)
 	end
 
 	error("Substitute: Unknown node kind '" .. tostring(kind) .. "'")

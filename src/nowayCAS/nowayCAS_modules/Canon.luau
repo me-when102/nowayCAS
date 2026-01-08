@@ -13,12 +13,6 @@ local ipairs = ipairs
 -------------------------------------------------------
 -- Canonicalizer
 -- Produces a unique, normalized AST form.
--- Steps:
---   1. Flatten associative ops (+, *)
---   2. Sort operands
---   3. Combine numeric constants
---   4. Combine like terms (polynomial-style)
---   5. Normalize subtraction and negation
 -------------------------------------------------------
 
 -- deep copy
@@ -466,6 +460,10 @@ function Canon.canonical(node)
 
 	elseif kind == "rat" then
 		result = Canon._canonicalRat(node)
+
+	elseif kind == "piecewise" then
+		result = Canon._canonicalPiecewise(node)
+
 	else
 		error("Canonical: unknown node kind '" .. tostring(kind) .. "'")
 	end
@@ -678,5 +676,21 @@ function Canon._canonicalRat(node)
 	return Node.Rat(n, d)
 end
 
--- The Canonical sub-library
+-- Canonicalizes the piecewise
+function Canon._canonicalPiecewise(node)
+    local newBranches = {}
+
+    for _, pair in ipairs(node.branches) do
+        local cond = Canon.canonical(pair[1])
+        local expr = Canon.canonical(pair[2])
+
+		-- For now: just canonicalize children, don't distribute.
+		-- TODO: implement logical operators for this.
+        table_insert(newBranches, { cond, expr })
+    end
+
+    return Node.Piecewise(newBranches)
+end
+
+-- The Canonical sub-library.
 return Canon

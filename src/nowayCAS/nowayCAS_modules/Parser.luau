@@ -8,15 +8,32 @@ local UserConstants = require(script.Parent.UserConstants)
 -- Converts a token list into an AST (expression tree).
 -- Grammar (recursive descent):
 --
--- expression 	-> term (("+" | "-" ) term)*
--- term 		-> factor (("*" | "/" | implicit) factor)*
--- factor 		-> power
--- postfix 		-> primary ("!" )*
--- power 		-> postfix ("^" power)?
--- primary 		-> number
---					| identifier
---					| identifier "(" expression ")" -- function call
---					| "(" expression ")"
+-- expression      -> term (("+" | "-") term)*
+--
+-- term            -> factor (("*" | "/" | implicit) factor)*
+--
+-- factor          -> ("+" | "-") factor
+--                  | power
+--
+-- postfix         -> primary ("!")*
+--
+-- power           -> postfix ("^" power)?        -- right-associative
+--
+-- primary         -> number
+--                  | identifier
+--                  | identifier "(" expression ")"    -- function call
+--                  | "(" expression ")"
+--                  | "{" piecewise_branch_list "}"    -- piecewise literal
+--
+-- piecewise_branch_list
+--                  -> piecewise_branch (";" piecewise_branch)* ";"?
+--
+-- piecewise_branch
+--                  -> expression ":" expression
+--
+-- Notes:
+--   * Implicit multiplication is triggered when a token can start a primary.
+--   * Piecewise blocks are first-class expressions and bind like parentheses.
 -------------------------------------------------------
 
 -------------------------------------------------------
@@ -232,7 +249,50 @@ function Parser._parsePrimary(stream)
 		return expr
 	end
 
+	-- piecewise literal: { cond : expr ; ... }
+	if tok.kind == "lbrace" then
+		return Parser._parsePiecewise(stream)
+	end
+
 	error("Parser: Unexpected token '" .. tok.kind .. "'")
+end
+
+-- Special case: Parse piecewise.
+function Parser._parsePiecewise(stream)
+	stream:expect("lbrace")
+
+	local branches = {}
+
+	while true do
+		-- Parse condition
+		local cond = Parser._parseExpression(stream)
+
+		-- Expect ':'
+		stream:expect("colon")
+
+		-- Parse expression
+		local expr = Parser._parseExpression(stream)
+
+		table.insert(branches, { cond, expr })
+
+		local tok = stream:peek()
+
+		-- Semicolon means more branches
+		if tok.kind == "semicolon" then
+			stream:next()
+			continue
+		end
+
+		-- End of piecewise
+		if tok.kind == "rbrace" then
+			break
+		end
+
+		error("Parser: Expected ';' or '}' in piecewise block")
+	end
+
+	stream:expect("rbrace")
+	return Node.Piecewise(branches)
 end
 
 -- Returns true if a token can start a primary expression.
@@ -240,6 +300,7 @@ function Parser._startsPrimary(tok)
 	return tok.kind == "number"
 		or tok.kind == "identifier"
 		or tok.kind == "lparen"
+		or tok.kind == "lbrace"
 end
 
 -- The Parser sub-library

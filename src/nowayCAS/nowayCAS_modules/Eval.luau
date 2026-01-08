@@ -77,6 +77,24 @@ function Eval.eval(node, env)
 		error("nowayCAS.Eval: unknown constant '" .. node.name .. "'")
 
 		-------------------------------------------------------
+		-- Piecewise
+		-------------------------------------------------------
+	elseif kind == "piecewise" then
+		for _, pair in ipairs(node.branches) do
+			local condNode = pair[1]
+			local exprNode = pair[2]
+
+			-- Evaluate condition
+			local condVal = Eval.eval(condNode, env)
+
+			if condVal then
+				return Eval.eval(exprNode, env)
+			end
+		end
+
+		error("nowayCAS.Eval: no branch condition evaluated to true")
+
+		-------------------------------------------------------
 		-- Functions
 		-------------------------------------------------------
 	elseif kind == "func" then

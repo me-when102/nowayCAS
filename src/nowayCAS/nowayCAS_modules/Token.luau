@@ -157,6 +157,39 @@ function Token._tokenize(input: string)
 			advance()
 			continue
 		end
+		
+		-------------------------------------------------------
+		-- Braces for piecewise
+		-------------------------------------------------------
+		if c == "{" then
+			table_insert(tokens, makeToken("lbrace", c))
+			advance()
+			continue
+		end
+
+		if c == "}" then
+			table_insert(tokens, makeToken("rbrace", c))
+			advance()
+			continue
+		end
+
+		-------------------------------------------------------
+		-- Colon for piecewise branches
+		-------------------------------------------------------
+		if c == ":" then
+			table_insert(tokens, makeToken("colon", c))
+			advance()
+			continue
+		end
+
+		-------------------------------------------------------
+		-- Semicolon for branch separators
+		-------------------------------------------------------
+		if c == ";" then
+			table_insert(tokens, makeToken("semicolon", c))
+			advance()
+			continue
+		end
 
 		-------------------------------------------------------
 		-- Unknown character

@@ -11,6 +11,7 @@ local rules_algebraic = require(script.Parent.Rewrite.rules_algebraic)
 
 local tonumber = tonumber
 local tostring = tostring
+local table_insert = table.insert
 
 -------------------------------------------------------
 -- Simplifier
@@ -59,18 +60,27 @@ function Simplify.simplify(node)
 	local simplified
 	if node.kind == "num" then
 		simplified = node
+
 	elseif node.kind == "var" then
 		simplified = node
+
 	elseif node.kind == "const" then
 		simplified = node
+
 	elseif node.kind == "complex" then
 		simplified = Simplify._simplifyComplex(node)
+
 	elseif node.kind == "rat" then
 		simplified = Canon.canonical(node)
+
 	elseif node.kind == "func" then
 		simplified = Simplify._simplifyFunc(node)
+
 	elseif node.kind == "op" then
 		simplified = Simplify._simplifyOp(node)
+	elseif node.kind == "piecewise" then
+		simplified = Simplify._simplifyPiecewise(node)
+
 	else
 		error("Simplify: Unknown node kind '" .. tostring(node.kind) .. "'")
 	end
@@ -501,6 +511,32 @@ function Simplify._simplifyOp(node)
 	local left = Simplify.simplify(node.left)
 	local right = Simplify.simplify(node.right)
 	local op = node.op
+
+	-------------------------------------------------------
+	-- Piecewise Handling
+	-------------------------------------------------------
+
+	if left.kind == "piecewise" and right.kind ~= "piecewise" then
+		local branches = {}
+		for _, pair in ipairs(left.branches) do
+			local cond = pair[1]
+			local expr = pair[2]
+			local newExpr = Simplify.simplify(Node.Op(op, expr, right))
+			table_insert(branches, { cond, newExpr })
+		end
+		return Node.Piecewise(branches)
+	end
+	
+	if right.kind == "piecewise" and left.kind ~= "piecewise" then
+		local branches = {}
+		for _, pair in ipairs(right.branches) do
+			local cond = pair[1]
+			local expr = pair[2]
+			local newExpr = Simplify.simplify(Node.Op(op, expr, right))
+			table_insert(branches, { cond, newExpr })
+		end
+		return Node.Piecewise(branches)
+	end
 
 	-------------------------------------------------------
 	-- Constant folding
@@ -1016,6 +1052,19 @@ function Simplify._foldConstants(op, a, b)
 
 	-- Fallback
 	return Node.Op(op, a, b)
+end
+
+-- Simplifies piecewise.
+function Simplify._simplifyPiecewise(node)
+	local newBranches = {}
+
+	for _, pair in ipairs(node.branches) do
+		local cond = Simplify.simplify(pair[1])
+		local expr = Simplify.simplify(pair[2])
+		table_insert(newBranches, { cond, expr })
+	end
+
+	return Node.Piecewise(newBranches)
 end
 
 -- The Simplifier sub-library.

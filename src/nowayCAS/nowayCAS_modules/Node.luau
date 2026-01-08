@@ -166,5 +166,34 @@ function Node.Const(name)
 	return node
 end
 
+-- Constructs a node as a piecewise function
+function Node.Piecewise(branches)
+	if type(branches) ~= "table" then
+		error("Node.Piecewise: branches must be a table")
+	end
+	
+	-- Hashing
+	local parts = {}
+	for i, pair in ipairs(branches) do
+		local cond, expr = pair[1], pair[2]
+		if cond == nil or expr == nil then
+			error ("Node.Piecewise: branch " .. i .. " missing condition or expression")
+		end
+		parts[i] = tostring(cond) .. ":" .. tostring(expr)
+	end
+	
+	local key = hashNode("piecewise", table.concat(parts, "|"), "", "")
+	local existing = NODE_CACHE[key]
+	if existing then return existing end
+	
+	local node = {
+		kind = "piecewise",
+		branches = branches, -- array of {cond, expr}
+	}
+	
+	NODE_CACHE[key] = node
+	return node
+end
+
 -- The Node sub-library.
 return Node

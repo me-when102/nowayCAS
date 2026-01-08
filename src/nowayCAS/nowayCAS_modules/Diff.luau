@@ -32,21 +32,38 @@ function Diff.diff(node, var)
 	local result
 	if node.kind == "num" then
 		result = Node.Num("0")
+
 	elseif node.kind == "rat" then
 		result = Node.Num("0")
+
 	elseif node.kind == "var" then
 		result = Node.Num(node.name == var and "1" or "0")
+
 	elseif node.kind == "op" then
 		result = Diff._diffOp(node, var)
+
 	elseif node.kind == "func" then
 		result = Diff._diffFunc(node, var)
+
 	elseif node.kind == "const" then
 		result = Node.Num("0")
+
 	elseif node.kind == "complex" then
 		-- d/dx (a + bi) = (da/dx) + (db/dx)i
 		local dReal = Diff.diff(node.real, var)
 		local dImag = Diff.diff(node.imag, var)
 		result = Node.Complex(dReal, dImag)
+	elseif node.kind == "piecewise" then
+		-- Differentiate each branch
+		local newBranches = {}
+		for i, pair in ipairs(node.branches) do
+			local cond = pair[1]
+			local expr = pair[2]
+			local dexpr = Diff.diff(expr, var)
+			newBranches[i] = { cond, dexpr }
+		end
+		result = Node.Piecewise(newBranches)
+
 	else
 		error("Diff: Unknown node kind '" .. tostring(node.kind) .. "'")
 	end
