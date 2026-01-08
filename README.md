@@ -45,8 +45,9 @@ nowayCAS is a **full-featured symbolic engine** built from the ground up in pure
 - **Symbolic manipulation**:
   - Assumption system (x is positive, negative, etc) with assigning, removing, and checking.
   - Simplification (algebraic identities, rational forms) integrated with assumptions
+  - Full pattern-matching rewrite engine with DSL.
   - Expansion & factoring of polynomials (partially)
-  - Symbolic **differentiation** (`var:diff()`)
+  - Symbolic **differentiation** (`var:diff(var)` and `var:diffN(var, number)`)
   - Variable/expression **substitution** (`:substitute({x: AST_node = 3})`)
 - **Evaluation**: Numerical results with parameter tables (`:eval({x=5})`)
 - **Extensibility**:
@@ -230,6 +231,19 @@ local solC = c:solve(x.node)
 print(solC)
 ```
 
+### 13. Piecewise Functions
+
+```lua
+local a = nowayCAS.new("{x > 0 and y == 3: (7+8*x) / y; not x > 0: x*y; not x <= 0: -2*x - y}")
+
+print(a:eval({x = -5, y = 3})) -- -15
+print(a:eval({x = 5, y = 7}))  -- -17
+print(a:eval({x = 5, y = 2}))  -- -12
+print(a:eval({x = 3, y = 3}))  -- 31/3 ~ 10.333...
+
+print(a:simplify())
+```
+
 ## **Development Status**
 nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Some edge-case bugs
@@ -260,11 +274,9 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Vector Algebra
   - Dot product
   - Cross product
-- Piecewise Functions (f(x) = (cond1, expr1, cond2, expr2, ...))
 - Limits
 - Integrals 
 - Series Expansions (like Taylor/Maclaurin Series and Series simplifications)
-- Logical Expressions (`and`, `or`, `not`)
 
 ## ❤️ Contributing
 We are going to make Roblox Studio have its own **CAS** system!
