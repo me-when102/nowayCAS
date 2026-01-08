@@ -415,6 +415,15 @@ local latexNames = {
 	acoth = "operatorname{acoth}",
 }
 
+local cmpLatex = {
+	["<"]  = "<",
+	[">"]  = ">",
+	["<="] = "\\le",
+	[">="] = "\\ge",
+	["=="] = "=",
+	["!="] = "\\neq",
+}
+
 -- Get precedence of the node for LaTeX.
 local function latexPrec(node)
 	if node.kind ~= "op" then
@@ -586,6 +595,16 @@ function Print._toLatex(node)
 		if node.name == "abs" then
 			return "\\left|" .. arg .. "\\right|"
 		end
+		
+		-- Not logical operator
+		if name == "not" then
+			local inner = Print._toLatex(args[1])
+			-- Parenthesize if argument is an op
+			if args[1].kind == "op" then
+				inner = "(" .. inner .. ")"
+			end
+			return "\\lnot " .. inner
+		end
 
 		-- Parenthesize only if needed
 		if node.args[1].kind == "op" then
@@ -714,6 +733,26 @@ function Print._toLatex(node)
 			local base = latexParen(L, "^", false)
 			local exp = latexParen(R, "^", true)
 			return base .. "^{" .. exp .. "}"
+		end
+
+		---------------------------------------------------
+		-- Logical AND / OR
+		---------------------------------------------------
+		if op == "and" or op == "or" then
+			local left = Print._toLatex(L)
+			local right = Print._toLatex(R)
+			local sym = (op == "and") and "\\land" or "\\lor"
+			return left .. " " .. sym .. " " .. right
+		end
+
+		---------------------------------------------------
+		-- Comparisons
+		---------------------------------------------------
+
+		if cmpLatex[op] then
+			local left = Print._toLatex(L)
+			local right = Print._toLatex(R)
+			return left .. " " .. cmpLatex[op] .. " " .. right
 		end
 	end
 
