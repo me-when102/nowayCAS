@@ -27,7 +27,8 @@ Or you can use other modules in the Roblox community but some (to put it nicely)
 - Can not simplify expressions
 - Can not freely put any kind of expression you'd like in any form
 
-**nowayCAS changes everything.**
+**Straight to the point: There was NO ADVANCED symbolic engines out there in Roblox Studio.**
+**... and nowayCAS solves that gap.**
 
 <p align="center">
     <img src="./assets/images/nowayCAS-capability.png" alt="nowayCAS capabilities" width="900">
@@ -251,19 +252,18 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - API changes as it stabilizes
 
 ## **Roadmap (needs help)**
-- Enhance simplification by using strategies.
-- Add more factorizing techniques.
-  - Rational-aware factorization.
+- Enhanced simplification with strategies
+- Factorizing techniques
+  - Rational-aware factorization
 - Extended Equations System
-  - Support generalized polynomial solving.
+  - Support generalized polynomial solving
   - Solve simultaneous questions
 - Sum and product
 - Polynomial-supported expansions and factorization
-- Calculus and other things for the calculus suite
-- Add any remaining functions (`math.min` and `math.max`) missing in the library.
+- Remaining functions (`math.min` and `math.max`) missing in the library
 - Complex Analysis Extensions
-- LaTeX to AST parsing.
-- Add safe guards.
+- LaTeX to AST parsing
+- Add ergonomic safe guards
 
 ### Long-Term
 - Rational function algebra
