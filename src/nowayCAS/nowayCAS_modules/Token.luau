@@ -115,7 +115,7 @@ function Token._tokenize(input: string)
 		end
 
 		-------------------------------------------------------
-		-- Identifiers (variables, function names)
+		-- Identifiers (variables, functions, keywords)
 		-------------------------------------------------------
 		if isLetter(c) then
 			local start = i
@@ -124,6 +124,19 @@ function Token._tokenize(input: string)
 				advance()
 			end
 			local ident = input:sub(start, i-1)
+
+			-- Boolean operators (keywords)
+			if ident == "and" or ident == "or" then
+				table_insert(tokens, makeToken("operator", ident))
+				continue
+			end
+
+			if ident == "not" then
+				table_insert(tokens, makeToken("operator", ident))
+				continue
+			end
+
+			-- Otherwise it's a normal identifier
 			table_insert(tokens, makeToken("identifier", ident))
 			continue
 		end

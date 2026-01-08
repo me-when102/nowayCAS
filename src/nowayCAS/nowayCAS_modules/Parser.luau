@@ -99,7 +99,7 @@ function Parser._parseLogicOr(stream)
 
 	while true do
 		local tok = stream:peek()
-		if tok.kind == "identifier" and tok.value == "or" then
+		if tok.kind == "operator" and tok.value == "or" then
 			stream:next()
 			local right = Parser._parseLogicAnd(stream)
 			node = Node.Op("or", node, right)
@@ -117,7 +117,7 @@ function Parser._parseLogicAnd(stream)
 
 	while true do
 		local tok = stream:peek()
-		if tok.kind == "identifier" and tok.value == "and" then
+		if tok.kind == "operator" and tok.value == "and" then
 			stream:next()
 			local right = Parser._parseLogicNot(stream)
 			node = Node.Op("and", node, right)
@@ -133,7 +133,7 @@ end
 function Parser._parseLogicNot(stream)
 	local tok = stream:peek()
 
-	if tok.kind == "identifier" and tok.value == "not" then
+	if tok.kind == "operator" and tok.value == "not" then
 		stream:next()
 		local operand = Parser._parseLogicNot(stream)
 		return Node.Func("not", { operand })
