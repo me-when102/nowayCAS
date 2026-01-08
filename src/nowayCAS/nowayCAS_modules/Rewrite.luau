@@ -15,11 +15,25 @@ local ipairs = ipairs
 -------------------------------------------------------
 
 local OpInfo = {
-	["+"] = { assoc = true, comm = true },
-	["*"] = { assoc = true, comm = true },
-	["-"] = { assoc = false, comm = false },
-	["/"] = { assoc = false, comm = false },
+	["+"]  = { assoc = true,  comm = true  },
+	["*"]  = { assoc = true,  comm = true  },
+
+	["-"]  = { assoc = false, comm = false },
+	["/"]  = { assoc = false, comm = false },
+
+	-- Logical operators
+	["and"] = { assoc = false, comm = false },
+	["or"]  = { assoc = false, comm = false },
+
+	-- Comparison operators
+	[">"]  = { assoc = false, comm = false },
+	["<"]  = { assoc = false, comm = false },
+	[">="] = { assoc = false, comm = false },
+	["<="] = { assoc = false, comm = false },
+	["=="] = { assoc = false, comm = false },
+	["!="] = { assoc = false, comm = false },
 }
+
 
 -- Checks if the node's operator is op.
 local function isAssocOp(node, op)

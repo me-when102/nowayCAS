@@ -498,6 +498,11 @@ function Canon._canonicalFunc(node)
 		end
 	end
 
+	if name == "not" then
+		-- Unary logical negation
+		return Node.Func("not", newArgs)
+	end
+
 	-------------------------------------------------------
 	-- Default: rebuild function node
 	-------------------------------------------------------
@@ -613,6 +618,21 @@ function Canon._canonicalOp(node)
 
 		-- Otherwise: symbolic division
 		return Node.Op("/", left, right)
+	end
+	
+	-------------------------------------------------------
+	-- COMPARISON OPERATORS
+	-------------------------------------------------------
+	if op == ">" or op == "<" or op == ">=" or op == "<=" or op == "==" or op == "!=" then
+		return Node.Op(op, left, right)
+	end
+
+	-------------------------------------------------------
+	-- LOGICAL OPERATORS
+	-------------------------------------------------------
+	if op == "and" or op == "or" then
+		-- Canonicalize children but keep structure
+		return Node.Op(op, left, right)
 	end
 end
 

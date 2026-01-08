@@ -11,12 +11,30 @@ local ipairs = ipairs
 -------------------------------------------------------
 
 local PRECEDENCE = {
-	["+"] = 1,
-	["-"] = 1,
-	["*"] = 2,
-	["/"] = 2,
-	["u-"] = 3,
-	["^"] = 4,
+	-- Boolean logic
+	["or"]  = 1,
+	["and"] = 2,
+	["not"] = 3,   -- unary, but treat as high-precedence prefix
+
+	-- Comparisons
+	[">"]  = 4,
+	["<"]  = 4,
+	[">="] = 4,
+	["<="] = 4,
+	["=="] = 4,
+	["!="] = 4,
+
+	-- Arithmetic
+	["+"] = 5,
+	["-"] = 5,
+	["*"] = 6,
+	["/"] = 6,
+
+	-- Unary minus
+	["u-"] = 7,
+
+	-- Exponentiation
+	["^"] = 8,
 }
 
 local unicodeConstants = {
