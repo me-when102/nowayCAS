@@ -154,7 +154,7 @@ function Parser._parseComparison(stream)
 				tok.value == "==" or tok.value == "!="
 			) then
 			stream:next()
-			local right = Parser._parseLogicOr(stream)
+			local right = Parser._parseExpression(stream)
 			node = Node.Op(tok.value, node, right)
 		else
 			break
