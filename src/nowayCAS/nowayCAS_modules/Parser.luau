@@ -290,25 +290,25 @@ function Parser._parsePrimary(stream)
 	if tok.kind == "identifier" then
 		stream:next()
 		local name = tok.value
-		
+
 		-- boolean literals
 		if name == "true" then
 			return Node.Const("true")
 		elseif name == "false" then
 			return Node.Const("false")
 		end
-		
+
 		local args = {}
-		
+
 		-- is it a constant + user-defined constant?
 		if CONSTANTS[name] or UserConstants.isConstant(name) then
 			return Node.Const(name)
 		end
-		
+
 		-- is it a function?
 		if stream:peek().kind == "lparen" then
 			stream:next() -- consume "("
-			
+
 			local args = {}
 			if stream:peek().kind ~= "rparen" then
 				table.insert(args, Parser._parseLogicOr(stream))
