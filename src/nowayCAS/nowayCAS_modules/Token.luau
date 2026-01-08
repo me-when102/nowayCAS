@@ -242,7 +242,7 @@ function Token._tokenize(input: string)
 				i += 2
 				continue
 			end
-			error("nowayCAS.Tokenizer: Unexpected '=' — did you mean '=='?")
+			error("nowayCAS.Tokenizer: Unexpected '=' - did you mean '=='?")
 		end
 
 		-- != (not equal)
