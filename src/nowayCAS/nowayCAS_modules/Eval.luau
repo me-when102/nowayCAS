@@ -66,6 +66,10 @@ function Eval.eval(node, env)
 		-- Constants
 		-------------------------------------------------------
 	elseif kind == "const" then
+		-- boolean literal handling
+		if node.name == "true" then return true end
+		if node.name == "false" then return false end
+
 		-- built-in constants
 		local v = BUILTIN_CONST[node.name]
 		if v ~= nil then return v end
@@ -187,10 +191,15 @@ function Eval.eval(node, env)
 		-- Log
 		if f == "log10" then return math.log10(arg) end
 		if f == "log" then return math.log(arg, arg2) end
-		
+
 		-- Factorial
 		if f == "factorial" then return Util.factorial(arg) end
-		
+
+		-- Comparison Operator: not
+		if f == "not" then
+			return not arg
+		end
+
 		error("nowayCAS.Eval: unsupported function '" .. f .. "'")
 
 		-------------------------------------------------------
@@ -261,6 +270,14 @@ function Eval.eval(node, env)
 
 		if op == "!=" then
 			return left ~= right
+		end
+
+		if op == "and" then
+			return left and right
+		end
+
+		if op == "or" then
+			return left or right
 		end
 
 		error("nowayCAS.Eval: unsupported operator '" .. op .. "'")

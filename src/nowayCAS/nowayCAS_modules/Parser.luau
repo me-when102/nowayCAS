@@ -8,6 +8,10 @@ local UserConstants = require(script.Parent.UserConstants)
 -- Converts a token list into an AST (expression tree).
 -- Grammar (recursive descent):
 --
+-- logic_or 	   -> logic_and ("or" logic_and)*
+-- logic_and 	   -> logic_not ("and" logic_not)*
+-- logic_not 	   -> ("not")* comparison
+--
 -- comparison 	   -> expression ((">" | "<" | ">=" | "<=" | "==" | "!=") expression)*
 --
 -- expression      -> term (("+" | "-") term)*
@@ -84,9 +88,58 @@ end
 -- Parses the tokened expression.
 function Parser.parse(tokens)
 	local stream = TokenStream.new(tokens)
-	local expr = Parser._parseComparison(stream)
+	local expr = Parser._parseLogicOr(stream)
 	stream:expect("eof")
 	return expr
+end
+
+-- logic_or -> logic_and ("or" logic_and)*
+function Parser._parseLogicOr(stream)
+	local node = Parser._parseLogicAnd(stream)
+
+	while true do
+		local tok = stream:peek()
+		if tok.kind == "identifier" and tok.value == "or" then
+			stream:next()
+			local right = Parser._parseLogicAnd(stream)
+			node = Node.Op("or", node, right)
+		else
+			break
+		end
+	end
+
+	return node
+end
+
+-- logic_and -> logic_not ("and" logic_not)*
+function Parser._parseLogicAnd(stream)
+	local node = Parser._parseLogicNot(stream)
+
+	while true do
+		local tok = stream:peek()
+		if tok.kind == "identifier" and tok.value == "and" then
+			stream:next()
+			local right = Parser._parseLogicNot(stream)
+			node = Node.Op("and", node, right)
+		else
+			break
+		end
+	end
+
+	return node
+end
+
+-- logic_not -> ("not")* comparison
+function Parser._parseLogicNot(stream)
+	local tok = stream:peek()
+
+	if tok.kind == "identifier" and tok.value == "not" then
+		stream:next()
+		local operand = Parser._parseLogicNot(stream)
+		return Node.Func("not", { operand })
+	end
+
+	return Parser._parseComparison(stream)
 end
 
 -- comparison -> expression ((">" | "<" | ">=" | "<=" | "==" | "!=") expression)*
@@ -238,6 +291,13 @@ function Parser._parsePrimary(stream)
 		stream:next()
 		local name = tok.value
 		
+		-- boolean literals
+		if name == "true" then
+			return Node.Const("true")
+		elseif name == "false" then
+			return Node.Const("false")
+		end
+		
 		local args = {}
 		
 		-- is it a constant + user-defined constant?
@@ -281,27 +341,6 @@ function Parser._parsePrimary(stream)
 	error("Parser: Unexpected token '" .. tok.kind .. "'")
 end
 
-function Parser._parseComparison(stream)
-	local node = Parser._parseExpression(stream)
-
-	while true do
-		local tok = stream:peek()
-		if tok.kind == "operator" and (
-			tok.value == ">" or tok.value == "<" or
-				tok.value == ">=" or tok.value == "<=" or
-				tok.value == "==" or tok.value == "!="
-			) then
-			stream:next()
-			local right = Parser._parseExpression(stream)
-			node = Node.Op(tok.value, node, right)
-		else
-			break
-		end
-	end
-
-	return node
-end
-
 -- Special case: Parse piecewise.
 function Parser._parsePiecewise(stream)
 	stream:expect("lbrace")
@@ -310,13 +349,13 @@ function Parser._parsePiecewise(stream)
 
 	while true do
 		-- Parse condition
-		local cond = Parser._parseComparison(stream)
+		local cond = Parser._parseLogicOr(stream)
 
 		-- Expect ':'
 		stream:expect("colon")
 
 		-- Parse expression
-		local expr = Parser._parseComparison(stream)
+		local expr = Parser._parseLogicOr(stream)
 
 		table.insert(branches, { cond, expr })
 
