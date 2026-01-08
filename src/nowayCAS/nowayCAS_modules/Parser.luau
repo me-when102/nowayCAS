@@ -154,7 +154,7 @@ function Parser._parseComparison(stream)
 				tok.value == "==" or tok.value == "!="
 			) then
 			stream:next()
-			local right = Parser._parseExpression(stream)
+			local right = Parser._parseLogicOr(stream)
 			node = Node.Op(tok.value, node, right)
 		else
 			break
@@ -311,10 +311,10 @@ function Parser._parsePrimary(stream)
 			
 			local args = {}
 			if stream:peek().kind ~= "rparen" then
-				table.insert(args, Parser._parseExpression(stream))
+				table.insert(args, Parser._parseLogicOr(stream))
 				while stream:peek().kind == "comma" do
 					stream:next() -- consume comma
-					table.insert(args, Parser._parseExpression(stream))
+					table.insert(args, Parser._parseLogicOr(stream))
 				end
 			end
 			stream:expect("rparen")
@@ -328,7 +328,7 @@ function Parser._parsePrimary(stream)
 	-- parenthesized expression
 	if tok.kind == "lparen" then
 		stream:next()
-		local expr = Parser._parseExpression(stream)
+		local expr = Parser._parseLogicOr(stream)
 		stream:expect("rparen")
 		return expr
 	end
