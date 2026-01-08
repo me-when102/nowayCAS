@@ -236,6 +236,33 @@ function Eval.eval(node, env)
 			return left ^ right
 		end
 
+		-------------------------------------------------------
+		-- Comparison Operators
+		-------------------------------------------------------
+		if op == ">" then
+			return left > right
+		end
+
+		if op == "<" then
+			return left < right
+		end
+
+		if op == ">=" then
+			return left >= right
+		end
+
+		if op == "<=" then
+			return left <= right
+		end
+
+		if op == "==" then
+			return left == right
+		end
+
+		if op == "!=" then
+			return left ~= right
+		end
+
 		error("nowayCAS.Eval: unsupported operator '" .. op .. "'")
 	end
 

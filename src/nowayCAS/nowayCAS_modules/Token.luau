@@ -192,6 +192,62 @@ function Token._tokenize(input: string)
 		end
 
 		-------------------------------------------------------
+		-- Comparison Operators
+		-------------------------------------------------------
+
+		-- <= or <
+		if c == "<" then
+			local nextChar = (i < n) and input:sub(i+1, i+1) or ""
+			if nextChar == "=" then
+				table_insert(tokens, makeToken("operator", "<="))
+				i += 2
+			else
+				table_insert(tokens, makeToken("operator", "<"))
+				i += 1
+			end
+			continue
+		end
+
+		-- >= or >
+		if c == ">" then
+			local nextChar = (i < n) and input:sub(i+1, i+1) or ""
+			if nextChar == "=" then
+				table_insert(tokens, makeToken("operator", ">="))
+				i += 2
+			else
+				table_insert(tokens, makeToken("operator", ">"))
+				i += 1
+			end
+			continue
+		end
+
+		-- == (equality)
+		if c == "=" then
+			local nextChar = (i < n) and input:sub(i+1, i+1) or ""
+			if nextChar == "=" then
+				table_insert(tokens, makeToken("operator", "=="))
+				i += 2
+				continue
+			end
+			error("nowayCAS.Tokenizer: Unexpected '=' — did you mean '=='?")
+		end
+
+		-- != (not equal)
+		if c == "!" then
+			local nextChar = (i < n) and input:sub(i+1, i+1) or ""
+			if nextChar == "=" then
+				table_insert(tokens, makeToken("operator", "!="))
+				i += 2
+				continue
+			end
+
+			-- fallback: factorial
+			table_insert(tokens, makeToken("operator", "!"))
+			i += 1
+			continue
+		end
+
+		-------------------------------------------------------
 		-- Unknown character
 		-------------------------------------------------------
 		error("nowayCAS.Tokenizer: Unexpected character '" .. c .. "' at position " .. i)

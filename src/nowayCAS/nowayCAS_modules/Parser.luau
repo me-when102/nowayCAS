@@ -8,6 +8,8 @@ local UserConstants = require(script.Parent.UserConstants)
 -- Converts a token list into an AST (expression tree).
 -- Grammar (recursive descent):
 --
+-- comparison 	   -> expression ((">" | "<" | ">=" | "<=" | "==" | "!=") expression)*
+--
 -- expression      -> term (("+" | "-") term)*
 --
 -- term            -> factor (("*" | "/" | implicit) factor)*
@@ -82,9 +84,31 @@ end
 -- Parses the tokened expression.
 function Parser.parse(tokens)
 	local stream = TokenStream.new(tokens)
-	local expr = Parser._parseExpression(stream)
+	local expr = Parser._parseComparison(stream)
 	stream:expect("eof")
 	return expr
+end
+
+-- comparison -> expression ((">" | "<" | ">=" | "<=" | "==" | "!=") expression)*
+function Parser._parseComparison(stream)
+	local node = Parser._parseExpression(stream)
+
+	while true do
+		local tok = stream:peek()
+		if tok.kind == "operator" and (
+			tok.value == ">" or tok.value == "<" or
+				tok.value == ">=" or tok.value == "<=" or
+				tok.value == "==" or tok.value == "!="
+			) then
+			stream:next()
+			local right = Parser._parseExpression(stream)
+			node = Node.Op(tok.value, node, right)
+		else
+			break
+		end
+	end
+
+	return node
 end
 
 -- expression -> term (("+" | "-") term)*
@@ -257,6 +281,27 @@ function Parser._parsePrimary(stream)
 	error("Parser: Unexpected token '" .. tok.kind .. "'")
 end
 
+function Parser._parseComparison(stream)
+	local node = Parser._parseExpression(stream)
+
+	while true do
+		local tok = stream:peek()
+		if tok.kind == "operator" and (
+			tok.value == ">" or tok.value == "<" or
+				tok.value == ">=" or tok.value == "<=" or
+				tok.value == "==" or tok.value == "!="
+			) then
+			stream:next()
+			local right = Parser._parseExpression(stream)
+			node = Node.Op(tok.value, node, right)
+		else
+			break
+		end
+	end
+
+	return node
+end
+
 -- Special case: Parse piecewise.
 function Parser._parsePiecewise(stream)
 	stream:expect("lbrace")
@@ -265,13 +310,13 @@ function Parser._parsePiecewise(stream)
 
 	while true do
 		-- Parse condition
-		local cond = Parser._parseExpression(stream)
+		local cond = Parser._parseComparison(stream)
 
 		-- Expect ':'
 		stream:expect("colon")
 
 		-- Parse expression
-		local expr = Parser._parseExpression(stream)
+		local expr = Parser._parseComparison(stream)
 
 		table.insert(branches, { cond, expr })
 
