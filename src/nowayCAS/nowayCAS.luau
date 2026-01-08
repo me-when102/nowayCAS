@@ -35,7 +35,7 @@
 	            - Associative operators never nest.
 	            - Functions never evaluate unless fully numeric.
 	            - Canonicalization flattens nested piecewise nodes.
-	            - Contradictory branches may be pruned (?).
+	            - Canonicalization prunes only syntactically unreachable piecewise branches (eg, literal false, duplicate conditions, or branches after a literal true). No semantic contradiction detection is performed.
 	            - Branch order is preserved unless contradictions are detected.
 	            
 	        Equations and Relational Semantics:
