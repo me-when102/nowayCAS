@@ -1,6 +1,7 @@
 local FactorHelpers = require(script.Parent.FactorHelpers)
 local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
+local Simplify = require(script.Parent.Parent.Simplify)
 local Util = require(script.Parent.Parent.Util)
 
 local tonumber = tonumber
@@ -13,16 +14,17 @@ local Bin = {}
 -- Binomial
 -------------------------------------------------------
 
--- Detect n = +-u^2, returning (true, u, sign)
+-- Detect n = +-(K * U^2) where K is a perfect square (possibly 1),
+-- returning (true, base, sign), where base is K^(1/2) * U and sign is +-1.
 local function getSquareBaseSigned(n)
-	-- symbolic square: u^2
+	-- pure symbolic square: u^2
 	if n.kind == "op" and n.op == "^" then
 		if n.right.kind == "num" and tonumber(n.right.value) == 2 then
 			return true, n.left, 1
 		end
 	end
 
-	-- numeric square: +-k
+	-- pure numeric square: +-k
 	if n.kind == "num" then
 		local v = tonumber(n.value)
 		if v then
@@ -35,7 +37,76 @@ local function getSquareBaseSigned(n)
 		end
 	end
 
-	return false, nil, nil
+	-- general monomial with coefficient and powers, e.g. 9x^2, -25y^2, 49a^2
+	-- Use FactorHelpers.extractTerm to pull out numeric coefficient and symbolic factors.
+	local ex = FactorHelpers.extractTerm(n)
+	-- ex.num: integer coefficient
+	-- ex.varExp: map name -> exponent
+	-- ex.others: list of non-var/const factors
+
+	-- We only handle pure monomials: no "others"
+	if #ex.others > 0 then
+		return false, nil, nil
+	end
+
+	-- All exponents must be even to be a square
+	for _, exp in pairs(ex.varExp) do
+		if exp % 2 ~= 0 then
+			return false, nil, nil
+		end
+	end
+
+	-- Coefficient must be a perfect square up to sign
+	local coeff = ex.num
+	if coeff == 0 then
+		-- 0 is a square: 0^2
+		return true, Node.Num("0"), 1
+	end
+
+	local sign = (coeff >= 0) and 1 or -1
+	local absCoeff = math.abs(coeff)
+	local r = math.sqrt(absCoeff)
+	if r ~= math.floor(r) then
+		return false, nil, nil
+	end
+
+	-- Build base = r * Π var^(exp/2)
+	local factors = {}
+
+	-- numeric part
+	if r ~= 1 then
+		table_insert(factors, Node.Num(tostring(r)))
+	end
+
+	-- symbolic part: each var^(exp/2)
+	for name, exp in pairs(ex.varExp) do
+		local half = exp // 2
+		local base
+		if name:sub(1,6) == "const:" then
+			base = Node.Const(name:sub(7))
+		else
+			base = Node.Var(name)
+		end
+
+		if half == 1 then
+			table_insert(factors, base)
+		else
+			table_insert(factors, Node.Op("^", base, Node.Num(tostring(half))))
+		end
+	end
+
+	-- If no symbolic factors and r == 1, it's just 1
+	if #factors == 0 then
+		table_insert(factors, Node.Num("1"))
+	end
+
+	-- Fold factors into a product or single node
+	local baseNode = factors[1]
+	for i = 2, #factors do
+		baseNode = Node.Op("*", baseNode, factors[i])
+	end
+
+	return true, baseNode, sign
 end
 
 -- Build (u - v)(u + v)
@@ -50,8 +121,15 @@ end
 
 -- Build (u +- v)^2
 local function perfectSquare(u, v, sign)
-    local inner = Node.Op(sign, u, v)
-    return Canon.canonical(Node.Op("^", inner, Node.Num("2")))
+	local inner
+	if sign == "+" then
+		inner = Node.Op("+", u, v)
+	else
+		-- normalise -(u) + v -> (v - u)
+		inner = Node.Op("-", v, u)
+	end
+
+	return Canon.canonical(Node.Op("^", inner, Node.Num("2")))
 end
 
 -- Factorizes the node in binomial if possible.
@@ -100,36 +178,25 @@ function Bin.factorBinomial(node)
         end
     end
 
-    -- Perfect square trinomial: exactly 3 terms
-    if #terms == 3 and #squareTerms == 2 and #others == 1 then
-        local u = squareTerms[1].base
-        local v = squareTerms[2].base
-        local mid = others[1]
+	-- Perfect square trinomial: (U^2) +- 2UV + (V^2)
+	if #terms == 3 and #squareTerms == 2 and #others == 1 then
+		local u = squareTerms[1].base
+		local v = squareTerms[2].base
+		local mid = others[1]
 
-        local ex = FactorHelpers.extractTerm(mid)
+		-- Compute mid / (u*v)
+		local uv = Node.Op("*", u, v)
+		local ratio = Simplify.simplify(Node.Op("/", mid, uv))
 
-        -- coefficient must be +-2
-        if math.abs(ex.num) == 2 then
-            -- Check mid term contains exactly u and v once
-            local ok = false
-
-            if u.kind == "var" and v.kind == "var" then
-                ok = (ex.varExp[u.name] == 1) and (ex.varExp[v.name] == 1)
-            else
-                local foundU, foundV = false, false
-                for _, o in ipairs(ex.others) do
-                    if Util.nodeEquals(o, u) then foundU = true end
-                    if Util.nodeEquals(o, v) then foundV = true end
-                end
-                ok = foundU and foundV
-            end
-
-            if ok then
-                local sign = (ex.num > 0) and "+" or "-"
-                return perfectSquare(u, v, sign)
-            end
-        end
-    end
+		-- ratio must simplify to +2 or -2
+		if ratio.kind == "num" then
+			local k = tonumber(ratio.value)
+			if k == 2 or k == -2 then
+				local sign = (k == 2) and "+" or "-"
+				return perfectSquare(u, v, sign)
+			end
+		end
+	end
 
     return nil
 end

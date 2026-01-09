@@ -7,17 +7,19 @@ local Factor = {}
 -------------------------------------------------------
 -- TODO:
 -- Implement rational support
+-- fix factorization by fixing canonicalization and simplifying.
 
 local Canon = require(script.Parent.Canon)
 local Simplify = require(script.Parent.Simplify)
 local Util = require(script.Parent.Util)
 local Node = require(script.Parent.Node)
 
-local H = require(script.helpers)
+local FactorHelpers = require(script.FactorHelpers)
 local Sum = require(script.sum)
 local Bil = require(script.bilinear)
 local Bin = require(script.binomial)
 local Lin = require(script.linear)
+local Quadratic = require(script.quadratic)
 local Trace = require(script.trace)
 
 local tostring = tostring
@@ -39,6 +41,7 @@ end
 
 -- try binomial, bilinear, linear-in-var, then sum fallback at this node
 local function factorAt(node)
+
 	-- binomial first
 	local b = Bin.factorBinomial(node)
 	Trace.log("Binomial attempt: ".. tostring(b))
@@ -48,14 +51,18 @@ local function factorAt(node)
 	local bil = Bil.factorBilinearGrouping(node)
 	Trace.log("Bilinear Grouping attempt: ".. tostring(bil))
 	if bil then return bil end
+	
+	-- quadratic factoring
+	local quad = Quadratic.factorQuadratic(node)
+	if quad then return quad end
 
 	-- linear in variable
 	if node.kind == "op" and node.op == "+" then
 		local vars = {}
 		local terms = {}
-		H.factor_flatten(node, "+", terms)
+		FactorHelpers.factor_flatten(node, "+", terms)
 		for _, t in ipairs(terms) do
-			local ex = H.extractTerm(t)
+			local ex = FactorHelpers.extractTerm(t)
 			for name in pairs(ex.varExp) do vars[name] = true end
 		end
 		for name in pairs(vars) do
@@ -97,15 +104,26 @@ end
 -- Factorizes the node.
 -- Canonicalize, try pariwse common, top-down bilinear pass, then iterative bottom-up factoring loop.
 function Factor.factor(node)
-	node = Simplify.simplify(node)
+    node = Simplify.simplify(node)
 
-	-- one bottom-up factoring pass
-	node = mapNode(node, factorAt)
+    local changed = true
+    while changed do
+        local before = tostring(node)
 
-	-- canonicalize once
-	node = Canon.canonical(node)
+        -- top-down pass (good for bilinear grouping)
+        node = mapNodeTopDown(node, factorAt)
 
-	return node
+        -- bottom-up pass (good for binomials, sums, linear-in-var)
+        node = mapNode(node, factorAt)
+
+        -- clean up
+        node = Simplify.simplify(node)
+
+        local after = tostring(node)
+        changed = not Util.nodeEquals(before, after)
+    end
+
+    return node
 end
 
 -- The Factor sub-library.

@@ -247,4 +247,174 @@ function FactorHelpers.getCoeff(node)
 	end
 end
 
+-- Remove v^k from a term T, returning T / v^k
+function FactorHelpers.removeVarPower(node, var, k)
+	-- Extract the term structure
+	local ex = FactorHelpers.extractTerm(node)
+
+	-- Adjust exponent
+	local newExp = (ex.varExp[var] or 0) - k
+	if newExp < 0 then
+		-- Should never happen if caller is correct
+		return node
+	end
+
+	-- Rebuild factors
+	local factors = {}
+
+	-- numeric coefficient
+	if ex.num ~= 1 or (next(ex.varExp) == nil and #ex.others == 0) then
+		table_insert(factors, Node.Num(tostring(ex.num)))
+	end
+
+	-- symbolic factors
+	for name, exp in pairs(ex.varExp) do
+		if name ~= var then
+			-- untouched variable
+			if exp == 1 then
+				table_insert(factors, Node.Var(name))
+			else
+				table_insert(factors, Node.Op("^", Node.Var(name), Node.Num(tostring(exp))))
+			end
+		else
+			-- reduced exponent
+			if newExp > 0 then
+				if newExp == 1 then
+					table_insert(factors, Node.Var(var))
+				else
+					table_insert(factors, Node.Op("^", Node.Var(var), Node.Num(tostring(newExp))))
+				end
+			end
+		end
+	end
+
+	-- other symbolic factors (non‑var/const)
+	for _, o in ipairs(ex.others) do
+		table_insert(factors, o)
+	end
+
+	-- If no factors left, return 1
+	if #factors == 0 then
+		return Node.Num("1")
+	end
+
+	-- Fold into product
+	local out = factors[1]
+	for i = 2, #factors do
+		out = Node.Op("*", out, factors[i])
+	end
+
+	return out
+end
+
+-- Return symbolic factor pairs {p, q} such that p*q = expr.
+-- Shallow, non-recursive, but handles numeric coefficients and variable powers.
+function FactorHelpers.factorPairs(expr)
+	local factor_pairs = {}
+
+	-- Extract monomial structure
+	local ex = FactorHelpers.extractTerm(expr)
+
+	-- If expr has "others" (non-monomial factors), fall back to trivial pairs
+	if #ex.others > 0 then
+		return {
+			{ Node.Num("1"), expr },
+			{ expr, Node.Num("1") }
+		}
+	end
+
+	
+	-- Numeric factor pairs
+	local num = ex.num
+	local absn = math.abs(num)
+
+	local numericPairs = {}
+
+	if absn == 0 then
+		-- 0 only has trivial pairs
+		numericPairs = {
+			{ Node.Num("0"), Node.Num("1") },
+			{ Node.Num("1"), Node.Num("0") }
+		}
+	else
+		for i = 1, absn do
+			if absn % i == 0 then
+				local a = i
+				local b = absn // i
+
+				if num < 0 then
+					table.insert(numericPairs, { Node.Num(tostring(-a)), Node.Num(tostring(b)) })
+					table.insert(numericPairs, { Node.Num(tostring(a)), Node.Num(tostring(-b)) })
+				else
+					table.insert(numericPairs, { Node.Num(tostring(a)), Node.Num(tostring(b)) })
+					table.insert(numericPairs, { Node.Num(tostring(-a)), Node.Num(tostring(-b)) })
+				end
+			end
+		end
+	end
+
+	
+	-- Variable exponent splits
+	-- For each variable x^k, split exponent into i + (k-i)
+	local varSplits = {}
+
+	local function buildVarFactor(name, exp)
+		if exp == 0 then
+			return Node.Num("1")
+		elseif exp == 1 then
+			return Node.Var(name)
+		else
+			return Node.Op("^", Node.Var(name), Node.Num(tostring(exp)))
+		end
+	end
+
+	-- Build all exponent splits for each variable
+	local varNames = {}
+	for name,_ in pairs(ex.varExp) do table.insert(varNames, name) end
+
+	-- Start with identity pair
+	varSplits[1] = { Node.Num("1"), Node.Num("1") }
+
+	for _, name in ipairs(varNames) do
+		local k = ex.varExp[name]
+		local newSplits = {}
+
+		for _, pair in ipairs(varSplits) do
+			for i = 0, k do
+				local leftExp  = i
+				local rightExp = k - i
+
+				local leftFactor  = buildVarFactor(name, leftExp)
+				local rightFactor = buildVarFactor(name, rightExp)
+
+				-- multiply into existing pair
+				local L = Node.Op("*", pair[1], leftFactor)
+				local R = Node.Op("*", pair[2], rightFactor)
+
+				table.insert(newSplits, { L, R })
+			end
+		end
+
+		varSplits = newSplits
+	end
+
+	
+	-- Combine numeric pairs with variable exponent pairs
+	for _, np in ipairs(numericPairs) do
+		for _, vp in ipairs(varSplits) do
+			local p = Node.Op("*", np[1], vp[1])
+			local q = Node.Op("*", np[2], vp[2])
+
+			table.insert(factor_pairs, { p, q })
+		end
+	end
+
+	
+	-- 4. Always include trivial pairs
+	table.insert(factor_pairs, { Node.Num("1"), expr })
+	table.insert(factor_pairs, { expr, Node.Num("1") })
+
+	return factor_pairs
+end
+
 return FactorHelpers
