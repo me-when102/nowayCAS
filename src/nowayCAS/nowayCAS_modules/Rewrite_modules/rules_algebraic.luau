@@ -61,6 +61,9 @@ rules_algebraic.simplify = {
 	
 	-- (a / x) + (b / x) -> (a + b) / x
 	R("(_a / _d) + (_b / _d)", "(_a + _b) / _d"),
+	
+	-- (a / x) - (b / x) -> (a - b) / x
+	R("(_a / _d) - (_b / _d)", "(_a - _b) / _d"),
 }
 
 return rules_algebraic
