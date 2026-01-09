@@ -223,6 +223,11 @@ local function combineMul(nodes)
 		end
 	end
 
+	-- If the numeric coefficient is zero, the whole product is zero.
+	if num == 0 then
+		return { Node.Num("0") }
+	end
+
 	-- Emit variables/constants with exponents
 	local names = {}
 	for name,_ in pairs(varExp) do table_insert(names, name) end
@@ -524,6 +529,11 @@ function Canon._canonicalOp(node)
 
 		items = combineAdd(items)
 		items = combineLikeTerms(items)
+
+		-- sort variables
+		table_sort(items, function(a, b)
+			return canonicalKey(a) < canonicalKey(b)
+		end)
 
 		if #items == 0 then return Node.Num("0") end
 		if #items == 1 then return items[1] end
