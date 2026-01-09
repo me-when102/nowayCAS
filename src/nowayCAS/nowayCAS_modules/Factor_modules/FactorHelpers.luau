@@ -2,7 +2,7 @@ local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
 local Util = require(script.Parent.Parent.Util)
 
-local H = {}
+local FactorHelpers = {}
 
 local table_insert = table.insert
 
@@ -16,7 +16,7 @@ local type = type
 -- Compute the common factor descriptor for a list of term descriptors.
 -- Input: terms = { { num, varExp, others }, ... }
 -- Output: { num, varExp, others }
-function H.commonFactor(terms)
+function FactorHelpers.commonFactor(terms)
 	assert(type(terms) == "table" and #terms >= 1, "commonFactor expects non-empty terms list")
 
 	-- numeric gcd
@@ -60,7 +60,7 @@ end
 
 -- Test whether a factor descriptor divides a term descriptor.
 -- Returns true if factor.num divides term.num, factor.varExp <= term.varExp, and every factor.other appears in term.others.
-function H.factorDividesTerm(factor, term)
+function FactorHelpers.factorDividesTerm(factor, term)
 	if not factor or not term then return false end
 
 	-- numeric part: factor.num must divide term.num (handle zero safely)
@@ -92,7 +92,7 @@ end
 
 -- Divide a term descriptor by a factor descriptor, returning the remainder descriptor.
 -- Assumes factorDividesTerm(factor, term) is true. Removes zero exponents.
-function H.divideTerm(term, factor)
+function FactorHelpers.divideTerm(term, factor)
 	local num = (term.num or 1) / (factor.num or 1)
 
 	local varExp = {}
@@ -116,18 +116,18 @@ function H.divideTerm(term, factor)
 	return { num = num, varExp = varExp, others = others }
 end
 
-function H.factor_flatten(node, op, out)
+function FactorHelpers.factor_flatten(node, op, out)
 	if node.kind == "op" and node.op == op then
-		H.factor_flatten(node.left, op, out)
-		H.factor_flatten(node.right, op, out)
+		FactorHelpers.factor_flatten(node.left, op, out)
+		FactorHelpers.factor_flatten(node.right, op, out)
 	else
 		table_insert(out, node)
 	end
 end
 
-function H.extractTerm(node)
+function FactorHelpers.extractTerm(node)
 	local factors = {}
-	H.factor_flatten(node, "*", factors)
+	FactorHelpers.factor_flatten(node, "*", factors)
 
 	local num = 1
 	local varExp = {}
@@ -149,7 +149,7 @@ function H.extractTerm(node)
 
 		elseif n.kind == "op" and n.op == "*" then
 			local parts = {}
-			H.factor_flatten(n, "*", parts)
+			FactorHelpers.factor_flatten(n, "*", parts)
 			for _, p in ipairs(parts) do
 				if p.kind == "num" then
 					num = num * tonumber(p.value)
@@ -176,7 +176,7 @@ function H.extractTerm(node)
 	}
 end
 
-function H.buildMul(f)
+function FactorHelpers.buildMul(f)
 	local parts = {}
 
 	if f.num ~= 1 then
@@ -216,7 +216,7 @@ end
 
 -- these things to document (help)
 
-function H.buildAdd(nodes)
+function FactorHelpers.buildAdd(nodes)
 	if #nodes == 0 then
 		return Node.Num("0")
 	end
@@ -228,7 +228,7 @@ function H.buildAdd(nodes)
 	return acc
 end
 
-function H.normalizeRemainder(node)
+function FactorHelpers.normalizeRemainder(node)
 	local n = Canon.canonical(node)
 	if not (n.kind == "op" and n.op == "+") then
 		n = Canon.canonical(Node.Op("+", n, Node.Num("0")))
@@ -237,7 +237,7 @@ function H.normalizeRemainder(node)
 end
 
 -- RATIONAL
-function H.getCoeff(node)
+function FactorHelpers.getCoeff(node)
 	if node.kind == "num" then
 		return node.value, 1
 	elseif node.kind == "rat" then
@@ -247,4 +247,4 @@ function H.getCoeff(node)
 	end
 end
 
-return H
+return FactorHelpers

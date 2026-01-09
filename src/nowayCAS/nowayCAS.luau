@@ -168,7 +168,7 @@ local nowayCAS = {
 
 -- Converts a value (including complex numbers) into a human-readable string.
 function nowayCAS.valueToString(x)
-	return Print.value(x)
+	return Print._value(x)
 end
 
 -------------------------------------------------------
@@ -261,7 +261,7 @@ end
 -- Indented: Returns the formatted table.
 -- Raw: Returns the luau table.
 function nowayCAS.toASTRepresentation(node)
-	return Print.toASTRepresentation(node)
+	return Print._toASTRepresentation(node)
 end
 
 -------------------------------------------------------

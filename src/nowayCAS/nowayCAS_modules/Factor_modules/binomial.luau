@@ -1,4 +1,4 @@
-local H = require(script.Parent.helpers)
+local FactorHelpers = require(script.Parent.FactorHelpers)
 local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
 local Util = require(script.Parent.Parent.Util)
@@ -67,7 +67,7 @@ function Bin.factorBinomial(node)
         terms[1] = node.left
         terms[2] = Node.Op("*", Node.Num("-1"), node.right)
     else
-        H.factor_flatten(node, "+", terms)
+        FactorHelpers.factor_flatten(node, "+", terms)
     end
 
     -- Extract square bases
@@ -89,8 +89,8 @@ function Bin.factorBinomial(node)
         local B = squareTerms[2]
 
         -- Check signs via extracted term
-        local exA = H.extractTerm(A.node)
-        local exB = H.extractTerm(B.node)
+        local exA = FactorHelpers.extractTerm(A.node)
+        local exB = FactorHelpers.extractTerm(B.node)
 
         -- We want A - B or B - A
         if exA.num > 0 and exB.num < 0 then
@@ -106,7 +106,7 @@ function Bin.factorBinomial(node)
         local v = squareTerms[2].base
         local mid = others[1]
 
-        local ex = H.extractTerm(mid)
+        local ex = FactorHelpers.extractTerm(mid)
 
         -- coefficient must be +-2
         if math.abs(ex.num) == 2 then

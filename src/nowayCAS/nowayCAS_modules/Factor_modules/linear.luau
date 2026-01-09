@@ -1,4 +1,4 @@
-local H = require(script.Parent.helpers)
+local FactorHelpers = require(script.Parent.FactorHelpers)
 local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
 local Rewrite = require(script.Parent.Parent.Rewrite)
@@ -9,7 +9,12 @@ local Simplify = require(script.Parent.Parent.Simplify)
 local ipairs = ipairs
 local table_insert = table.insert
 
+
 local Lin = {}
+
+-------------------------------------------------------
+-- Linear
+-------------------------------------------------------
 
 -- Creates the nodes wrapped under a sum node.
 local function buildAdd(nodes)
@@ -49,13 +54,13 @@ function Lin.factorLinearIn(node, varName)
 
 	-- Split into A_terms (contain varName) and B_terms (do not)
 	local terms = {}
-	H.factor_flatten(node, "+", terms)
+	FactorHelpers.factor_flatten(node, "+", terms)
 
 	local A_terms = {}
 	local B_terms = {}
 
 	for _, t in ipairs(terms) do
-		local ex = H.extractTerm(t)
+		local ex = FactorHelpers.extractTerm(t)
 		local exp = ex.varExp[varName] or 0
 
 		-- Nonlinear -> abort
@@ -90,7 +95,7 @@ function Lin.factorLinearIn(node, varName)
 	local function buildPoly(list)
 		local nodes = {}
 		for _, t in ipairs(list) do
-			table_insert(nodes, H.buildMul(t))
+			table_insert(nodes, FactorHelpers.buildMul(t))
 		end
 		return buildAdd(nodes)
 	end
@@ -115,7 +120,7 @@ function Lin.factorLinearIn(node, varName)
 	Q = Simplify.simplify(Q)
 
 	-- Normalize sign: ensure A is positive
-	if isMinusOne(H.extractTerm(A)) or (A.kind == "num" and tonumber(A.value) < 0) then
+	if isMinusOne(FactorHelpers.extractTerm(A)) or (A.kind == "num" and tonumber(A.value) < 0) then
 		A = Canon.canonical(negate(A))
 		Q = Canon.canonical(negate(Q))
 	end

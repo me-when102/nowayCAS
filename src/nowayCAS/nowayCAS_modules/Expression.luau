@@ -84,7 +84,7 @@ end
 -- Indented: Returns the formatted table.
 -- Raw: Returns the luau table.
 function Expression:toASTRepresentation()
-	return Print.toASTRepresentation(self.node)
+	return Print._toASTRepresentation(self.node)
 end
 
 -- Determines if all variables of the expression satisfy the property.

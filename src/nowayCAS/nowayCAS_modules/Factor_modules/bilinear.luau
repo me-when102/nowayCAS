@@ -1,4 +1,4 @@
-local H = require(script.Parent.helpers)
+local FactorHelpers = require(script.Parent.FactorHelpers)
 local Sum = require(script.Parent.sum)
 local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
@@ -31,12 +31,12 @@ function Bil.factorByPairwiseCommon(node)
 
 	-- Flatten and extract
 	local terms = {}
-	H.factor_flatten(node, "+", terms)
+	FactorHelpers.factor_flatten(node, "+", terms)
 	if #terms < 2 then return nil end
 
 	local extracted = {}
 	for i, t in ipairs(terms) do
-		extracted[i] = H.extractTerm(Canon.canonical(t))
+		extracted[i] = FactorHelpers.extractTerm(Canon.canonical(t))
 		extracted[i].node = Canon.canonical(t)
 	end
 
@@ -45,12 +45,12 @@ function Bil.factorByPairwiseCommon(node)
 	local candidateNodes = {}
 	for i = 1, #extracted-1 do
 		for j = i+1, #extracted do
-			local cf = H.commonFactor({extracted[i], extracted[j]})
+			local cf = FactorHelpers.commonFactor({extracted[i], extracted[j]})
 			-- ignore trivial factor (1)
 			if not (cf.num == 1 and next(cf.varExp) == nil and #cf.others == 0) then
-				local key = tostring(Canon.canonical(H.buildMul(cf)))
+				local key = tostring(Canon.canonical(FactorHelpers.buildMul(cf)))
 				candidateKeys[key] = cf
-				candidateNodes[key] = Canon.canonical(H.buildMul(cf))
+				candidateNodes[key] = Canon.canonical(FactorHelpers.buildMul(cf))
 			end
 		end
 	end
@@ -60,7 +60,7 @@ function Bil.factorByPairwiseCommon(node)
 	for key, cf in pairs(candidateKeys) do
 		local count = 0
 		for _, ex in ipairs(extracted) do
-			if H.factorDividesTerm(cf, ex) then count = count + 1 end
+			if FactorHelpers.factorDividesTerm(cf, ex) then count = count + 1 end
 		end
 		if count >= 2 then
 			table_insert(scored, {key = key, factor = cf, node = candidateNodes[key], count = count})
@@ -78,23 +78,23 @@ function Bil.factorByPairwiseCommon(node)
 	-- Try each candidate: build remainders for terms it divides and assemble product
 	for _, cand in ipairs(scored) do
 		local Fdesc = cand.factor
-		local Fnode = Canon.canonical(H.buildMul(Fdesc))
+		local Fnode = Canon.canonical(FactorHelpers.buildMul(Fdesc))
 
 		local remainders = {}
 		local usedIndices = {}
 		for i, ex in ipairs(extracted) do
-			if H.factorDividesTerm(Fdesc, ex) then
-				local remDesc = H.divideTerm(ex, Fdesc)
+			if FactorHelpers.factorDividesTerm(Fdesc, ex) then
+				local remDesc = FactorHelpers.divideTerm(ex, Fdesc)
 				-- remove zero exponents
 				for name, e in pairs(remDesc.varExp) do if e == 0 then remDesc.varExp[name] = nil end end
-				table_insert(remainders, Canon.canonical(H.buildMul(remDesc)))
+				table_insert(remainders, Canon.canonical(FactorHelpers.buildMul(remDesc)))
 				usedIndices[i] = true
 			end
 		end
 
 		-- require at least two terms used
 		if #remainders >= 2 then
-			local distributed = H.buildAdd(remainders)
+			local distributed = FactorHelpers.buildAdd(remainders)
 			local product = Canon.canonical(Node.Op("*", Fnode, Canon.canonical(distributed)))
 
 			-- If the product actually reduces the original (i.e., replacing used terms by product yields same canonical)
@@ -111,7 +111,7 @@ function Bil.factorByPairwiseCommon(node)
 					table_insert(newTerms, Canon.canonical(t))
 				end
 			end
-			local candidateSum = H.buildAdd(newTerms)
+			local candidateSum = FactorHelpers.buildAdd(newTerms)
 			-- canonical compare to ensure correctness
 			if Util.nodeEquals(Canon.canonical(candidateSum), Canon.canonical(node)) then
 				-- Optionally, try to see if multiple such factors share the same remainder (to assemble two-sided product)
@@ -132,7 +132,7 @@ function Bil.factorBilinearGrouping(node)
 
 	-- flatten and canonicalize the 4 terms once
 	local terms = {}
-	H.factor_flatten(node, "+", terms)
+	FactorHelpers.factor_flatten(node, "+", terms)
 	if #terms ~= 4 then
 		return nil 
 	end

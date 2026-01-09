@@ -1,4 +1,4 @@
-local H = require(script.Parent.helpers)
+local FactorHelpers = require(script.Parent.FactorHelpers)
 local Util = require(script.Parent.Parent.Util)
 local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
@@ -23,7 +23,7 @@ function Sum.factorSum(node)
 
 	-- Flatten the sum
 	local terms = {}
-	H.factor_flatten(node, "+", terms)
+	FactorHelpers.factor_flatten(node, "+", terms)
 	if #terms < 2 then
 		return node
 	end
@@ -31,11 +31,11 @@ function Sum.factorSum(node)
 	-- Extract term descriptors
 	local extracted = {}
 	for _, t in ipairs(terms) do
-		table_insert(extracted, H.extractTerm(t))
+		table_insert(extracted, FactorHelpers.extractTerm(t))
 	end
 
 	-- Compute the greatest common factor
-	local factor = H.commonFactor(extracted)
+	local factor = FactorHelpers.commonFactor(extracted)
 
 	-- If factor is trivial, return original
 	if factor.num == 1
@@ -76,13 +76,13 @@ function Sum.factorSum(node)
 			end
 		end
 
-		local mulNode = Canon.canonical(H.buildMul(remainder))
+		local mulNode = Canon.canonical(FactorHelpers.buildMul(remainder))
 		table_insert(newTerms, mulNode)
 	end
 
 	-- Build final product: common * (sum of remainders)
-	local common = Canon.canonical(H.buildMul(factor))
-	local distributed = Canon.canonical(H.buildAdd(newTerms))
+	local common = Canon.canonical(FactorHelpers.buildMul(factor))
+	local distributed = Canon.canonical(FactorHelpers.buildAdd(newTerms))
 
 	local product = Canon.canonical(Node.Op("*", common, distributed))
 
