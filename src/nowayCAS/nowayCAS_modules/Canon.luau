@@ -266,6 +266,32 @@ local function combineMul(nodes)
 	table_sort(out, function(a, b)
 		return canonicalKey(a) < canonicalKey(b)
 	end)
+	
+	-- Collapse repeated non-variable factors: (f)(f) -> f^2
+	do
+		local buckets = {}
+		local reps = {}
+
+		-- Count occurrences of each factor by canonical key
+		for _, n in ipairs(out) do
+			local key = canonicalKey(n)
+			buckets[key] = (buckets[key] or 0) + 1
+			reps[key] = reps[key] or n
+		end
+
+		-- Rebuild with exponent nodes for repeated factors
+		local collapsed = {}
+		for key, count in pairs(buckets) do
+			local base = reps[key]
+			if count == 1 then
+				table_insert(collapsed, base)
+			else
+				table_insert(collapsed, Node.Op("^", base, Node.Num(tostring(count))))
+			end
+		end
+
+		out = collapsed
+	end
 
 	return out
 end
@@ -592,6 +618,11 @@ function Canon._canonicalOp(node)
 	-- DIVISION + RATIONAL CREATION
 	-------------------------------------------------------
 	if op == "/" then
+		
+		-- x / 1 -> x
+		if isNum(right) and right.value == "1" then
+			return left
+		end
 
 		-- x/x -> 1 if x ~= 0
 		if canonicalKey(left) == canonicalKey(right) then
