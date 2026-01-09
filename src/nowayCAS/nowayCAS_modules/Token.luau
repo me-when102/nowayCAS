@@ -254,7 +254,7 @@ function Token._tokenize(input: string)
 				continue
 			end
 
-			-- fallback: factorial
+			-- Factorial Handling
 			table_insert(tokens, makeToken("operator", "!"))
 			i += 1
 			continue
