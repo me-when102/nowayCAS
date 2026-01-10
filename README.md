@@ -23,8 +23,8 @@ But if you really had to, you need to use `loadstring()` enabled,
 - and it can't do algebra.
 
 Or you can use other modules in the Roblox community but some (to put it nicely):
-- Can not parse algebra through strings like "sin(x)^2 + y^3 - sqrt(5)"
-- Can not simplify expressions
+- Can not parse algebra through strings like "`sin(x)^2 + y^3 - sqrt(5)`"
+- Can not simplify or canonicalize expressions
 - Can not freely put any kind of expression you'd like in any form
 
 **Straight to the point: There was NO ADVANCED symbolic engines out there in Roblox Studio.**
@@ -50,6 +50,7 @@ nowayCAS is a **full-featured symbolic engine** built from the ground up in pure
   - Expansion & factoring of polynomials (partially)
   - Symbolic **differentiation** (`var:diff(var)` and `var:diffN(var, number)`)
   - Variable/expression **substitution** (`:substitute({x: AST_node = 3})`)
+  - Complex number support. (`7 + 3i`)
 - **Evaluation**: Numerical results with parameter tables (`:eval({x=5})`)
 - **Extensibility**:
   - Built-in functions & constants (sin, cos, pi, tau, etc.)
@@ -58,13 +59,12 @@ nowayCAS is a **full-featured symbolic engine** built from the ground up in pure
   - `.toString()` → clean pretty-printed Unicode
   - `.toLaTeX()` → ready for docs/export
   - `.toDAGString()` & `.toASTRepresentation()` → debugging/power-user tools
-- **Modular design** → easy to extend with new rules, parsers, or backends
+- **Modular design** → carefully structured to handle new features in the long-term.
 
 All of this runs natively in Roblox Studio - no external services needed.
 
 ## How to Use?
-nowayCAS exposes a simple, expressive external API for parsing, manipulating, differentiating, simplifying, evaluating, and printing symbolic expressions. Everything begins with `nowayCAS.new(...)`, which parses a string into an immutable expression tree.
-
+nowayCAS exposes a simple, expressive eternal API for manipulating symbolic expressions in many different ways. Everything begins with `nowayCAS.new(...)`, which parses a string into an immutable expression tree.
 
 ### 1. Parsing Expressions and Equations
 
@@ -275,6 +275,7 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Vector Algebra
   - Dot product
   - Cross product
+- Tensor Algebra
 - Limits
 - Integrals 
 - Series Expansions (like Taylor/Maclaurin Series and Series simplifications)
