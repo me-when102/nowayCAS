@@ -39,24 +39,22 @@ local function mapNode(node, f)
 	return replaced
 end
 
--- try binomial, bilinear, linear-in-var, then sum fallback at this node
+-- try binomial, quadratic, bilinear, linear-in-var, then sum fallback at this node
 local function factorAt(node)
 
-	-- binomial first
+	-- Try binomial first
 	local b = Bin.factorBinomial(node)
-	Trace.log("Binomial attempt: ".. tostring(b))
 	if b then return b end
 
-	-- bilinear grouping
-	local bil = Bil.factorBilinearGrouping(node)
-	Trace.log("Bilinear Grouping attempt: ".. tostring(bil))
-	if bil then return bil end
-	
-	-- quadratic factoring
+	-- Try quadratic factoring
 	local quad = Quadratic.factorQuadratic(node)
 	if quad then return quad end
 
-	-- linear in variable
+	-- Try bilinear grouping
+	local bil = Bil.factorBilinearGrouping(node)
+	if bil then return bil end
+
+	-- Try linear in variable
 	if node.kind == "op" and node.op == "+" then
 		local vars = {}
 		local terms = {}
@@ -71,14 +69,14 @@ local function factorAt(node)
 		end
 	end
 
-	-- fallback
+	-- Try fallback: GCF extraction LAST
 	if node.kind == "op" and node.op == "+" then
-		Trace.log("Factor Sum")
 		return Sum.factorSum(node)
 	end
-	Trace.log("No Factorization")
+
 	return node
 end
+
 
 -- attempt f at node before recursing, preserve sums for recursion
 local function mapNodeTopDown(node, f)
@@ -104,26 +102,26 @@ end
 -- Factorizes the node.
 -- Canonicalize, try pariwse common, top-down bilinear pass, then iterative bottom-up factoring loop.
 function Factor.factor(node)
-    node = Simplify.simplify(node)
+	node = Simplify.simplify(node)
 
-    local changed = true
-    while changed do
-        local before = tostring(node)
+	local changed = true
+	while changed do
+		local before = tostring(node)
 
-        -- top-down pass (good for bilinear grouping)
-        node = mapNodeTopDown(node, factorAt)
+		-- top-down pass (good for bilinear grouping)
+		node = mapNodeTopDown(node, factorAt)
 
-        -- bottom-up pass (good for binomials, sums, linear-in-var)
-        node = mapNode(node, factorAt)
+		-- bottom-up pass (good for binomials, sums, linear-in-var)
+		node = mapNode(node, factorAt)
 
-        -- clean up
-        node = Simplify.simplify(node)
+		-- clean up
+		node = Simplify.simplify(node)
 
-        local after = tostring(node)
-        changed = not Util.nodeEquals(before, after)
-    end
+		local after = tostring(node)
+		changed = not Util.nodeEquals(before, after)
+	end
 
-    return node
+	return node
 end
 
 -- The Factor sub-library.

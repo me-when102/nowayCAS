@@ -391,7 +391,7 @@ function FactorHelpers.factorPairs(expr)
 				local L = Node.Op("*", pair[1], leftFactor)
 				local R = Node.Op("*", pair[2], rightFactor)
 
-				table.insert(newSplits, { L, R })
+				table_insert(newSplits, { L, R })
 			end
 		end
 
@@ -405,16 +405,50 @@ function FactorHelpers.factorPairs(expr)
 			local p = Node.Op("*", np[1], vp[1])
 			local q = Node.Op("*", np[2], vp[2])
 
-			table.insert(factor_pairs, { p, q })
+			table_insert(factor_pairs, { p, q })
 		end
 	end
 
 	
-	-- 4. Always include trivial pairs
-	table.insert(factor_pairs, { Node.Num("1"), expr })
-	table.insert(factor_pairs, { expr, Node.Num("1") })
+	-- Always include trivial pairs
+	table_insert(factor_pairs, { Node.Num("1"), expr })
+	table_insert(factor_pairs, { expr, Node.Num("1") })
 
 	return factor_pairs
+end
+
+-- Checks if the node is a simple monomial
+function FactorHelpers.isSimpleMonomial(node)
+	-- Extract monomial structure
+	local ex = FactorHelpers.extractTerm(node)
+
+	-- Must have no "others" (no non-monomial factors)
+	if #ex.others > 0 then
+		return false
+	end
+
+	-- Numeric coefficient must be a perfect square (up to sign)
+	local coeff = ex.num
+	local absCoeff = math.abs(coeff)
+	local r = math.sqrt(absCoeff)
+
+	-- reject if not a perfect square
+	if r ~= math.floor(r) then
+		return false
+	end
+
+	-- All variable exponents are fine (extractTerm guarantees integers)
+
+	-- No multiple distinct variables allowed (u or v must be single-variable monomials)
+	local countVars = 0
+	for _ in pairs(ex.varExp) do
+		countVars = countVars + 1
+		if countVars > 1 then
+			return false
+		end
+	end
+
+	return true
 end
 
 return FactorHelpers

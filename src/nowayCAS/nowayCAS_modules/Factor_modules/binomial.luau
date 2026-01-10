@@ -126,7 +126,7 @@ local function perfectSquare(u, v, sign)
 		inner = Node.Op("+", u, v)
 	else
 		-- normalise -(u) + v -> (v - u)
-		inner = Node.Op("-", v, u)
+		inner = Node.Op("-", u, v)
 	end
 
 	return Canon.canonical(Node.Op("^", inner, Node.Num("2")))
@@ -183,6 +183,10 @@ function Bin.factorBinomial(node)
 		local u = squareTerms[1].base
 		local v = squareTerms[2].base
 		local mid = others[1]
+
+		-- reject if u or v are not simple monomials (no numeric sqrt, no products)
+		if not FactorHelpers.isSimpleMonomial(u) then return nil end 
+		if not FactorHelpers.isSimpleMonomial(v) then return nil end
 
 		-- Compute mid / (u*v)
 		local uv = Node.Op("*", u, v)

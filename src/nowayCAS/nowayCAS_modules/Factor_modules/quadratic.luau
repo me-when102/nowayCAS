@@ -2,12 +2,40 @@ local Node = require(script.Parent.Parent.Node)
 local FactorHelpers = require(script.Parent.FactorHelpers)
 local Util = require(script.Parent.Parent.Util)
 local Simplify = require(script.Parent.Parent.Simplify)
+local Bin = require(script.Parent.binomial)
 
 local Quadratic = {}
 
 -------------------------------------------------------
 -- Quadratic
 -------------------------------------------------------
+
+-- Detect whether n is a perfect square integer (possibly negative).
+-- Returns (true, base, sign) where:
+--   base = Node.Num(sqrt(|n|))
+--   sign = +1 or -1
+-- Only used for discriminant checking.
+local function getSquareBaseSigned(n)
+	if n.kind ~= "num" then
+		return false, nil, nil
+	end
+
+	local v = tonumber(n.value)
+	if not v then
+		return false, nil, nil
+	end
+
+	local absV = math.abs(v)
+	local r = math.sqrt(absV)
+
+	if r ~= math.floor(r) then
+		return false, nil, nil
+	end
+
+	local base = Node.Num(tostring(r))
+	local sign = (v >= 0) and 1 or -1
+	return true, base, sign
+end
 
 -- Try to factor Av^2 + Bv + C in variable v
 function Quadratic.factorQuadratic(node)
@@ -19,7 +47,7 @@ function Quadratic.factorQuadratic(node)
 	local terms = {}
 	FactorHelpers.factor_flatten(node, "+", terms)
 
-	-- Detect variable with exponent 2
+	-- Detect variable with exponent 2 (we allow other vars in coefficients)
 	local var = nil
 	for _, t in ipairs(terms) do
 		local ex = FactorHelpers.extractTerm(t)
@@ -33,7 +61,7 @@ function Quadratic.factorQuadratic(node)
 		return nil
 	end
 
-	-- Extract A, B, C
+	-- Extract A, B, C as expressions
 	local A = Node.Num("0")
 	local B = Node.Num("0")
 	local C = Node.Num("0")
@@ -55,6 +83,26 @@ function Quadratic.factorQuadratic(node)
 	B = Simplify.simplify(B)
 	C = Simplify.simplify(C)
 
+	-- Compute discriminant Δ = B^2 - 4AC
+	local disc = Simplify.simplify(
+		Node.Op("-",
+			Node.Op("^", B, Node.Num("2")),
+			Node.Op("*", Node.Num("4"), Node.Op("*", A, C))
+		)
+	)
+
+	-- Only factor if discriminant is a perfect square integer
+	local isSq, _, sign = getSquareBaseSigned(disc)
+	if not isSq or sign < 0 then
+		return nil
+	end
+
+	-- Perfect square case: let binomial module own it
+	-- TODO: removing this breaks factorization (quadratic needs more fixing)
+	if disc.kind == "num" and tonumber(disc.value) == 0 then
+		return Bin.factorBinomial(node)
+	end
+
 	-- AC method: find p,q such that p*q = A*C and p+q = B
 	local AC = Simplify.simplify(Node.Op("*", A, C))
 
@@ -74,17 +122,26 @@ function Quadratic.factorQuadratic(node)
 		return nil
 	end
 
-	-- Build the two linear factors directly:
-	-- (A*v + p) * (v + q/A)
-	-- But we avoid division by A by using grouping:
-	--
-	-- Av^2 + Bv + C = (A*v + p) * (v + q/A)
-	-- and since p+q = B, this is valid.
-
+	-- Factor by grouping:
+	-- A v^2 + B v + C = A v^2 + p v + q v + C
 	local vNode = Node.Var(var)
 
-	local left  = Simplify.simplify(Node.Op("+", Node.Op("*", A, vNode), p))
-	local right = Simplify.simplify(Node.Op("+", vNode, Node.Op("/", q, A)))
+	local pTerm = Node.Op("*", p, vNode)
+	local qTerm = Node.Op("*", q, vNode)
+
+	-- Factor each group using common factors
+	local g1 = FactorHelpers.commonFactor({
+		FactorHelpers.extractTerm(Node.Op("*", A, vNode)),
+		FactorHelpers.extractTerm(pTerm),
+	})
+
+	local g2 = FactorHelpers.commonFactor({
+		FactorHelpers.extractTerm(qTerm),
+		FactorHelpers.extractTerm(C),
+	})
+
+	local left  = FactorHelpers.buildMul(g1)
+	local right = FactorHelpers.buildMul(g2)
 
 	return Node.Op("*", left, right)
 end
