@@ -79,6 +79,9 @@
 				- Complex numbers as an AST node are symbolic, and complex numbers as objects are numeric.
 				- Complex nodes store real and imag as AST nodes, not Lua numbers.
 			
+			Factorization:
+				- n/a for now
+
         System:
             Core:
                 Node.luau        -> AST constructors with DAG caching (no dependency)
