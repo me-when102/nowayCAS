@@ -99,6 +99,25 @@ function Eval.eval(node, env)
 		error("nowayCAS.Eval: no branch condition evaluated to true")
 
 		-------------------------------------------------------
+		-- Complex literal
+		-------------------------------------------------------
+	elseif kind == "complex" then
+		local re = Eval.eval(node.real, env)
+		local im = Eval.eval(node.imag, env)
+
+		-- real part may already be complex (e.g. a + 2i)
+		local base = Complex.to(re)
+
+		-- imag part must be real numeric
+		if Complex.is(im) then
+			error("nowayCAS.Eval: complex imaginary part not supported in complex literal")
+		end
+
+		-- base + im * i
+		local imagPart = Complex.new(0, im)
+		return Complex.add(base, imagPart)
+
+		-------------------------------------------------------
 		-- Functions
 		-------------------------------------------------------
 	elseif kind == "func" then

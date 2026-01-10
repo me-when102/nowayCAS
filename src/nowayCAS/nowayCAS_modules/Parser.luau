@@ -43,6 +43,35 @@ local UserConstants = require(script.Parent.UserConstants)
 -------------------------------------------------------
 
 -------------------------------------------------------
+-- Helpers
+-------------------------------------------------------
+
+-- Detects if a node is a pure imaginary literal like "5i" or "-3i"
+local function _asImaginary(node)
+	-- Case: variable "i"
+	if node.kind == "var" and node.name == "i" then
+		return Node.Num("1") -- imag = 1
+	end
+
+	-- Case: multiplication: <number> * i
+	if node.kind == "op" and node.op == "*" then
+		local left, right = node.left, node.right
+
+		-- number * i
+		if left.kind == "num" and right.kind == "var" and right.name == "i" then
+			return left
+		end
+
+		-- (-1) * i  or  (num) * i
+		if left.kind == "op" and left.op == "*" and left.left.kind == "num" and left.right.kind == "num" then
+			-- not needed unless you want to catch nested numeric forms
+		end
+	end
+
+	return nil
+end
+
+-------------------------------------------------------
 -- TokenStream helper
 -------------------------------------------------------
 local TokenStream = {}
@@ -174,6 +203,13 @@ function Parser._parseExpression(stream)
 			stream:next()
 			local right = Parser._parseTerm(stream)
 			node = Node.Op(tok.value, node, right)
+			
+			-- Complex folding: A + Bi  or  A - Bi
+			local imag = _asImaginary(right)
+			if imag then
+				node = Node.Complex(node.left, tok.value == "-" and Node.Op("*", Node.Num("-1"), imag) or imag)
+			end
+
 		else
 			break
 		end
@@ -203,6 +239,13 @@ function Parser._parseTerm(stream)
 			-- Treat as multiplication
 			local right = Parser._parseFactor(stream)
 			node = Node.Op("*", node, right)
+			
+			-- Pure imaginary: <number> * i
+			local imag = _asImaginary(Node.Op("*", node, right))
+			if imag then
+				return Node.Complex(Node.Num("0"), imag)
+			end
+			
 			continue
 		end
 
@@ -323,6 +366,9 @@ function Parser._parsePrimary(stream)
 
 		-- otherwise it's a variable
 		return Node.Var(name)
+		
+		-- Special case: standalone "i" is a variable, not imaginary unit
+		-- Imaginary unit only appears in numeric-imaginary patterns.
 	end
 
 	-- parenthesized expression
