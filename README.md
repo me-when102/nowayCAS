@@ -254,6 +254,7 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 ## **Roadmap (needs help)**
 - Enhancing simplification with strategies
 - Robust canonicalization
+- Modularize canonicalization
 - Extended Equations System
   - Support generalized polynomial solving
   - Solve simultaneous questions
