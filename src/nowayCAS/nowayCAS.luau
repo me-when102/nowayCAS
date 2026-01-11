@@ -178,9 +178,6 @@ end
 -- Node Manipulation
 -------------------------------------------------------
 
--- TODO: constructor semantics problem: find a way to access symbolic complex numbers without awkwardness
--- context: the system supports complex numbers (Node.Complex(real, imag))
-
 -- Parses a string to an expression or an equation.
 -- If the string has a relation (=, >=, >, etc), it constructs an equation object
 -- Else, it constructs an expression object
@@ -382,7 +379,7 @@ function nowayCAS.newGreaterThanOrEqual(lhs, rhs) return Equation.ge(lhs, rhs) e
 -- Returns a solve, solveset table, or other special table from solving the equation for a variable.
 -- The variable must be a single variable node.
 function nowayCAS.solveEquation(expr, var)
-	Solve.solve(expr, var)
+	return Solve.solve(expr, var)
 end
 
 -- Returns a solve, solveset table, or other special table from solving the equation for a variable.
