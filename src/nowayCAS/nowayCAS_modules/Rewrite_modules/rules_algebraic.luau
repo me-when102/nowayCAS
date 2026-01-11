@@ -64,6 +64,10 @@ rules_algebraic.simplify = {
 	
 	-- (a / x) - (b / x) -> (a - b) / x
 	R("(_a / _d) - (_b / _d)", "(_a - _b) / _d"),
+	
+	-- sin(x)^2 + cos(x)^2 = 1
+	R("sin(_x)^2 + cos(_x)^2", "1"),
+	R("cos(_x)^2 + sin(_x)^2", "1"),
 }
 
 return rules_algebraic

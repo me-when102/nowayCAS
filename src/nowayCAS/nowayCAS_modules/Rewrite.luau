@@ -3,7 +3,7 @@ local Rewrite = {}
 local Node = require(script.Parent.Node)
 local Canon = require(script.Parent.Canon)
 local Util = require(script.Parent.Util)
-local DSL = require(script.DSL)
+local RewriteDSL = require(script.RewriteDSL)
 
 local table_remove = table.remove
 local table_insert = table.insert
@@ -189,7 +189,7 @@ end
 --
 -- Rule constructors:
 --      Rewrite.Rule(patternStr, replaceStr)
---        -> both parsed by DSL.parse()
+--        -> both parsed by RewriteDSL.parse()
 --
 --      Rewrite.RuleFn(patternStr, fn)
 --        -> fn receives (node, bindings)
@@ -581,8 +581,8 @@ end
 -- patternStr: the pattern to be replaced
 -- replaceStr: the string to replace the pattern
 function Rewrite.Rule(patternStr, replaceStr)
-	local pattern = DSL.parse(patternStr)
-	local replaceNode = DSL.parse(replaceStr)
+	local pattern = RewriteDSL.parse(patternStr)
+	local replaceNode = RewriteDSL.parse(replaceStr)
 
 	return {
 		pattern = pattern,
@@ -597,7 +597,7 @@ end
 -- fn: the function to be fired with the pattern string.
 function Rewrite.RuleFn(patternStr, fn)
 	return {
-		pattern = DSL.parse(patternStr),
+		pattern = RewriteDSL.parse(patternStr),
 		replace = fn
 	}
 end

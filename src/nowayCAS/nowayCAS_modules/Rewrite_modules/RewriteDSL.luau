@@ -1,9 +1,9 @@
-local DSL = {}
+local RewriteDSL = {}
 
 local Node = require(script.Parent.Parent.Node)
 
 -------------------------------------------------------
--- DSL
+-- RewriteDSL
 -------------------------------------------------------
 
 -------------------------------------------------------
@@ -46,7 +46,7 @@ local function tokenize(str)
 			i += 1
 
 		else
-			error("Unexpected character in DSL: " .. c)
+			error("Unexpected character in RewriteDSL: " .. c)
 		end
 	end
 
@@ -98,6 +98,16 @@ function parseAtom(tokens)
 	if t:match("^%a+") then
 		pop(tokens)
 		local name = t
+		
+		-- check if complex number first
+		if name == "complex" and peek(tokens) == "(" then
+			pop(tokens) -- "("
+			local real = parseExpr(tokens)
+			if pop(tokens) ~= "," then error("Expected ',' in complex()") end
+			local imag = parseExpr(tokens)
+			if pop(tokens) ~= ")" then error("Expected ')' in complex()") end
+			return Node.Complex(real, imag)
+		end
 
 		-- function call?
 		if peek(tokens) == "(" then
@@ -129,7 +139,7 @@ end
 
 -------------------------------------------------------
 -- Parse binary expressions (left-associative)
--- NOTE: This is a simple pattern DSL, not a full math parser.
+-- NOTE: This is a simple pattern RewriteDSL, not a full math parser.
 -------------------------------------------------------
 
 local function parsePower(tokens)
@@ -185,7 +195,7 @@ end
 -- Public API
 -------------------------------------------------------
 
-function DSL.parse(str)
+function RewriteDSL.parse(str)
 	local tokens = tokenize(str)
 	local node = parseExpr(tokens)
 
@@ -196,5 +206,5 @@ function DSL.parse(str)
 	return node
 end
 
--- The DSL system.
-return DSL
+-- The RewriteDSL system.
+return RewriteDSL
