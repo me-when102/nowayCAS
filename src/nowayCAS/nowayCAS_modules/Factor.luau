@@ -1,14 +1,5 @@
 local Factor = {}
 
--------------------------------------------------------
--- Factor
--- Facorizes expressions.
--- May be one of the advanced + difficult modules in here
--------------------------------------------------------
--- TODO:
--- Implement rational support
--- fix factorization by fixing canonicalization and simplifying.
-
 local Canon = require(script.Parent.Canon)
 local Simplify = require(script.Parent.Simplify)
 local Util = require(script.Parent.Util)
@@ -20,6 +11,7 @@ local Bil = require(script.bilinear)
 local Bin = require(script.binomial)
 local Lin = require(script.linear)
 local Quadratic = require(script.quadratic)
+local Tri = require(script.trinomial)
 local Trace = require(script.trace)
 
 local tostring = tostring
@@ -27,6 +19,14 @@ local ipairs = ipairs
 
 -- expose trace toggle
 Factor.trace = Trace
+
+-------------------------------------------------------
+-- Factor
+-- Facorizes expressions.
+-- May be one of the advanced + difficult modules in here
+-- TODO: Implement rational support
+-- TODO: fix factorization by fixing canonicalization and simplifying.
+-------------------------------------------------------
 
 -- recursively apply f bottom-up to every node and return f(node)
 local function mapNode(node, f)
@@ -39,10 +39,14 @@ local function mapNode(node, f)
 	return replaced
 end
 
--- try binomial, quadratic, bilinear, linear-in-var, then sum fallback at this node
+-- try trinomial, binomial, quadratic, bilinear, linear-in-var, then sum fallback at this node (in order).
 local function factorAt(node)
 
-	-- Try binomial first
+	-- Try perfect square trinomial factoring first.	
+	local sq = Tri.isPerfectSquareTrinomial(node)
+	if sq then return sq end
+
+	-- Try binomial factoring
 	local b = Bin.factorBinomial(node)
 	if b then return b end
 

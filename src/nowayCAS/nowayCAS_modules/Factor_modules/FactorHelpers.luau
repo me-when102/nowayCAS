@@ -7,11 +7,38 @@ local FactorHelpers = {}
 local table_insert = table.insert
 
 local ipairs = ipairs
+local pairs = pairs
 local type = type
 
 -------------------------------------------------------
 -- Factorization Helpers
+-- Common helpers for the factorization subsystem.
+-- TODO: FactorHelpers is in pain, perhaps if Factor gets fixed try increasing maintainability index if possible.
 -------------------------------------------------------
+
+function FactorHelpers.minExponentAcross(terms, name)
+	local minExp = terms[1].varExp[name] or 0
+	for i = 2, #terms do
+		minExp = math.min(minExp, terms[i].varExp[name] or 0)
+	end
+	return minExp
+end
+
+function FactorHelpers.intersectOthers(terms)
+	local others = {}
+	for _, n in ipairs(terms[1].others or {}) do
+		local ok = true
+		for i = 2, #terms do
+			local found = false
+			for _, m in ipairs(terms[i].others or {}) do
+				if Util.nodeEquals(n, m) then found = true; break end
+			end
+			if not found then ok = false; break end
+		end
+		if ok then table.insert(others, n) end
+	end
+	return others
+end
 
 -- Compute the common factor descriptor for a list of term descriptors.
 -- Input: terms = { { num, varExp, others }, ... }
@@ -28,32 +55,12 @@ function FactorHelpers.commonFactor(terms)
 	-- variable min exponents
 	local varExp = {}
 	for name, exp in pairs(terms[1].varExp or {}) do
-		local minExp = exp
-		for i = 2, #terms do
-			minExp = math.min(minExp, terms[i].varExp[name] or 0)
-		end
+		local minExp = FactorHelpers.minExponentAcross(terms, name)
 		if minExp > 0 then varExp[name] = minExp end
 	end
 
 	-- intersection of "others" using structural equality
-	local others = {}
-	for _, n in ipairs(terms[1].others or {}) do
-		local ok = true
-		for i = 2, #terms do
-			local found = false
-			for _, m in ipairs(terms[i].others or {}) do
-				if Util.nodeEquals(n, m) then
-					found = true
-					break
-				end
-			end
-			if not found then
-				ok = false
-				break
-			end
-		end
-		if ok then table_insert(others, n) end
-	end
+	local others =  FactorHelpers.intersectOthers(terms)
 
 	return { num = g, varExp = varExp, others = others }
 end
@@ -176,6 +183,7 @@ function FactorHelpers.extractTerm(node)
 	}
 end
 
+-- Builds a sequence of multiplication nodes.
 function FactorHelpers.buildMul(f)
 	local parts = {}
 
@@ -214,8 +222,7 @@ function FactorHelpers.buildMul(f)
 	return result
 end
 
--- these things to document (help)
-
+-- Build an addition sum node sequence with a table of nodes.
 function FactorHelpers.buildAdd(nodes)
 	if #nodes == 0 then
 		return Node.Num("0")
@@ -228,6 +235,7 @@ function FactorHelpers.buildAdd(nodes)
 	return acc
 end
 
+-- Normalizes the node remainder.
 function FactorHelpers.normalizeRemainder(node)
 	local n = Canon.canonical(node)
 	if not (n.kind == "op" and n.op == "+") then
@@ -236,7 +244,7 @@ function FactorHelpers.normalizeRemainder(node)
 	return n
 end
 
--- RATIONAL
+-- Gets the coefficient of the node, regardless if it is a number or a rational.
 function FactorHelpers.getCoeff(node)
 	if node.kind == "num" then
 		return node.value, 1
@@ -323,7 +331,6 @@ function FactorHelpers.factorPairs(expr)
 		}
 	end
 
-	
 	-- Numeric factor pairs
 	local num = ex.num
 	local absn = math.abs(num)
@@ -343,17 +350,16 @@ function FactorHelpers.factorPairs(expr)
 				local b = absn // i
 
 				if num < 0 then
-					table.insert(numericPairs, { Node.Num(tostring(-a)), Node.Num(tostring(b)) })
-					table.insert(numericPairs, { Node.Num(tostring(a)), Node.Num(tostring(-b)) })
+					table_insert(numericPairs, { Node.Num(tostring(-a)), Node.Num(tostring(b)) })
+					table_insert(numericPairs, { Node.Num(tostring(a)), Node.Num(tostring(-b)) })
 				else
-					table.insert(numericPairs, { Node.Num(tostring(a)), Node.Num(tostring(b)) })
-					table.insert(numericPairs, { Node.Num(tostring(-a)), Node.Num(tostring(-b)) })
+					table_insert(numericPairs, { Node.Num(tostring(a)), Node.Num(tostring(b)) })
+					table_insert(numericPairs, { Node.Num(tostring(-a)), Node.Num(tostring(-b)) })
 				end
 			end
 		end
 	end
 
-	
 	-- Variable exponent splits
 	-- For each variable x^k, split exponent into i + (k-i)
 	local varSplits = {}
@@ -370,7 +376,7 @@ function FactorHelpers.factorPairs(expr)
 
 	-- Build all exponent splits for each variable
 	local varNames = {}
-	for name,_ in pairs(ex.varExp) do table.insert(varNames, name) end
+	for name,_ in pairs(ex.varExp) do table_insert(varNames, name) end
 
 	-- Start with identity pair
 	varSplits[1] = { Node.Num("1"), Node.Num("1") }
@@ -398,7 +404,6 @@ function FactorHelpers.factorPairs(expr)
 		varSplits = newSplits
 	end
 
-	
 	-- Combine numeric pairs with variable exponent pairs
 	for _, np in ipairs(numericPairs) do
 		for _, vp in ipairs(varSplits) do
@@ -409,7 +414,6 @@ function FactorHelpers.factorPairs(expr)
 		end
 	end
 
-	
 	-- Always include trivial pairs
 	table_insert(factor_pairs, { Node.Num("1"), expr })
 	table_insert(factor_pairs, { expr, Node.Num("1") })
@@ -449,6 +453,101 @@ function FactorHelpers.isSimpleMonomial(node)
 	end
 
 	return true
+end
+
+-- Detect n = +-(K * U^2) where K is a perfect square (possibly 1),
+-- returning (true, base, sign), where base is K^(1/2) * U and sign is +-1.
+function FactorHelpers.getSquareBaseSigned(n)
+	-- pure symbolic square: u^2
+	if n.kind == "op" and n.op == "^" then
+		if n.right.kind == "num" and tonumber(n.right.value) == 2 then
+			return true, n.left, 1
+		end
+	end
+
+	-- pure numeric square: +-k
+	if n.kind == "num" then
+		local v = tonumber(n.value)
+		if v then
+			local r = math.sqrt(math.abs(v))
+			if r == math.floor(r) then
+				local base = Node.Num(tostring(r))
+				local sign = (v >= 0) and 1 or -1
+				return true, base, sign
+			end
+		end
+	end
+
+	-- general monomial with coefficient and powers, e.g. 9x^2, -25y^2, 49a^2
+	-- Use FactorHelpers.extractTerm to pull out numeric coefficient and symbolic factors.
+	local ex = FactorHelpers.extractTerm(n)
+	-- ex.num: integer coefficient
+	-- ex.varExp: map name -> exponent
+	-- ex.others: list of non-var/const factors
+
+	-- We only handle pure monomials: no "others"
+	if #ex.others > 0 then
+		return false, nil, nil
+	end
+
+	-- All exponents must be even to be a square
+	for _, exp in pairs(ex.varExp) do
+		if exp % 2 ~= 0 then
+			return false, nil, nil
+		end
+	end
+
+	-- Coefficient must be a perfect square up to sign
+	local coeff = ex.num
+	if coeff == 0 then
+		-- 0 is a square: 0^2
+		return true, Node.Num("0"), 1
+	end
+
+	local sign = (coeff >= 0) and 1 or -1
+	local absCoeff = math.abs(coeff)
+	local r = math.sqrt(absCoeff)
+	if r ~= math.floor(r) then
+		return false, nil, nil
+	end
+
+	-- Build base = r * Π var^(exp/2)
+	local factors = {}
+
+	-- numeric part
+	if r ~= 1 then
+		table_insert(factors, Node.Num(tostring(r)))
+	end
+
+	-- symbolic part: each var^(exp/2)
+	for name, exp in pairs(ex.varExp) do
+		local half = exp // 2
+		local base
+		if name:sub(1,6) == "const:" then
+			base = Node.Const(name:sub(7))
+		else
+			base = Node.Var(name)
+		end
+
+		if half == 1 then
+			table_insert(factors, base)
+		else
+			table_insert(factors, Node.Op("^", base, Node.Num(tostring(half))))
+		end
+	end
+
+	-- If no symbolic factors and r == 1, it's just 1
+	if #factors == 0 then
+		table_insert(factors, Node.Num("1"))
+	end
+
+	-- Fold factors into a product or single node
+	local baseNode = factors[1]
+	for i = 2, #factors do
+		baseNode = Node.Op("*", baseNode, factors[i])
+	end
+
+	return true, baseNode, sign
 end
 
 return FactorHelpers
