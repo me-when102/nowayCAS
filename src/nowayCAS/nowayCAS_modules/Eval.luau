@@ -45,9 +45,8 @@ function Eval.eval(node, env)
 		return tonumber(node.value)
 
 		-------------------------------------------------------
-		-- Numbers
+		-- Rationals
 		-------------------------------------------------------
-
 	elseif kind == "rat" then
 
 		return node.num / node.den
