@@ -4,7 +4,20 @@ local NODE_CACHE = {}
 local tostring = tostring
 
 -------------------------------------------------------
--- Expression Node Constructors
+-- Node constructors (AST/DAG)
+-- Immutable, structurally hashed, and interned (DAG).
+--
+-- Num(n):            numeric literal ("num"), value as string
+-- Rat(n,d):          reduced rational ("rat"); integer num/den, gcd‑normalized, den>0
+-- Complex(r,i):      complex number ("complex"), numeric parts
+-- Var(name):         symbolic variable ("var")
+-- Const(name):       named constant ("const")
+-- Op(op,l,r):        binary operator ("op"), raw tree (no AC)
+-- Func(name,args):   function call ("func"), args = node list
+-- Piecewise({{cond,expr},...}): piecewise branches ("piecewise"), {cond,expr}
+--
+-- Constructors never simplify; they only build canonical nodes.
+-- Identical structures reuse the same cached instance.
 -------------------------------------------------------
 
 -- Hashes the node (DAG)

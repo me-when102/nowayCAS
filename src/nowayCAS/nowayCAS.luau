@@ -438,7 +438,7 @@ end
 
 -- Returns an expression added by another thing.
 function Expression.__add(a, b)
-	if getmetatable(a) == Equation or getmetatable(b) == Equation then
+	if a.kind == "equation" or b.kind == "equation" then
 		return Equation.apply_op(b, "add", a)
 	end
 
@@ -448,7 +448,7 @@ end
 
 -- Returns an expression subtracted by another thing.
 function Expression.__sub(a, b)
-	if getmetatable(a) == Equation or getmetatable(b) == Equation then
+	if a.kind == "equation" or b.kind == "equation" then
 		return Equation.apply_op(b, "sub", a)
 	end
 
@@ -458,7 +458,7 @@ end
 
 -- Returns an expression multiplied by another thing.
 function Expression.__mul(a, b)
-	if getmetatable(a) == Equation or getmetatable(b) == Equation then
+	if a.kind == "equation" or b.kind == "equation" then
 		return Equation.apply_op(b, "mul", a)
 	end
 
@@ -468,7 +468,7 @@ end
 
 -- Returns an expression divided by another thing.
 function Expression.__div(a, b)
-	if getmetatable(a) == Equation or getmetatable(b) == Equation then
+	if a.kind == "equation" or b.kind == "equation" then
 		return Equation.apply_op(b, "div", a)
 	end
 
@@ -478,7 +478,7 @@ end
 
 -- Returns an expression powered by another thing
 function Expression.__pow(a, b)
-	if getmetatable(a) == Equation or getmetatable(b) == Equation then
+	if a.kind == "equation" or b.kind == "equation" then
 		return Equation.apply_op(b, "pow", a)
 	end
 

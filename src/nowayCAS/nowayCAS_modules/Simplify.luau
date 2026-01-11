@@ -202,4 +202,5 @@ function Simplify.simplifyDeep(node, maxSteps)
 	return node
 end
 
+-- The Simplifier sub-library.
 return Simplify

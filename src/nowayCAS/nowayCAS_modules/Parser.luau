@@ -433,5 +433,5 @@ function Parser._startsPrimary(tok)
 		or tok.kind == "lbrace"
 end
 
--- The Parser sub-library
+-- The Parser sub-library.
 return Parser

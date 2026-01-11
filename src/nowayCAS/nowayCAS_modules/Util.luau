@@ -212,7 +212,7 @@ end
 -- Detect if the string has a relation and then split into two left and right expressions and one relation if found.
 function Util.detectRelation(str)
 	-- Relations to detect, ordered by length (longest first)
-	local relations = { "<=", ">=", "!=", "<", ">", "=" }
+	local relations = { "<=", ">=", "!=", "==", "<", ">", "=" }
 
 	local depth = 0
 	local i = 1
