@@ -38,7 +38,7 @@ local Print = require(script.Parent.Print)
 -- (future: factorization-based)
 -------------------------------------------------------
 
--- Solve an expression or an equation.
+-- Solve an expression or an equation for a variable.
 function Solve.solve(expr, var)
 	local eq = Solve.normalizeEquation(expr, var)
 
@@ -46,8 +46,12 @@ function Solve.solve(expr, var)
 		return Solve.unknownSolve(expr, var)
 	end
 
+	-- piecewise solving
+	if eq.lhs.kind == "piecewise" or eq.rhs.kind == "piecewise" then
+		return Solve.solvePiecewise(eq, var)
+	end
+
 	local class = Solve.classifyEquation(eq, var)
-	print("class:", class)
 	if class == "linear" then
 		return Solve.solveLinear(eq, var)
 	elseif class == "quadratic" then
@@ -63,6 +67,11 @@ end
 function Solve.normalizeEquation(expr, var)
 	if expr.kind == "equation" then
 		local rel = expr.rel  -- e.g. "==", "<", "<=", ">", ">=", "!="
+		
+		-- do not normalize piecewise equations
+		if expr.lhs.kind == "piecewise" or expr.rhs.kind == "piecewise" then
+			return expr
+		end
 
 		if rel == "==" then
 			-- Only equalities can be normalized to lhs - rhs = 0
@@ -248,8 +257,15 @@ function Solve.solveQuadratic(eq, var)
 end
 
 -- TODO: implement full polynomial solving
+-- Solve a general polynomial equation.
 function Solve.solvePolynomial(eq, var) 
 	return Solve.unknownSolve(eq, var)
+end
+
+-- TODO: implement piecewise solving
+-- Solve a piecewise function.
+function Solve.solvePiecewise(eq, var)
+    return Solve.unknownSolve(eq, var)
 end
 
 -------------------------------------------------------
