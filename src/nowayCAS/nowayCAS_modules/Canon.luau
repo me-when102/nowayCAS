@@ -117,24 +117,50 @@ local function combineAdd(nodes)
 
 	for _, n in ipairs(nodes) do
 		if Util.isNum(n) then
-			-- integer literal
-			local v = tonumber(n.value)
-			sumNum = sumNum + v * sumDen
+			if Util.beyondIntegerLimit(n.value) then
+				table_insert(out, n) -- keep symbolic
+			else
+				local v = tonumber(n.value)
+				local newNum = sumNum + v * sumDen
+
+				if Util.beyondIntegerLimit(newNum) then
+					-- stop folding, emit current sum and treat n as symbolic
+					if sumNum ~= 0 then
+						table_insert(out, Node.Num(tostring(sumNum)))
+					end
+					table_insert(out, n)
+					sumNum, sumDen = 0, 1
+				else
+					sumNum = newNum
+				end
+			end
 
 		elseif Util.isRat(n) then
-			-- rational literal
 			local n2 = n.num
 			local d2 = n.den
 
-			-- sum = sum + n2/d2
-			sumNum = sumNum * d2 + n2 * sumDen
-			sumDen = sumDen * d2
+			local a = sumNum * d2
+			local b = n2 * sumDen
 
-			-- reduce
-			local g = Util.gcd(math.abs(sumNum), math.abs(sumDen))
-			sumNum = sumNum // g
-			sumDen = sumDen // g
+			if Util.beyondIntegerLimit(a) or Util.beyondIntegerLimit(b) then
+				table_insert(out, n)
+			else
+				local newNum = a + b
+				local newDen = sumDen * d2
 
+				if Util.beyondIntegerLimit(newNum) or Util.beyondIntegerLimit(newDen) then
+					table_insert(out, n)
+				else
+					-- Safe to fold
+					sumNum = newNum
+					sumDen = newDen
+
+					-- Reduce
+					local g = Util.gcd(math.abs(sumNum), math.abs(sumDen))
+					sumNum = sumNum // g
+					sumDen = sumDen // g
+				end
+			end
 		else
 			-- symbolic term, keep it
 			table_insert(out, n)
@@ -167,17 +193,35 @@ local function combineMul(nodes)
 
 		-- Integer literal
 		if Util.isNum(n) then
-			num = num * tonumber(n.value)
+			if Util.beyondIntegerLimit(n.value) then
+				table_insert(others, n)
+			else
+				local v = tonumber(n.value)
+				local newNum = num * v
+
+				if Util.beyondIntegerLimit(newNum) then
+					-- stop folding
+					table_insert(others, n)
+				else
+					num = newNum
+				end
+			end
 
 			-- Rational literal
 		elseif Util.isRat(n) then
-			num = num * n.num
-			den = den * n.den
+			local newNum = num * n.num
+			local newDen = den * n.den
 
-			-- reduce
-			local g = Util.gcd(math.abs(num), math.abs(den))
-			num = num // g
-			den = den // g
+			if Util.beyondIntegerLimit(newNum) or Util.beyondIntegerLimit(newDen) then
+				table_insert(others, n)
+			else
+				num = newNum
+				den = newDen
+
+				local g = Util.gcd(math.abs(num), math.abs(den))
+				num = num // g
+				den = den // g
+			end
 
 			-- Variable
 		elseif Util.isVar(n) then

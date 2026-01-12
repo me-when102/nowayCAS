@@ -68,7 +68,7 @@ end
 -- Returns nil if the rational cannot be represented exactly.
 function Util.fromRational(num, den)
 	-- Guard: numerator and denominator must be within safe integer range
-	if math.abs(num) > 2^53 or math.abs(den) > 2^53 then
+	if Util.beyondIntegerLimit(num) or Util.beyondIntegerLimit(den) then
 		return nil
 	end
 
@@ -78,7 +78,7 @@ function Util.fromRational(num, den)
 	den = den // g
 
 	-- Guard again after reduction
-	if math.abs(num) > 2^53 or math.abs(den) > 2^53 then
+	if Util.beyondIntegerLimit(num) or Util.beyondIntegerLimit(den) then
 		return nil
 	end
 
@@ -304,6 +304,44 @@ function Util.collectCoefficients(expr, var)
 end
 
 -------------------------------------------------------
+-- Numeric Manipulation
+-------------------------------------------------------
+
+local limit = "9007199254740992" -- 2^53
+local leadingZerosPattern = "^0*(.*)$"
+
+-- Returns true if the number is beyond the Luau integer limit.
+function Util.beyondIntegerLimit(v)
+	-- v is expected to be a string of digits
+	-- Strip optional leading sign
+	if type(v) == "number" then
+		-- If the parser already converted it to a number, it's already inexact.
+		return math.abs(v) > 2^53
+	end
+
+	v = tostring(v)
+	if v:sub(1,1) == "-" then
+		v = v:sub(2)
+	end
+
+	-- Remove leading zeros
+	v = v:match(leadingZerosPattern)
+	if v == "" then return false end
+
+	-- Fast check: too many digits
+	if #v > 16 then
+		return true
+	end
+
+	-- Slow check: compare lexicographically to 2^53
+	if #v == #limit and v > limit then
+		return true
+	end
+
+	return false
+end
+
+-------------------------------------------------------
 -- Mathematical functions
 -------------------------------------------------------
 
@@ -383,16 +421,15 @@ end
 
 -- Returns true if the object is an equation.
 function Util.isEquation(a)
-	if a.kind and a.kind == "equation" then return true end
+	if type(a) == "table" and a.kind and a.kind == "equation" then return true end
 	return false
 end
 
 -- Returns true if the object is an equation.
 function Util.isExpression(a)
-	if a.kind and a.kind == "expression" then return true end
+	if type(a) == "table" and a.kind == "expression" then return true end
 	return false
 end
-
 
 -- The Utility sub-library.
 return Util
