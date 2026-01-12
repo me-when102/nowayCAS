@@ -36,7 +36,7 @@ Or you can use other modules in the Roblox community but some (to put it nicely)
 
 ## Features 🚀
 
-nowayCAS is a **full-featured symbolic engine** built from the ground up in pure Luau:
+nowayCAS is a **general-purpose symbolic engine** built from the ground up in pure Luau:
 
 - **Expression parsing** from strings → optimized **AST → DAG** representation (shared subexpressions for speed & memory)
 - **Natural math syntax** via operator overloading (`x^2 + 2*x + 1`)
