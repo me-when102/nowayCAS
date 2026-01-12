@@ -631,7 +631,7 @@ function Canon._canonicalOp(node)
 
 		-- x/x -> 1 if x ~= 0
 		if canonicalKey(left) == canonicalKey(right) then
-			if left.kind == "var" and Assume.is(left, "nonzero") then
+			if Util.isVar(left) and Assume.is(left, "nonzero") then
 				return Node.Num("1")
 			end
 		end
