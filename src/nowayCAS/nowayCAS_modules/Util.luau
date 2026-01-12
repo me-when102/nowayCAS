@@ -65,16 +65,29 @@ function Util.toRational(n)
 end
 
 -- Convert rational pair -> Node.Num or Node.Rat
+-- Returns nil if the rational cannot be represented exactly.
 function Util.fromRational(num, den)
+	-- Guard: numerator and denominator must be within safe integer range
+	if math.abs(num) > 2^53 or math.abs(den) > 2^53 then
+		return nil
+	end
+
 	-- reduce
 	local g = Util.gcd(num, den)
 	num = num // g
 	den = den // g
 
+	-- Guard again after reduction
+	if math.abs(num) > 2^53 or math.abs(den) > 2^53 then
+		return nil
+	end
+
+	-- If denominator is 1, return integer node
 	if den == 1 then
 		return Node.Num(tostring(num))
 	end
 
+	-- Otherwise return rational node
 	return Node.Rat(num, den)
 end
 

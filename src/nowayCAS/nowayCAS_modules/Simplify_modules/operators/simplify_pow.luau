@@ -1,5 +1,6 @@
 local Node = require(script.Parent.Parent.Parent.Node)
 local Util = require(script.Parent.Parent.Parent.Util)
+local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
 
 return {
 
@@ -47,6 +48,15 @@ return {
 				local newExp = a_num * b_num
 				return Node.Op("^", a.left, Node.Num(tostring(newExp)))
 			end
+		end
+	end,
+	
+	----------------------------------------------------------------------
+	-- a^b where both a and b are numeric constants
+	----------------------------------------------------------------------
+	function(a, b)
+		if Util.isNumeric(a) and Util.isNumeric(b) then
+			return SimplifyHelpers.pow(a, b)
 		end
 	end,
 }
