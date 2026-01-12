@@ -323,6 +323,10 @@ function Latex._toLatex(node)
 				elseif Util.isNum(leftNode) and leftNode.value == "-1" then
 					result = "-" .. b
 
+					-- x * -1 -> -x
+				elseif Util.isNum(rightNode) and rightNode.value == "-1" then
+					result = "-" .. a
+
 					-- number * variable -> 3x
 				elseif Util.isNum(leftNode) and Util.isVar(rightNode) then
 					result = a .. b

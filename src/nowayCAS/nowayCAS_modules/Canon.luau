@@ -107,234 +107,288 @@ local function canonicalKey(node)
 	end
 end
 
--- Combine numeric constants in addition
-local function combineAdd(nodes)
-	-- running rational sum: sum = sumNum / sumDen
-	local sumNum = 0
-	local sumDen = 1
+-- Create a fresh rational accumulator for addition (num / den).
+local function newAddAccumulator()
+	return { num = 0, den = 1 }
+end
 
+-- Create a fresh rational accumulator for multiplication (num / den).
+local function newMulAccumulator()
+	return { num = 1, den = 1 }
+end
+
+-- Compute new numerator when adding an integer v to acc.
+local function accAddInteger(acc, v)
+	local newNum = acc.num + v * acc.den
+	return newNum
+end
+
+-- Compute intermediate numerators for adding rational n2/d2 to acc.
+local function accAddRational(acc, n2, d2)
+	local a = acc.num * d2
+	local b = n2 * acc.den
+	return a, b
+end
+
+-- Commit a safe (num, den) pair into acc and reduce it.
+local function accCommit(acc, newNum, newDen)
+	acc.num = newNum
+	acc.den = newDen
+	-- reduce
+	local g = Util.gcd(math.abs(acc.num), math.abs(acc.den))
+	acc.num = acc.num // g
+	acc.den = acc.den // g
+end
+
+-- Emit accumulated rational into out and reset accumulator.
+local function accFlush(acc, out)
+	if acc.num ~= 0 then
+		if acc.den == 1 then
+			table_insert(out, Node.Num(tostring(acc.num)))
+		else
+			table_insert(out, Node.Rat(acc.num, acc.den))
+		end
+	end
+	acc.num, acc.den = 0, 1
+end
+
+-- Fold integer literal into acc or emit if overflow would occur.
+local function handleIntegerAdd(acc, n, out)
+	if Util.beyondIntegerLimit(n.value) then
+		table_insert(out, n)
+		return
+	end
+
+	local v = tonumber(n.value)
+	local newNum = accAddInteger(acc, v)
+
+	if Util.beyondIntegerLimit(newNum) then
+		accFlush(acc, out)
+		table_insert(out, n)
+	else
+		acc.num = newNum
+	end
+end
+
+-- Fold rational literal into acc or emit if overflow would occur.
+local function handleRationalAdd(acc, n, out)
+	local n2, d2 = n.num, n.den
+	local a, b = accAddRational(acc, n2, d2)
+
+	if Util.beyondIntegerLimit(a) or Util.beyondIntegerLimit(b) then
+		table_insert(out, n)
+		return
+	end
+
+	local newNum = a + b
+	local newDen = acc.den * d2
+
+	if Util.beyondIntegerLimit(newNum) or Util.beyondIntegerLimit(newDen) then
+		table_insert(out, n)
+		return
+	end
+
+	accCommit(acc, newNum, newDen)
+end
+
+-- Fold integer literal into multiplicative accumulator or emit if overflow.
+local function handleIntegerMul(acc, n, others)
+	if Util.beyondIntegerLimit(n.value) then
+		table_insert(others, n)
+		return
+	end
+
+	local v = tonumber(n.value)
+	local newNum = acc.num * v
+
+	if Util.beyondIntegerLimit(newNum) then
+		table_insert(others, n)
+	else
+		acc.num = newNum
+	end
+end
+
+-- Fold rational literal into multiplicative accumulator or emit if overflow.
+local function handleRationalMul(acc, n, others)
+	local newNum = acc.num * n.num
+	local newDen = acc.den * n.den
+
+	if Util.beyondIntegerLimit(newNum) or Util.beyondIntegerLimit(newDen) then
+		table_insert(others, n)
+		return
+	end
+
+	acc.num = newNum
+	acc.den = newDen
+
+	local g = Util.gcd(math.abs(acc.num), math.abs(acc.den))
+	acc.num = acc.num // g
+	acc.den = acc.den // g
+end
+
+-- Accumulate symbolic exponents (vars, consts, x^n) or classify as other.
+local function mulAccSymbol(accExp, n, others)
+	if Util.isVar(n) then
+		accExp[n.name] = (accExp[n.name] or 0) + 1
+		return
+	end
+
+	if Util.isConst(n) then
+		local key = "const:" .. n.name
+		accExp[key] = (accExp[key] or 0) + 1
+		return
+	end
+
+	if Util.isOp(n) and n.op == "^" and Util.isNum(n.right) then
+		local exp = tonumber(n.right.value)
+
+		if Util.isVar(n.left) then
+			accExp[n.left.name] = (accExp[n.left.name] or 0) + exp
+			return
+		end
+
+		if Util.isConst(n.left) then
+			local key = "const:" .. n.left.name
+			accExp[key] = (accExp[key] or 0) + exp
+			return
+		end
+	end
+
+	table_insert(others, n)
+end
+
+-- Emit numeric coefficient into out; return true if product collapses to zero.
+local function mulEmitCoefficient(acc, out, hasOtherFactors)
+	if acc.num ~= 1 or acc.den ~= 1 or not hasOtherFactors then
+		if acc.den == 1 then
+			table_insert(out, Node.Num(tostring(acc.num)))
+		else
+			table_insert(out, Node.Rat(acc.num, acc.den))
+		end
+	end
+
+	if acc.num == 0 then
+		return true -- product collapses to zero
+	end
+
+	return false
+end
+
+-- Emit symbolic factors (vars, consts, powers) in canonical order.
+local function mulEmitSymbolic(accExp, out)
+	local names = {}
+	for name,_ in pairs(accExp) do table_insert(names, name) end
+	table_sort(names)
+
+	for _, key in ipairs(names) do
+		local exp = accExp[key]
+
+		if key:sub(1,6) == "const:" then
+			local cname = key:sub(7)
+			local base = Node.Const(cname)
+			if exp == 1 then
+				table_insert(out, base)
+			else
+				table_insert(out, Node.Op("^", base, Node.Num(tostring(exp))))
+			end
+		else
+			local base = Node.Var(key)
+			if exp == 1 then
+				table_insert(out, base)
+			else
+				table_insert(out, Node.Op("^", base, Node.Num(tostring(exp))))
+			end
+		end
+	end
+end
+
+-- Collapse repeated non-variable factors into exponent form.
+local function mulCollapseRepeats(out)
+	local buckets = {}
+	local reps = {}
+
+	for _, n in ipairs(out) do
+		local key = canonicalKey(n)
+		buckets[key] = (buckets[key] or 0) + 1
+		reps[key] = reps[key] or n
+	end
+
+	local collapsed = {}
+	for key, count in pairs(buckets) do
+		local base = reps[key]
+		if count == 1 then
+			table_insert(collapsed, base)
+		else
+			table_insert(collapsed, Node.Op("^", base, Node.Num(tostring(count))))
+		end
+	end
+
+	return collapsed
+end
+
+-- Combine numeric constants in addition.
+local function combineAdd(nodes)
+	local acc = newAddAccumulator()
 	local out = {}
 
 	for _, n in ipairs(nodes) do
 		if Util.isNum(n) then
-			if Util.beyondIntegerLimit(n.value) then
-				table_insert(out, n) -- keep symbolic
-			else
-				local v = tonumber(n.value)
-				local newNum = sumNum + v * sumDen
-
-				if Util.beyondIntegerLimit(newNum) then
-					-- stop folding, emit current sum and treat n as symbolic
-					if sumNum ~= 0 then
-						table_insert(out, Node.Num(tostring(sumNum)))
-					end
-					table_insert(out, n)
-					sumNum, sumDen = 0, 1
-				else
-					sumNum = newNum
-				end
-			end
+			handleIntegerAdd(acc, n, out)
 
 		elseif Util.isRat(n) then
-			local n2 = n.num
-			local d2 = n.den
+			handleRationalAdd(acc, n, out)
 
-			local a = sumNum * d2
-			local b = n2 * sumDen
-
-			if Util.beyondIntegerLimit(a) or Util.beyondIntegerLimit(b) then
-				table_insert(out, n)
-			else
-				local newNum = a + b
-				local newDen = sumDen * d2
-
-				if Util.beyondIntegerLimit(newNum) or Util.beyondIntegerLimit(newDen) then
-					table_insert(out, n)
-				else
-					-- Safe to fold
-					sumNum = newNum
-					sumDen = newDen
-
-					-- Reduce
-					local g = Util.gcd(math.abs(sumNum), math.abs(sumDen))
-					sumNum = sumNum // g
-					sumDen = sumDen // g
-				end
-			end
 		else
-			-- symbolic term, keep it
 			table_insert(out, n)
 		end
 	end
 
-	-- emit numeric result if nonzero
-	if sumNum ~= 0 then
-		if sumDen == 1 then
-			table_insert(out, Node.Num(tostring(sumNum)))
-		else
-			table_insert(out, Node.Rat(sumNum, sumDen))
-		end
-	end
-
+	accFlush(acc, out)
 	return out
 end
 
 -- Combine numeric factors in multiplication
 -- Also combine repeated variables into powers: a*a*n*n -> a^2 * n^2
 local function combineMul(nodes)
-	-- Rational accumulator for coefficient
-	local num = 1
-	local den = 1
-
-	local varExp = {}
+	local acc = newMulAccumulator()
+	local accExp = {}
 	local others = {}
 
 	for _, n in ipairs(nodes) do
-
-		-- Integer literal
 		if Util.isNum(n) then
-			if Util.beyondIntegerLimit(n.value) then
-				table_insert(others, n)
-			else
-				local v = tonumber(n.value)
-				local newNum = num * v
+			handleIntegerMul(acc, n, others)
 
-				if Util.beyondIntegerLimit(newNum) then
-					-- stop folding
-					table_insert(others, n)
-				else
-					num = newNum
-				end
-			end
-
-			-- Rational literal
 		elseif Util.isRat(n) then
-			local newNum = num * n.num
-			local newDen = den * n.den
+			handleRationalMul(acc, n, others)
 
-			if Util.beyondIntegerLimit(newNum) or Util.beyondIntegerLimit(newDen) then
-				table_insert(others, n)
-			else
-				num = newNum
-				den = newDen
-
-				local g = Util.gcd(math.abs(num), math.abs(den))
-				num = num // g
-				den = den // g
-			end
-
-			-- Variable
-		elseif Util.isVar(n) then
-			varExp[n.name] = (varExp[n.name] or 0) + 1
-
-			-- Constant
-		elseif Util.isConst(n) then
-			varExp["const:" .. n.name] = (varExp["const:" .. n.name] or 0) + 1
-
-			-- Power: x^n or const^n
-		elseif Util.isOp(n) and n.op == "^" and Util.isNum(n.right) then
-			local exp = tonumber(n.right.value)
-
-			if Util.isVar(n.left) then
-				varExp[n.left.name] = (varExp[n.left.name] or 0) + exp
-
-			elseif Util.isConst(n.left) then
-				local key = "const:" .. n.left.name
-				varExp[key] = (varExp[key] or 0) + exp
-
-			else
-				table_insert(others, n)
-			end
-
-			-- Everything else
 		else
-			table_insert(others, n)
+			mulAccSymbol(accExp, n, others)
 		end
 	end
 
-	-- Build output list
 	local out = {}
 
-	-- Emit numeric/rational coefficient
-	if num ~= 1 or den ~= 1 or (#others == 0 and next(varExp) == nil) then
-		if den == 1 then
-			table_insert(out, Node.Num(tostring(num)))
-		else
-			table_insert(out, Node.Rat(num, den))
-		end
-	end
-
-	-- If the numeric coefficient is zero, the whole product is zero.
-	if num == 0 then
+	-- emit coefficient
+	local collapseToZero = mulEmitCoefficient(acc, out, (#others > 0 or next(accExp) ~= nil))
+	if collapseToZero then
 		return { Node.Num("0") }
 	end
 
-	-- Emit variables/constants with exponents
-	local names = {}
-	for name,_ in pairs(varExp) do table_insert(names, name) end
-	table_sort(names)
+	-- emit symbolic powers
+	mulEmitSymbolic(accExp, out)
 
-	for _, key in ipairs(names) do
-		local exp = varExp[key]
-
-		if key:sub(1,6) == "const:" then
-			local cname = key:sub(7)
-			local base = Node.Const(cname)
-
-			if exp == 1 then
-				table_insert(out, base)
-			else
-				table_insert(out, Node.Op("^", base, Node.Num(tostring(exp))))
-			end
-
-		else
-			local base = Node.Var(key)
-
-			if exp == 1 then
-				table_insert(out, base)
-			else
-				table_insert(out, Node.Op("^", base, Node.Num(tostring(exp))))
-			end
-		end
-	end
-
-	-- Emit other factors
+	-- emit other factors
 	for _, n in ipairs(others) do
 		table_insert(out, n)
 	end
 
-	-- Deterministic ordering
+	-- sort deterministically
 	table_sort(out, function(a, b)
 		return canonicalKey(a) < canonicalKey(b)
 	end)
 
-	-- Collapse repeated non-variable factors: (f)(f) -> f^2
-	do
-		local buckets = {}
-		local reps = {}
-
-		-- Count occurrences of each factor by canonical key
-		for _, n in ipairs(out) do
-			local key = canonicalKey(n)
-			buckets[key] = (buckets[key] or 0) + 1
-			reps[key] = reps[key] or n
-		end
-
-		-- Rebuild with exponent nodes for repeated factors
-		local collapsed = {}
-		for key, count in pairs(buckets) do
-			local base = reps[key]
-			if count == 1 then
-				table_insert(collapsed, base)
-			else
-				table_insert(collapsed, Node.Op("^", base, Node.Num(tostring(count))))
-			end
-		end
-
-		out = collapsed
-	end
-
-	return out
+	-- collapse repeated non-variable factors
+	return mulCollapseRepeats(out)
 end
 
 -- Returns a canonical monomial descriptor:
@@ -424,20 +478,19 @@ local function monomialKey(node)
 	return nil
 end
 
--- Combine like terms: a*x + b*x -> (a+b)*x
-local function combineLikeTerms(nodes)
+-- Buckets symbolic monomials by variable signature; returns { buckets, others }.
+local function bucketMonomials(nodes)
 	local buckets = {}
 	local others = {}
 
-	-- Bucket only symbolic monomials
 	for _, n in ipairs(nodes) do
 		local m = monomialKey(n)
 
-		-- Skip pure numeric constants — let combineAdd handle them
-		if not m or (next(m.vars) == nil) then
+		-- Not a symbolic monomial → leave it alone
+		if not m or next(m.vars) == nil then
 			table_insert(others, n)
 		else
-			-- Build key from variable/exponent signature
+			-- Build canonical variable signature
 			local names = {}
 			for k,_ in pairs(m.vars) do table_insert(names, k) end
 			table_sort(names)
@@ -450,7 +503,7 @@ local function combineLikeTerms(nodes)
 			if not buckets[key] then
 				buckets[key] = {
 					coeff = { num = m.coeff.num, den = m.coeff.den },
-					vars = table.clone(m.vars)
+					vars  = table.clone(m.vars)
 				}
 			else
 				buckets[key].coeff = ratAdd(buckets[key].coeff, m.coeff)
@@ -458,50 +511,78 @@ local function combineLikeTerms(nodes)
 		end
 	end
 
-	-- Rebuild each combined symbolic monomial
-	for _, b in pairs(buckets) do
-		if not ratIsZero(b.coeff) then
-			local factors = {}
+	return buckets, others
+end
 
-			-- Add symbolic factors
-			local names = {}
-			for name,_ in pairs(b.vars) do table_insert(names, name) end
-			table_sort(names)
+-- Rebuilds a symbolic monomial AST from a bucket { coeff, vars }.
+local function rebuildMonomial(bucket)
+	if ratIsZero(bucket.coeff) then
+		return nil
+	end
 
-			for _, name in ipairs(names) do
-				local exp = b.vars[name]
-				local base = Util.buildSymbol(name)
+	local factors = {}
 
-				if exp == 1 then
-					table_insert(factors, base)
-				else
-					table_insert(factors, Node.Op("^", base, Node.Num(tostring(exp))))
-				end
-			end
+	-- symbolic factors
+	local names = {}
+	for name,_ in pairs(bucket.vars) do table_insert(names, name) end
+	table_sort(names)
 
-			-- Add numeric coefficient
-			local c = b.coeff
-			if not ratIsOne(c) then
-				if c.den == 1 then
-					table_insert(factors, 1, Node.Num(tostring(c.num)))
-				else
-					table_insert(factors, 1, Node.Rat(c.num, c.den))
-				end
-			end
+	for _, name in ipairs(names) do
+		local exp = bucket.vars[name]
+		local base = Util.buildSymbol(name)
 
-			-- Sort factors canonically
-			table_sort(factors, function(a, b)
-				return canonicalKey(a) < canonicalKey(b)
-			end)
-
-			-- Fold into left-associative product
-			local term = factors[1]
-			for i = 2, #factors do
-				term = Node.Op("*", term, factors[i])
-			end
-
-			table_insert(others, term)
+		if exp == 1 then
+			table_insert(factors, base)
+		else
+			table_insert(factors, Node.Op("^", base, Node.Num(tostring(exp))))
 		end
+	end
+
+	-- numeric coefficient
+	local c = bucket.coeff
+	if not ratIsOne(c) then
+		if c.den == 1 then
+			table_insert(factors, 1, Node.Num(tostring(c.num)))
+		else
+			table_insert(factors, 1, Node.Rat(c.num, c.den))
+		end
+	end
+
+	-- canonical sort
+	table_sort(factors, function(a, b)
+		return canonicalKey(a) < canonicalKey(b)
+	end)
+
+	-- fold into left-associative product
+	local term = factors[1]
+	for i = 2, #factors do
+		term = Node.Op("*", term, factors[i])
+	end
+
+	return term
+end
+
+-- Rebuilds all monomials in the bucket table into AST nodes.
+local function rebuildAllMonomials(buckets)
+	local out = {}
+
+	for _, bucket in pairs(buckets) do
+		local term = rebuildMonomial(bucket)
+		if term then
+			table_insert(out, term)
+		end
+	end
+
+	return out
+end
+
+-- Combine like terms: a*x + b*x -> (a+b)*x
+local function combineLikeTerms(nodes)
+	local buckets, others = bucketMonomials(nodes)
+	local rebuilt = rebuildAllMonomials(buckets)
+
+	for _, term in ipairs(rebuilt) do
+		table_insert(others, term)
 	end
 
 	return others

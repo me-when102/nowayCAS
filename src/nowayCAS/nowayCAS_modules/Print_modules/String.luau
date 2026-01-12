@@ -149,14 +149,6 @@ function String._toString(node, parentOp)
 		local op = node.op
 
 		-------------------------------------------------------
-		-- Unary minus
-		-------------------------------------------------------
-		if op == "*" and Util.isNum(node.left) and node.left.value == "-1" then
-			local inner = maybeParen(node.right, "u-", false)
-			return "-" .. inner
-		end
-
-		-------------------------------------------------------
 		-- Exponentiation
 		-------------------------------------------------------
 		if op == "^" then
@@ -169,76 +161,86 @@ function String._toString(node, parentOp)
 		-- Multiplication (flatten + smart implicit mult)
 		-------------------------------------------------------
 		if op == "*" then
-			-- 1. Flatten chain
-			local function collect(n, out)
-				if Util.isOp(n) and n.op == "*" then
-					collect(n.left, out)
-					collect(n.right, out)
-				else
-					table_insert(out, n)
-				end
-			end
-
+			-- Flatten the multiplication chain
 			local factors = {}
-			collect(node, factors)
-
-			-- 2. Convert each factor to string
-			local out = {}
-			for _, f in ipairs(factors) do
-				if PrintHelpers.isSimple(f) then
-					table_insert(out, String._toString(f, "*"))
+			local function collect(n)
+				if Util.isOp(n) and n.op == "*" then
+					collect(n.left)
+					collect(n.right)
 				else
-					table_insert(out, "(" .. String._toString(f, "*") .. ")")
+					table_insert(factors, n)
+				end
+			end
+			collect(node)
+
+			-- Look for -1 factors and remove them while tracking sign
+			local sign = 1
+			local nonNegFactors = {}
+			for _, f in ipairs(factors) do
+				if Util.isNum(f) and f.value == "-1" then
+					sign = -sign
+				else
+					table_insert(nonNegFactors, f)
 				end
 			end
 
-			-- 3. Join with correct implicit multiplication rules
-			local result = out[1]
-			for i = 2, #out do
-				local leftNode = factors[i-1]
-				local rightNode = factors[i]
-				local a = result
-				local b = out[i]
+			-- If we ended up with no factors left after removing -1's → it's 1 or -1
+			if #nonNegFactors == 0 then
+				return sign < 0 and "-1" or "1"
+			end
 
-				-- number * variable -> 3x
-				if (Util.isNum(leftNode) or Util.isRat(leftNode))
-					and Util.isVar(rightNode) then
+			-- Build the string for the remaining factors with implicit rules
+			local parts = {}
+			for _, f in ipairs(nonNegFactors) do
+				local s = String._toString(f, "*")
+				if not PrintHelpers.isSimple(f) then
+					s = "(" .. s .. ")"
+				end
+				table_insert(parts, s)
+			end
+			
+			-- Join factors using implicit multiplication rules
+			local joined = parts[1] or "1"
+			for i = 2, #parts do
+				local leftNode  = nonNegFactors[i-1]
+				local rightNode = nonNegFactors[i]
+				local a = joined
+				local b = parts[i]
 
-					result = wrapIfRat(leftNode, a) .. b
+				if Util.isNumeric(leftNode) and Util.isVar(rightNode) then
+					joined = wrapIfRat(leftNode, a) .. b          	-- 2x
 
-					-- variable * number -> x3
-				elseif (Util.isNum(leftNode) or Util.isRat(leftNode))
-					and PrintHelpers.isBareVar(rightNode) then
+				elseif Util.isNumeric(leftNode) and PrintHelpers.isBareVar(rightNode) then
+					joined = a .. wrapIfRat(rightNode, b)         	-- x2 (rare)
 
-					result = a .. wrapIfRat(rightNode, b)
-
-					-- variable * variable
 				elseif PrintHelpers.isBareVar(leftNode) and PrintHelpers.isBareVar(rightNode) then
-					-- multi-letter vars must NOT concatenate
 					if #leftNode.name > 1 or #rightNode.name > 1 then
-						result = a .. " * " .. b
+						joined = a .. " * " .. b					-- multi-letter vars -> explicit
 					else
-						result = a .. b
+						joined = a .. b                             -- xy
 					end
 
-					-- simple * composite -> x(...)
 				elseif PrintHelpers.isSimple(leftNode) and Util.isOp(rightNode) then
-					result = wrapIfRat(leftNode, a) .. b
+					joined = wrapIfRat(leftNode, a) .. b			-- simple * complex-op
 
-					-- composite * simple -> (... )x
 				elseif Util.isOp(leftNode) and PrintHelpers.isSimple(rightNode) then
-					result = a .. wrapIfRat(rightNode, b)
+					joined = a .. wrapIfRat(rightNode, b)			-- op * op -> implicit
 
-					-- composite * composite -> (...)(...)
 				elseif Util.isOp(leftNode) and Util.isOp(rightNode) then
-					result = a .. b
+					joined = a .. b									-- fallback explicit multiplication
 
 				else
-					result = a .. " * " .. b
+					joined = a .. " * " .. b
+
 				end
 			end
 
-			return result
+			-- Apply overall sign
+			if sign < 0 then
+				return "-" .. joined
+			end
+
+			return joined
 		end
 
 		-------------------------------------------------------
