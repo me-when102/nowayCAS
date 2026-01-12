@@ -25,7 +25,7 @@ local function coerce(value)
 
 	-- number
 	if type(value) == "number" then
-		return Node.Num(value)
+		return Node.Num(tostring(value))
 	end
 
 	error("Cannot coerce value into AST node: " .. tostring(value))

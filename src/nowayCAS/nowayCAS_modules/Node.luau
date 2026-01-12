@@ -43,14 +43,14 @@ local function hashArgs(args)
 end
 
 -- Constructs a node as a number with a value.
-function Node.Num(n) 
-	local v = tostring(tonumber(n))
+function Node.Num(n)
+	if type(n) ~= "string" and tonumber(n) == nil then error("Node.Num: Value must be a number represented as a string literal.") end
 
-	local key = hashNode("num", v, "", "")
+	local key = hashNode("num", n, "", "")
 	local existing = NODE_CACHE[key]
 	if existing then return existing end
 
-	local node = { kind = "num", value = v }
+	local node = { kind = "num", value = n }
 	NODE_CACHE[key] = node
 	return node
 end

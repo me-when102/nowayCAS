@@ -85,7 +85,7 @@ function parseAtom(tokens)
 	-- number
 	if t:match("^%d+$") then
 		pop(tokens)
-		return Node.Num(tonumber(t))
+		return Node.Num(tostring(t))
 	end
 
 	-- wildcard or variable
@@ -161,7 +161,7 @@ local function parseFactor(tokens)
 	if t == "-" then
 		pop(tokens)
 		local factor = parseFactor(tokens)
-		return Node.Op("*", Node.Num(-1), factor)
+		return Node.Op("*", Node.Num("-1"), factor)
 	end
 
 	return parsePower(tokens)
