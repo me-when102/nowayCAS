@@ -22,9 +22,9 @@
 	            - A node cannot simultaneously represent multiple numeric types (eg: a num node cannot also store rational metadata).
 	            - Never overflow IEEE-754's exact integer range when during symbolic tasks. Allow this only for evaluation.
 	        
-	        Piecewise Semantics (untightened as for now):
+	        Piecewise Semantics:
 	        	- Piecewise nodes store an ordered list of { condition, expression } pairs.
-	        	- Conditions are AST nodes representing boolean expressions.
+	        	- Conditions are AST nodes representing boolean expressions, default to false if invalid.
 	        	- A final unconditional branch may be represented as { true, expr }.
 	        	- Piecewise nodes are first-class expressions and may appear anywhere.
 	        	- Solvers must propagate conditions into solution sets.
@@ -61,12 +61,14 @@
 	        	- Print never inspects Equation or Solution internals beyond reading fields.
 	        	- Print always respects operator precedence and associativity.
 	        	- Pretty-printing is pure and uses precedence rules without parent pointers.
+	        	- Print must not imply evaluation.
             
             Simplification Semantics:
 	        	- Simplification never mutates nodes.
 				- Simplification always returns a new or original node.
+				- Simplification rules must be terminating.
 				- Simplification recursively simplifies children before applying rules.
-				- Simplify never changes the mathematical meaning of an expression.
+				- Simplification never changes the mathematical meaning of an expression.
 				- Never fold when the result overflows the IEEE-754's exact integer range.
 			
 			Solving Semantics:
@@ -75,6 +77,8 @@
 				- Solvers always operate on canonicalized expressions.
 				- Solvers never simplify the input equation, only the output expressions
 				- UnknownSolve is always returned for unsupported equation types.
+				- Solvers must not implicitly simplify.
+				- Solvers must propagate conditions faithfully.
 			
 			Expression Object Model:
 				- Expression objects never store raw Lua values; they always wrap AST trees.
