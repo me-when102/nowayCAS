@@ -4,6 +4,7 @@ local Node = require(script.Parent.Node)
 local Equation = require(script.Parent.Equation)
 local Canon = require(script.Parent.Canon)
 local Simplify = require(script.Parent.Simplify)
+local Substitute = require(script.Parent.Substitute)
 local Util = require(script.Parent.Util)
 local Print = require(script.Parent.Print)
 
@@ -354,10 +355,133 @@ local function solvePolynomial(eq, var, ctx)
 	return Solve.unknownSolve(eq, var, { reason = "polynomial_unimplemented" })
 end
 
+-- TODO: make piecewise solving actually return solutions if possible.
+
 -- Solves a piecewise equation.
 local function solvePiecewise(eq, var, ctx)
-	-- TODO: propagate piecewise conditions into solution sets.
-	return Solve.unknownSolve(eq, var, { reason = "piecewise_unimplemented" })
+	local anyUnknown = false
+	local anySolved = false
+
+	-- Identify the piecwise side.
+	local lhs, rhs = eq.lhs, eq.rhs
+	local pw, other, pwOnLHS
+	
+	if lhs.kind == "piecewise" then
+		pw = lhs
+		other = rhs
+		pwOnLHS = true
+	else
+		pw = rhs
+		other = lhs
+		pwOnLHS = false
+	end
+	
+	local solutions = {}
+	
+	-- Solve each branch independently.
+	for _, branch in ipairs(pw.branches) do
+		local cond = branch[1]
+		local expr = branch[2]
+		
+		-- build sub-equation: expr == other
+		local subEq
+		if pwOnLHS then
+			subEq = Equation.new(
+				Canon.canonical(Node.Op("-", expr, other)),
+				Node.Num("0"),
+				"=="
+			)
+		else
+			subEq = Equation.new(
+				Canon.canonical(Node.Op("-", other, expr)),
+				Node.Num("0"),
+				"=="
+			)
+		end
+		
+		-- Solve the branch.
+		local subResult = Solve.solve(subEq, var, ctx)
+		
+		-- Handle each result type.
+		if subResult.kind == Solve.kind.SOLUTION then
+			anySolved = true
+			-- Attach branch condition.
+			table.insert(solutions, Solve.solution(
+				subResult.bindings,
+				{ cond },
+				subResult.meta
+			))
+			
+		elseif subResult.kind == Solve.kind.SET then
+			anySolved = true
+			-- Attach condition to each solution
+			for _, sol in pairs(subResult.list) do
+				table.insert(solutions, Solve.solution(
+					sol.bindings,
+					{ cond },
+					sol.meta
+				))
+			end
+
+		elseif subResult.kind == Solve.kind.INFINITE then
+			-- Solution is infinite, do nothing.
+			anySolved = true
+		elseif subResult.kind == Solve.kind.UNKNOWN then
+			-- Solution is unknown, do nothing.
+			anyUnknown = true
+		end
+	end
+
+	-- No branches produced usable solutions.
+	if #solutions == 0 then
+		if anyUnknown then
+			return Solve.unknownSolve(eq, var, { reason = "piecewise_all_unknown" })
+		else
+			return Solve.NoSolution
+		end
+	end
+	
+	-- Filter solutions by feasibility.
+	local filtered = {}
+	for _, sol in ipairs(solutions) do
+		if sol.kind == Solve.kind.SOLUTION then
+			local cond = sol.conditions[1]
+			
+			-- Substitute variable into condition.
+			local substituted = Substitute.apply(cond, sol.bindings)
+			
+			-- Evaluate condition.
+			local eval = Simplify.simplifyDeep(substituted)
+			
+			if eval.kind == "const" and eval.name == "true" then
+				table.insert(filtered, sol)
+			end
+			
+		else
+			-- Infinite or unknown: keep as-is.
+			table.insert(filtered, sol)
+		end
+	end
+	
+	if #filtered == 0 then return Solve.NoSolution end
+	
+	-- If all are infinite solutions, collapse.
+	local allInfinite = true
+	for _, sol in ipairs(filtered) do
+		if sol.kind ~= Solve.kind.INFINITE then
+			allInfinite = false
+			break
+		end
+	end
+	if allInfinite then return Solve.InfiniteSolutions end
+	
+	-- If exactly one solution, return it.
+	if #filtered == 1 and filtered[1].kind == Solve.kind.SOLUTION then
+		return Solve.solutionSet({ filtered[1] })
+	end
+	
+	-- Otherwise, return a solution set.
+	return Solve.solutionSet(filtered)
 end
 
 Solve.solvers.linear = solveLinear
@@ -485,6 +609,43 @@ function SolutionSetMT:toLatex()
 end
 
 -------------------------------------------------------
+-- Non-Solution Metatable
+-------------------------------------------------------
+
+local NonSolutionMT = {}
+
+-- Returns the non-solution set converted into a string.
+function NonSolutionMT:__tostring()
+	if self.kind == Solve.kind.NONE then
+		return "NoSolution"
+	elseif self.kind == Solve.kind.INFINITE then
+		return "InfiniteSolutions"
+	elseif self.kind == Solve.kind.UNKNOWN then
+		local reason = (self.meta and self.meta.reason) or "?"
+		return "UnknownSolve(" .. reason .. ")"
+	end
+	return "<invalid non-solution>"
+end
+
+-- Returns the non-solution set converted into a string.
+function NonSolutionMT:toString()
+	return self:__tostring()
+end
+
+-- Returns the non-solution set converted into LaTeX form.
+function NonSolutionMT:toLatex()
+	if self.kind == Solve.kind.NONE then
+		return "\\text{No Solution}"
+	elseif self.kind == Solve.kind.INFINITE then
+		return "\\text{Infinite Solutions}"
+	elseif self.kind == Solve.kind.UNKNOWN then
+		local reason = (self.meta and self.meta.reason) or "?"
+		return "\\text{Unknown Solve: " .. reason .. "}"
+	end
+	return "\\text{Invalid Non-Solution}"
+end
+
+-------------------------------------------------------
 -- Constructors
 -------------------------------------------------------
 
@@ -507,17 +668,22 @@ function Solve.solutionSet(list, meta)
 	}, SolutionSetMT)
 end
 
-Solve.NoSolution = { kind = Solve.kind.NONE }
-Solve.InfiniteSolutions = { kind = Solve.kind.INFINITE }
+Solve.NoSolution = setmetatable({
+	kind = Solve.kind.NONE
+}, NonSolutionMT)
+
+Solve.InfiniteSolutions = setmetatable({
+	kind = Solve.kind.INFINITE
+}, NonSolutionMT)
 
 -- Constructs an unknown solve set of the expression, the varaible, and a meta.
 function Solve.unknownSolve(expr, var, meta)
-	return {
+	return setmetatable({
 		kind = Solve.kind.UNKNOWN,
 		expr = expr,
 		var = var,
 		meta = meta or {},
-	}
+	}, NonSolutionMT)
 end
 
 -- The Solver sub-library.

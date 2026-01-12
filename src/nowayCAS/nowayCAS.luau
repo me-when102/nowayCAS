@@ -165,6 +165,32 @@ local nowayCAS = {
 }
 
 -------------------------------------------------------
+-- API Helpers
+-------------------------------------------------------
+
+local function asNode(v)
+	if type(v) == "table" and v.kind then
+		return v
+	end
+
+	if type(v) == "table" and v.node then
+		return v.node
+	end
+
+	if type(v) == "number" then
+		return Node.Num(tostring(v))
+	end
+
+	if type(v) == "string" then
+		local tokens = Token._tokenize(v)
+		local ast = Parser.parse(tokens)
+		return Canon.canonical(ast)
+	end
+
+	error("Cannot convert to node: " .. typeof(v))
+end
+
+-------------------------------------------------------
 -- Public API
 -------------------------------------------------------
 -- Generic API
@@ -231,9 +257,13 @@ function nowayCAS.factor(node)
 end
 
 -- Returns an AST with variables subsituted according to the map.
--- The map contains a key that is the variable name, with a value containing another AST which it will be converted to.
+-- The map contains a key that is the variable name, with a value containing another AST or string which it will be converted to.
 -- For example: { x = AST1, y = AST2 }
 function nowayCAS.substitute(node, map)
+	for key, value in pairs(map) do
+		map[key] = asNode(value)
+	end
+	
 	return nowayCAS.Substitute.apply(node, map)
 end
 
@@ -271,10 +301,10 @@ end
 -- Defines a user-defined function.
 -- Name: the name of the function, eg: 'f' = "f(...params)" when called.
 -- Params: the parameters to substitute into the bodyString.
--- bodyString: the contents of the function as an AST node, eg: 7x + 3
+-- bodyString: the contents of the function as an AST node or string, eg: "7x + 3"
 -- Eg: f(7, 4) = (2*(3y + 7x)) / 3 (x, y are params, f is name, (2*(3y + 7x)) / 3 is bodyAST).
 function nowayCAS.defineFunction(name, params, bodyAST)
-	UserFunctions.define(name, params, bodyAST)
+	UserFunctions.define(name, params, asNode(bodyAST))
 end
 
 -- Defines a user-defined constant.
@@ -379,13 +409,13 @@ function nowayCAS.newGreaterThanOrEqual(lhs, rhs) return Equation.ge(lhs, rhs) e
 -- Returns a solve, solveset table, or other special table from solving the equation for a variable.
 -- The variable must be a single variable node.
 function nowayCAS.solveEquation(expr, var)
-	return Solve.solve(expr, var)
+	return Solve.solve(expr, asNode(var))
 end
 
 -- Returns a solve, solveset table, or other special table from solving the equation for a variable.
 -- The variable must be a single variable node.
 function Equation:solve(var)
-	return Solve.solve(self, var)
+	return Solve.solve(self, asNode(var))
 end
 
 -------------------------------------------------------
