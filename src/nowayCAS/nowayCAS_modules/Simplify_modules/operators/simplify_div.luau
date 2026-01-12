@@ -10,7 +10,7 @@ return {
 	----------------------------------------------------------------------
 	function(a, b)
 		if Util.nodeEquals(a, b) then
-			if a.kind == "var" and Assume.is(a, "nonzero") then
+			if Util.isVar(a) and Assume.is(a, "nonzero") then
 				return Node.Num("1")
 			end
 		end
@@ -20,7 +20,7 @@ return {
 	-- identity: x / 1 -> x
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isOne(b) then
+		if Util.isOne(b) then
 			return a
 		end
 	end,
@@ -29,7 +29,7 @@ return {
 	-- annihilator: 0 / x -> 0
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isZero(a) then
+		if Util.isZero(a) then
 			return Node.Num("0")
 		end
 	end,
@@ -38,7 +38,7 @@ return {
 	-- numeric folding: num/rat combinations
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNumeric(a) and SimplifyHelpers.isNumeric(b) then
+		if Util.isNumeric(a) and Util.isNumeric(b) then
 			return SimplifyHelpers.div(a, b)
 		end
 	end,
@@ -47,11 +47,11 @@ return {
 	-- (u * 1) / v -> u / v
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "op" and a.op == "*" then
-			if SimplifyHelpers.isOne(a.right) then
+		if Util.isOp(a) and a.op == "*" then
+			if Util.isOne(a.right) then
 				return Node.Op("/", a.left, b)
 			end
-			if SimplifyHelpers.isOne(a.left) then
+			if Util.isOne(a.left) then
 				return Node.Op("/", a.right, b)
 			end
 		end
@@ -61,8 +61,8 @@ return {
 	-- (u * -1) / v -> -(u / v)
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "op" and a.op == "*"
-			and SimplifyHelpers.isNegOne(a.right) then
+		if Util.isOp(a) and a.op == "*"
+			and Util.isNegOne(a.right) then
 			return Node.Op("*", Node.Num("-1"), Node.Op("/", a.left, b))
 		end
 	end,
@@ -71,8 +71,8 @@ return {
 	-- -(u) / v -> -(u / v)
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "op" and a.op == "*"
-			and SimplifyHelpers.isNegOne(a.left) then
+		if Util.isOp(a) and a.op == "*"
+			and Util.isNegOne(a.left) then
 			return Node.Op("*", Node.Num("-1"), Node.Op("/", a.right, b))
 		end
 	end,
@@ -81,8 +81,8 @@ return {
 	-- u / -(v) -> -(u / v)
 	----------------------------------------------------------------------
 	function(a, b)
-		if b.kind == "op" and b.op == "*"
-			and SimplifyHelpers.isNegOne(b.left) then
+		if Util.isOp(b) and b.op == "*"
+			and Util.isNegOne(b.left) then
 			return Node.Op("*", Node.Num("-1"), Node.Op("/", a, b.right))
 		end
 	end,
@@ -91,62 +91,56 @@ return {
 	-- x / -y -> -(x / y)
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(b) then
+		if Util.isNegOne(b) then
 			return Node.Op("*", Node.Num("-1"), Node.Op("/", a, Node.Num("1")))
 		end
 	end,
 
 	----------------------------------------------------------------------
 	-- Reciprocal trig collapsing
-	-- 1 / cos(x) -> sec(x)
-	-- 1 / sin(x) -> csc(x)
-	-- cos(x) / sin(x) -> cot(x)
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isOne(a)
-			and b.kind == "func" and b.name == "cos" then
-			return Node.Func("sec", {b.args[1]})
+		if Util.isOne(a)
+			and Util.isFunc(b) and b.name == "cos" then
+			return Node.Func("sec", { b.args[1] })
 		end
 	end,
 
 	function(a, b)
-		if SimplifyHelpers.isOne(a)
-			and b.kind == "func" and b.name == "sin" then
-			return Node.Func("csc", {b.args[1]})
+		if Util.isOne(a)
+			and Util.isFunc(b) and b.name == "sin" then
+			return Node.Func("csc", { b.args[1] })
 		end
 	end,
 
 	function(a, b)
-		if a.kind == "func" and a.name == "cos"
-			and b.kind == "func" and b.name == "sin" then
-			return Node.Func("cot", {a.args[1]})
+		if Util.isFunc(a) and a.name == "cos"
+			and Util.isFunc(b) and b.name == "sin" then
+			return Node.Func("cot", { a.args[1] })
 		end
 	end,
 
 	----------------------------------------------------------------------
 	-- Hyperbolic reciprocal collapsing
-	-- 1 / cosh(x) -> sech(x)
-	-- 1 / sinh(x) -> csch(x)
-	-- cosh(x) / sinh(x) -> coth(x)
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isOne(a)
-			and b.kind == "func" and b.name == "cosh" then
-			return Node.Func("sech", {b.args[1]})
+		if Util.isOne(a)
+			and Util.isFunc(b) and b.name == "cosh" then
+			return Node.Func("sech", { b.args[1] })
 		end
 	end,
 
 	function(a, b)
-		if SimplifyHelpers.isOne(a)
-			and b.kind == "func" and b.name == "sinh" then
-			return Node.Func("csch", {b.args[1]})
+		if Util.isOne(a)
+			and Util.isFunc(b) and b.name == "sinh" then
+			return Node.Func("csch", { b.args[1] })
 		end
 	end,
 
 	function(a, b)
-		if a.kind == "func" and a.name == "cosh"
-			and b.kind == "func" and b.name == "sinh" then
-			return Node.Func("coth", {a.args[1]})
+		if Util.isFunc(a) and a.name == "cosh"
+			and Util.isFunc(b) and b.name == "sinh" then
+			return Node.Func("coth", { a.args[1] })
 		end
 	end,
 }

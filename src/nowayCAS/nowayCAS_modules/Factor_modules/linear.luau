@@ -6,9 +6,9 @@ local rules_expand = require(script.Parent.Parent.Rewrite.rules_expand)
 local Util = require(script.Parent.Parent.Util)
 local Simplify = require(script.Parent.Parent.Simplify)
 
+local tonumber = tonumber
 local ipairs = ipairs
-local table_insert = table.insert
-
+local table_insert = table_insert
 
 local Lin = {}
 
@@ -26,29 +26,14 @@ local function buildAdd(nodes)
 	return acc
 end
 
--- Checks if node is one.
-local function isOne(n)
-	return n.kind == "num" and n.value == "1"
-end
-
--- Checks if node is negative one.
-local function isMinusOne(n)
-	return n.kind == "num" and n.value == "-1"
-end
-
 -- Negates the node.
 local function negate(n)
 	return Node.Op("*", Node.Num("-1"), n)
 end
 
--- Checks if the node is a sum.
-local function isSum(n)
-	return n.kind == "op" and n.op == "+"
-end
-
 -- Factorizes the node in linear if possible.
 function Lin.factorLinearIn(node, varName)
-	if node.kind ~= "op" or node.op ~= "+" then
+	if not (Util.isOp(node) and node.op == "+") then
 		return nil
 	end
 
@@ -106,12 +91,12 @@ function Lin.factorLinearIn(node, varName)
 	-- Heuristic: avoid trivial or ugly factorizations
 
 	-- Reject A = +-1
-	if isOne(A) or isMinusOne(A) then
+	if Util.isOne(A) or Util.isNegOne(A) then
 		return nil
 	end
 
 	-- Reject A being a sum (optional heuristic for cleaner output)
-	if isSum(A) then
+	if Util.isOp(A) and A.op == "+" then
 		return nil
 	end
 
@@ -120,7 +105,7 @@ function Lin.factorLinearIn(node, varName)
 	Q = Simplify.simplify(Q)
 
 	-- Normalize sign: ensure A is positive
-	if isMinusOne(FactorHelpers.extractTerm(A)) or (A.kind == "num" and tonumber(A.value) < 0) then
+	if Util.isNegOne(A) or (Util.isNum(A) and tonumber(A.value) < 0) then
 		A = Canon.canonical(negate(A))
 		Q = Canon.canonical(negate(Q))
 	end

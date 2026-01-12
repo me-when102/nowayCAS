@@ -1,5 +1,4 @@
 local Node = require(script.Parent.Parent.Parent.Node)
-local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
 local Util = require(script.Parent.Parent.Parent.Util)
 local Assume = require(script.Parent.Parent.Parent.Assume)
 
@@ -14,7 +13,7 @@ return {
 	-- factorial(0) -> 1
 	----------------------------------------------------------------------
 	function(name, x)
-		if SimplifyHelpers.isZero(x) then
+		if Util.isZero(x) then
 			if name == "sqrt" then return Node.Num("0") end
 			if name == "abs" then return Node.Num("0") end
 			if name == "floor" then return Node.Num("0") end
@@ -54,20 +53,20 @@ return {
 	----------------------------------------------------------------------
 	-- abs(-x) -> abs(x)
 	-- sign(-x) -> -sign(x)
-	-- sqrt(-x) -> no simplification (complex territory)
+	-- sqrt(-x) -> no simplification
 	-- floor/ceil/factorial: no negation rules
 	----------------------------------------------------------------------
 	function(name, x)
 		-- match -1 * inner
-		if x.kind == "op" and x.op == "*" and SimplifyHelpers.isNegOne(x.left) then
+		if x.kind == "op" and x.op == "*" and Util.isNegOne(x.left) then
 			local inner = x.right
 
 			if name == "abs" then
-				return Node.Func("abs", {inner})
+				return Node.Func("abs", { inner })
 			end
 
 			if name == "sign" then
-				return Node.Op("*", Node.Num("-1"), Node.Func("sign", {inner}))
+				return Node.Op("*", Node.Num("-1"), Node.Func("sign", { inner }))
 			end
 
 			-- sqrt(-x), floor(-x), ceil(-x), factorial(-x) -> no simplification

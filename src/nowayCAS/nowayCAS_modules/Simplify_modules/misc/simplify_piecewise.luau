@@ -1,5 +1,5 @@
 local Node = require(script.Parent.Parent.Parent.Node)
-local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
+local Util = require(script.Parent.Parent.Parent.Util)
 
 return function(branches)
 	-- branches is already simplified by Simplify.simplify
@@ -10,9 +10,9 @@ return function(branches)
 		local expr = pair[2]
 
 		-- prune false branches
-		if SimplifyHelpers.isFalse(cond) then
+		if Util.isFalse(cond) then
 			-- skip
-		elseif SimplifyHelpers.isTrue(cond) then
+		elseif Util.isTrue(cond) then
 			-- true branch short-circuits everything
 			return expr
 		else
@@ -27,7 +27,7 @@ return function(branches)
 	end
 
 	-- if only one branch remains and its condition is true, return expr
-	if #out == 1 and SimplifyHelpers.isTrue(out[1][1]) then
+	if #out == 1 and Util.isTrue(out[1][1]) then
 		return out[1][2]
 	end
 

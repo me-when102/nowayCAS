@@ -112,7 +112,7 @@ function Simplify.simplify(node)
 
 	local out
 
-	if node.kind == "op" then
+	if Util.isOp(node) then
 		local op = node.op
 		local left = Simplify.simplify(node.left)
 		local right = Simplify.simplify(node.right)
@@ -129,15 +129,14 @@ function Simplify.simplify(node)
 
 		out = Node.Op(op, left, right)
 
-	elseif node.kind == "complex" then
+	elseif Util.isComplex(node) then
 		local real = Simplify.simplify(node.real)
 		local imag = Simplify.simplify(node.imag)
 
 		out = applyRules(simplifyComplex, real, imag)
-
 		out = Canon.canonical(out)
 
-	elseif node.kind == "func" then
+	elseif Util.isFunc(node) then
 		local name = node.name
 		local args = {}
 		for i, a in ipairs(node.args) do
@@ -155,7 +154,8 @@ function Simplify.simplify(node)
 		end
 
 		out = Node.Func(name, args)
-	elseif node.kind == "piecewise" then
+
+	elseif Util.isPiecewise(node) then
 		local newBranches = {}
 		for i, pair in ipairs(node.branches) do
 			local cond = Simplify.simplify(pair[1])
@@ -163,8 +163,9 @@ function Simplify.simplify(node)
 			newBranches[i] = { cond, expr }
 		end
 		out = simplifyPiecewise(newBranches)
+
 	else
-		-- num, var, const, rat, complex, piecewise, etc.
+		-- num, var, const, rat, etc.
 		out = node
 	end
 
@@ -195,7 +196,7 @@ function Simplify.simplifyDeep(node, maxSteps)
 		node = next
 		steps += 1
 	end
-	
+
 	if steps >= maxSteps then
 		warn("no")
 	end

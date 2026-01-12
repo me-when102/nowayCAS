@@ -1,6 +1,7 @@
 local Substitute = {}
 
 local Node = require(script.Parent.Node)
+local Util = require(script.Parent.Util)
 
 -------------------------------------------------------
 -- Substitute
@@ -8,36 +9,17 @@ local Node = require(script.Parent.Node)
 -- Example: substitute(x^2 + 3x, { x = (y+1) })
 -------------------------------------------------------
 
--- Apply substitution to piecewise.
-function Substitute._applyPiecewise(node, map)
-	local newBranches = {}
-	local changed = false
-
-	for i, pair in ipairs(node.branches) do
-		local cond = Substitute.apply(pair[1], map)
-		local expr = Substitute.apply(pair[2], map)
-
-		if cond ~= pair[1] or expr ~= pair[2] then
-			changed = true
-		end
-
-		newBranches[i] = { cond, expr }
-	end
-
-	if not changed then
-		return node
-	end
-
-	return Node.Piecewise(newBranches)
-end
-
 -- Substitute variables according to a map:
 --   { x = Node(...), y = Node(...), ... }
 function Substitute.apply(node, map)
-	local kind = node.kind
+
+	-- Numbers and rationals unchanged
+	if Util.isNumeric(node) then
+		return node
+	end
 
 	-- Variable replacement
-	if kind == "var" then
+	if Util.isVar(node) then
 		local repl = map[node.name]
 		if repl then
 			-- If replacement is an expression, use its AST
@@ -52,7 +34,7 @@ function Substitute.apply(node, map)
 	end
 
 	-- Constants: allow substitution just like variables
-	if kind == "const" then
+	if Util.isConst(node) then
 		local repl = map[node.name]
 		if repl then
 			if repl.node then
@@ -64,13 +46,15 @@ function Substitute.apply(node, map)
 		end
 	end
 
-	-- Numbers unchanged
-	if kind == "num" then
-		return node
+	-- Operators: recurse into children
+	if Util.isOp(node) then
+		local left = Substitute.apply(node.left, map)
+		local right = Substitute.apply(node.right, map)
+		return Node.Op(node.op, left, right)
 	end
-	
+
 	-- Complex numbers: recurse into real and imag
-	if kind == "complex" then
+	if Util.isComplex(node) then
 		local newReal = Substitute.apply(node.real, map)
 		local newImag = Substitute.apply(node.imag, map)
 
@@ -82,13 +66,8 @@ function Substitute.apply(node, map)
 		return Node.Complex(newReal, newImag)
 	end
 
-	-- Rationals unchanged
-	if kind == "rat" then 
-		return node 
-	end
-
 	-- Functions: recurse into argument
-	if kind == "func" then
+	if Util.isFunc(node) then
 		local newArgs = {}
 		local changed = false
 
@@ -107,19 +86,30 @@ function Substitute.apply(node, map)
 		return Node.Func(node.name, newArgs)
 	end
 
-	-- Operators: recurse into children
-	if kind == "op" then
-		local left = Substitute.apply(node.left, map)
-		local right = Substitute.apply(node.right, map)
-		return Node.Op(node.op, left, right)
-	end
-
 	-- Piecewise: Substitute inside branches.
-	if kind == "piecewise" then
-		return Substitute._applyPiecewise(node, map)
+	if Util.isPiecewise(node) then
+		local newBranches = {}
+		local changed = false
+
+		for i, pair in ipairs(node.branches) do
+			local cond = Substitute.apply(pair[1], map)
+			local expr = Substitute.apply(pair[2], map)
+
+			if cond ~= pair[1] or expr ~= pair[2] then
+				changed = true
+			end
+
+			newBranches[i] = { cond, expr }
+		end
+
+		if not changed then
+			return node
+		end
+
+		return Node.Piecewise(newBranches)
 	end
 
-	error("Substitute: Unknown node kind '" .. tostring(kind) .. "'")
+	error("Substitute: Unknown node kind '" .. tostring(node.kind) .. "'")
 end
 
 -- The Substitute sub-library.

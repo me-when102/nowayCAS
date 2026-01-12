@@ -1,5 +1,6 @@
 local Latex = {}
 
+local Util = require(script.Parent.Parent.Util)
 local PrintHelpers = require(script.Parent.PrintHelpers)
 
 local table_insert = table.insert
@@ -58,7 +59,7 @@ local cmpLatex = {
 
 -- Get precedence of the node for LaTeX.
 local function latexPrec(node)
-	if node.kind ~= "op" then
+	if not Util.isOp(node) then
 		return 10
 	end
 	return PrintHelpers.PRECEDENCE[node.op] or 10
@@ -66,7 +67,7 @@ end
 
 -- Wrap parenthesis / brackets determined by precedence for LaTeX.
 local function latexParen(child, parentOp, isRight)
-	if child.kind ~= "op" then
+	if not Util.isOp(child) then
 		return Latex._toLatex(child)
 	end
 
@@ -92,14 +93,14 @@ function Latex._toLatex(node)
 	-------------------------------------------------------
 	-- Numbers
 	-------------------------------------------------------
-	if kind == "num" then
+	if Util.isNum(node) then
 		return node.value
 	end
 
 	-------------------------------------------------------
 	-- Rationals
 	-------------------------------------------------------
-	if kind == "rat" then
+	if Util.isRat(node) then
 		local n, d = node.num, node.den
 		if d == 1 then
 			return tostring(n)
@@ -113,7 +114,7 @@ function Latex._toLatex(node)
 	-------------------------------------------------------
 	-- Variables
 	-------------------------------------------------------
-	if kind == "var" then
+	if Util.isVar(node) then
 		if #node.name > 1 then
 			return "\\text{" .. node.name .. "}"
 		end
@@ -123,7 +124,7 @@ function Latex._toLatex(node)
 	-------------------------------------------------------
 	-- Constants
 	-------------------------------------------------------
-	if kind == "const" then
+	if Util.isConst(node) then
 		if node.name == "pi" then return "\\pi" end
 		if node.name == "phi" then return "\\varphi" end
 		if node.name == "tau" then return "\\tau" end
@@ -133,7 +134,7 @@ function Latex._toLatex(node)
 	-------------------------------------------------------
 	-- Complex
 	-------------------------------------------------------
-	if kind == "complex" then
+	if Util.isComplex(node) then
 		local realStr = Latex._toLatex(node.real)
 		local imagStr = Latex._toLatex(node.imag)
 
@@ -151,7 +152,7 @@ function Latex._toLatex(node)
 			return imagStr
 		end
 
-		if node.imag.kind == "num" and node.imag.value:sub(1,1) == "-" then
+		if Util.isNum(node.imag) and node.imag.value:sub(1,1) == "-" then
 			return realStr .. " - " .. imagStr:sub(2)
 		end
 
@@ -161,7 +162,7 @@ function Latex._toLatex(node)
 	-------------------------------------------------------
 	-- Piecewise
 	-------------------------------------------------------
-	if kind == "piecewise" then
+	if Util.isPiecewise(node) then
 		local out = {}
 		table_insert(out, "\\begin{cases}")
 
@@ -178,17 +179,17 @@ function Latex._toLatex(node)
 	-------------------------------------------------------
 	-- Functions
 	-------------------------------------------------------
-	if kind == "func" then
+	if Util.isFunc(node) then
 		local name = node.name
 		local args = node.args
 
 		-- Special case: factorial
-		if node.name == "factorial" then
-			local arg = node.args[1]
+		if name == "factorial" then
+			local arg = args[1]
 			local inner = Latex._toLatex(arg)
 
 			-- Parenthesize if needed
-			if arg.kind == "op" then
+			if Util.isOp(arg) then
 				inner = "(" .. inner .. ")"
 			end
 
@@ -209,14 +210,15 @@ function Latex._toLatex(node)
 		end
 
 		-- Unary
-		local latexName = latexNames[node.name] or node.name
-		local arg = Latex._toLatex(node.args[1])
+		local latexName = latexNames[name] or name
+		local argNode = args[1]
+		local arg = Latex._toLatex(argNode)
 
-		if node.name == "sqrt" then
+		if name == "sqrt" then
 			return "\\sqrt{" .. arg .. "}"
 		end
 
-		if node.name == "abs" then
+		if name == "abs" then
 			return "\\left|" .. arg .. "\\right|"
 		end
 
@@ -224,14 +226,14 @@ function Latex._toLatex(node)
 		if name == "not" then
 			local inner = Latex._toLatex(args[1])
 			-- Parenthesize if argument is an op
-			if args[1].kind == "op" then
+			if Util.isOp(args[1]) then
 				inner = "(" .. inner .. ")"
 			end
 			return "\\lnot " .. inner
 		end
 
 		-- Parenthesize only if needed
-		if node.args[1].kind == "op" then
+		if Util.isOp(argNode) then
 			arg = "(" .. arg .. ")"
 		end
 
@@ -241,7 +243,7 @@ function Latex._toLatex(node)
 	-------------------------------------------------------
 	-- Operators
 	-------------------------------------------------------
-	if kind == "op" then
+	if Util.isOp(node) then
 		local op = node.op
 		local L = node.left
 		local R = node.right
@@ -284,7 +286,7 @@ function Latex._toLatex(node)
 		if op == "*" then
 			-- Flatten chain
 			local function collect(n, out)
-				if n.kind == "op" and n.op == "*" then
+				if Util.isOp(n) and n.op == "*" then
 					collect(n.left, out)
 					collect(n.right, out)
 				else
@@ -314,19 +316,19 @@ function Latex._toLatex(node)
 				local rightNode = factors[i]
 
 				-- 1 * x -> x
-				if leftNode.kind == "num" and leftNode.value == "1" then
+				if Util.isNum(leftNode) and leftNode.value == "1" then
 					result = b
 
 					-- -1 * x -> -x
-				elseif leftNode.kind == "num" and leftNode.value == "-1" then
+				elseif Util.isNum(leftNode) and leftNode.value == "-1" then
 					result = "-" .. b
 
 					-- number * variable -> 3x
-				elseif leftNode.kind == "num" and rightNode.kind == "var" then
+				elseif Util.isNum(leftNode) and Util.isVar(rightNode) then
 					result = a .. b
 
 					-- variable * variable -> xy
-				elseif leftNode.kind == "var" and rightNode.kind == "var" then
+				elseif Util.isVar(leftNode) and Util.isVar(rightNode) then
 					result = a .. b
 
 					-- simple * simple -> ab
@@ -372,7 +374,6 @@ function Latex._toLatex(node)
 		---------------------------------------------------
 		-- Comparisons
 		---------------------------------------------------
-
 		if cmpLatex[op] then
 			local left = Latex._toLatex(L)
 			local right = Latex._toLatex(R)

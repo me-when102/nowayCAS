@@ -31,11 +31,12 @@ return {
 			return
 		end
 
-		if a.kind == "var" and b.kind == "num" then
+		if Util.isVar(a) and Util.isNum(b) then
 			local x = a.name
-			local n = tonumber(b.value)
+			local num, den = Util.toRational(b)
 
-			if n == 0 then
+			-- Only handle comparisons to 0
+			if num == 0 then
 
 				-- x > 0 or x >= 0
 				if Assume.is(x, "positive") then

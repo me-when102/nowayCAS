@@ -22,31 +22,6 @@ local function copy(t)
 	return n
 end
 
--- check if node is numeric literal
-local function isNum(n)
-	return n.kind == "num"
-end
-
--- check if node is variable
-local function isVar(n)
-	return n.kind == "var"
-end
-
--- check if node is complex
-local function isComplex(n)
-	return n.kind == "complex"
-end
-
--- check if the node is rational.
-local function isRat(n)
-	return n.kind == "rat"
-end
-
--- check if node is constant.
-local function isConst(n)
-	return n.kind == "const"
-end
-
 -- Rational Addition.
 local function ratAdd(a, b)
 	-- a = {num, den}, b = {num, den}
@@ -119,12 +94,12 @@ local function combineAdd(nodes)
 	local out = {}
 
 	for _, n in ipairs(nodes) do
-		if n.kind == "num" then
+		if Util.isNum(n) then
 			-- integer literal
 			local v = tonumber(n.value)
 			sumNum = sumNum + v * sumDen
 
-		elseif n.kind == "rat" then
+		elseif Util.isRat(n) then
 			-- rational literal
 			local n2 = n.num
 			local d2 = n.den
@@ -169,11 +144,11 @@ local function combineMul(nodes)
 	for _, n in ipairs(nodes) do
 
 		-- Integer literal
-		if n.kind == "num" then
+		if Util.isNum(n) then
 			num = num * tonumber(n.value)
 
 			-- Rational literal
-		elseif n.kind == "rat" then
+		elseif Util.isRat(n) then
 			num = num * n.num
 			den = den * n.den
 
@@ -183,21 +158,21 @@ local function combineMul(nodes)
 			den = den // g
 
 			-- Variable
-		elseif n.kind == "var" then
+		elseif Util.isVar(n) then
 			varExp[n.name] = (varExp[n.name] or 0) + 1
 
 			-- Constant
-		elseif n.kind == "const" then
+		elseif Util.isConst(n) then
 			varExp["const:" .. n.name] = (varExp["const:" .. n.name] or 0) + 1
 
 			-- Power: x^n or const^n
-		elseif n.kind == "op" and n.op == "^" and isNum(n.right) then
+		elseif Util.isOp(n) and n.op == "^" and Util.isNum(n.right) then
 			local exp = tonumber(n.right.value)
 
-			if n.left.kind == "var" then
+			if Util.isVar(n.left) then
 				varExp[n.left.name] = (varExp[n.left.name] or 0) + exp
 
-			elseif n.left.kind == "const" then
+			elseif Util.isConst(n.left) then
 				local key = "const:" .. n.left.name
 				varExp[key] = (varExp[key] or 0) + exp
 
@@ -266,7 +241,7 @@ local function combineMul(nodes)
 	table_sort(out, function(a, b)
 		return canonicalKey(a) < canonicalKey(b)
 	end)
-	
+
 	-- Collapse repeated non-variable factors: (f)(f) -> f^2
 	do
 		local buckets = {}
@@ -303,7 +278,7 @@ end
 -- }
 local function monomialKey(node)
 	-- Variable
-	if node.kind == "var" then
+	if Util.isVar(node) then
 		return {
 			coeff = { num = 1, den = 1 },
 			vars  = { [node.name] = 1 }
@@ -311,7 +286,7 @@ local function monomialKey(node)
 	end
 
 	-- Integer literal
-	if node.kind == "num" then
+	if Util.isNum(node) then
 		return {
 			coeff = { num = tonumber(node.value), den = 1 },
 			vars  = {}
@@ -319,7 +294,7 @@ local function monomialKey(node)
 	end
 
 	-- Rational literal
-	if node.kind == "rat" then
+	if Util.isRat(node) then
 		return {
 			coeff = { num = node.num, den = node.den },
 			vars  = {}
@@ -327,7 +302,7 @@ local function monomialKey(node)
 	end
 
 	-- Constant
-	if node.kind == "const" then
+	if Util.isConst(node) then
 		return {
 			coeff = { num = 1, den = 1 },
 			vars  = { ["const:" .. node.name] = 1 }
@@ -335,7 +310,7 @@ local function monomialKey(node)
 	end
 
 	-- Power: x^n or const^n
-	if node.kind == "op" and node.op == "^" and isNum(node.right) then
+	if Util.isOp(node) and node.op == "^" and Util.isNum(node.right) then
 		local exp = tonumber(node.right.value)
 
 		if node.left.kind == "var" then
@@ -352,7 +327,7 @@ local function monomialKey(node)
 	end
 
 	-- Multiplication: combine recursively
-	if node.kind == "op" and node.op == "*" then
+	if Util.isOp(node) and node.op == "*" then
 		local left  = monomialKey(node.left)
 		local right = monomialKey(node.right)
 
@@ -475,28 +450,27 @@ function Canon.canonical(node)
 	end
 
 	local result
-	local kind = node.kind
 
-	if kind == "num" or kind == "var" or kind == "const" then
+	if Util.isNum(node) or Util.isVar(node) or Util.isConst(node) then
 		result = node
 
-	elseif kind == "func" then
+	elseif Util.isFunc(node) then
 		result = Canon._canonicalFunc(node)
 
-	elseif kind == "complex" then
+	elseif Util.isComplex(node) then
 		result = Canon._canonicalComplex(node)
 
-	elseif kind == "op" then
+	elseif Util.isOp(node) then
 		result = Canon._canonicalOp(node)
 
-	elseif kind == "rat" then
+	elseif Util.isRat(node) then
 		result = Canon._canonicalRat(node)
 
-	elseif kind == "piecewise" then
+	elseif Util.isPiecewise(node) then
 		result = Canon._canonicalPiecewise(node)
 
 	else
-		error("Canonical: unknown node kind '" .. tostring(kind) .. "'")
+		error("Canonical: unknown node kind '" .. tostring(node.kind) .. "'")
 	end
 
 	CANON_CACHE[node] = result
@@ -583,6 +557,15 @@ function Canon._canonicalOp(node)
 
 		items = combineMul(items)
 
+		table_sort(items, function(a, b)
+			-- numeric first
+			if Util.isNum(a) and not Util.isNum(b) then return true end
+			if Util.isNum(b) and not Util.isNum(a) then return false end
+
+			-- otherwise fallback to canonicalKey
+			return canonicalKey(a) < canonicalKey(b)
+		end)
+
 		if #items == 1 then
 			return items[1]
 		end
@@ -618,9 +601,9 @@ function Canon._canonicalOp(node)
 	-- DIVISION + RATIONAL CREATION
 	-------------------------------------------------------
 	if op == "/" then
-		
+
 		-- x / 1 -> x
-		if isNum(right) and right.value == "1" then
+		if Util.isOne(right) then
 			return left
 		end
 
@@ -632,17 +615,17 @@ function Canon._canonicalOp(node)
 		end
 
 		-- both sides are integers -> rational
-		if isNum(left) and isNum(right) then
+		if Util.isNum(left) and Util.isNum(right) then
 			return Node.Rat(tonumber(left.value), tonumber(right.value))
 		end
 
 		-- rational / integer -> rational
-		if isRat(left) and isNum(right) then
+		if Util.isRat(left) and Util.isNum(right) then
 			return Node.Rat(left.num, left.den * tonumber(right.value))
 		end
 
 		-- integer / rational -> rational
-		if isNum(left) and isRat(right) then
+		if Util.isNum(left) and Util.isRat(right) then
 			return Node.Rat(
 				tonumber(left.value) * right.den,
 				right.num
@@ -650,7 +633,7 @@ function Canon._canonicalOp(node)
 		end
 
 		-- rational / rational -> rational
-		if isRat(left) and isRat(right) then
+		if Util.isRat(left) and Util.isRat(right) then
 			return Node.Rat(
 				left.num * right.den,
 				left.den * right.num
@@ -660,7 +643,7 @@ function Canon._canonicalOp(node)
 		-- Otherwise: symbolic division
 		return Node.Op("/", left, right)
 	end
-	
+
 	-------------------------------------------------------
 	-- COMPARISON OPERATORS
 	-------------------------------------------------------
@@ -718,18 +701,18 @@ function Canon._canonicalComplex(node)
 	local imag = Canon.canonical(node.imag)
 
 	-- Case 1: 0 + 0i -> 0
-	if real.kind == "num" and real.value == "0"
-		and imag.kind == "num" and imag.value == "0" then
+	if Util.isZero(real)
+		and Util.isZero(imag) then
 		return Node.Num("0")
 	end
 
 	-- Case 2: a + 0i -> a
-	if imag.kind == "num" and imag.value == "0" then
+	if Util.isZero(imag) then
 		return real
 	end
 
 	-- Case 3: 0 + bi -> b*i
-	if real.kind == "num" and real.value == "0" then
+	if Util.isZero(real) then
 		-- symbolic: b * i
 		return Node.Op("*", imag, Node.Const("i"))
 	end
@@ -773,11 +756,11 @@ end
 
 -- Canonicalizes the piecewise function.
 function Canon._canonicalPiecewise(node)
-	
+
 	-- Flatten nested piecewise: distribute guards
 	local function distribute(cond, expr)
 		-- If expr is not piecewise, keep as-is
-		if expr.kind ~= "piecewise" then
+		if not Util.isPiecewise(expr) then
 			return { { cond, expr } }
 		end
 

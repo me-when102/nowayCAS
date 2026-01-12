@@ -110,13 +110,11 @@ Solve.pipeline = {
 
 -- Determines the degree of the polynomial based on the current structure.
 function Solve._degree(expr, var)
-	local kind = expr.kind
-
-	if kind == "num" or kind == "rat" then
+	if Util.isNum(expr) or Util.isRat(expr) then
 		return 0
 	end
 
-	if kind == "var" then
+	if Util.isVar(expr) then
 		if expr.name == var.name then
 			return 1
 		else
@@ -124,11 +122,11 @@ function Solve._degree(expr, var)
 		end
 	end
 
-	if kind == "complex" then
+	if Util.isComplex(expr) then
 		return 0
 	end
 
-	if kind == "op" then
+	if Util.isOp(expr) then
 		local op = expr.op
 		local a, b = expr.left, expr.right
 
@@ -146,14 +144,14 @@ function Solve._degree(expr, var)
 
 		elseif op == "^" then
 			-- x^n
-			if a.kind == "var" and a.name == var.name and b.kind == "num" then
+			if Util.isVar(a) and a.name == var.name and Util.isNum(b) then
 				return tonumber(b.value)
 			end
 
 			-- (c * x)^n
-			if a.kind == "op" and a.op == "*" then
+			if Util.isOp(a) and a.op == "*" then
 				local da = Solve._degree(a, var)
-				if da == 1 and b.kind == "num" then
+				if da == 1 and Util.isNum(b) then
 					return tonumber(b.value)
 				end
 			end
@@ -183,7 +181,7 @@ function Solve.normalizeEquation(expr, var)
 		local rel = expr.rel
 
 		-- do not normalize piecewise equations
-		if expr.lhs.kind == "piecewise" or expr.rhs.kind == "piecewise" then
+		if Util.isPiecewise(expr.lhs) or Util.isPiecewise(expr.rhs) then
 			return expr
 		end
 
@@ -235,7 +233,7 @@ function Solve.solve(expr, var, ctx)
 	end
 
 	-- Piecewise solving hook (future: dedicated classifier/solver).
-	if eq.lhs.kind == "piecewise" or eq.rhs.kind == "piecewise" then
+	if Util.isPiecewise(eq.lhs) or Util.isPiecewise(eq.rhs) then
 		local solver = Solve.solvers["piecewise"]
 		if solver then
 			return solver(eq, var, ctx)
@@ -286,12 +284,12 @@ local function solveLinear(eq, var, ctx)
 	local b = coeffs[0] or Node.Num("0")
 
 	-- a == 0 and b == 0 -> infinite solutions
-	if a.kind == "num" and a.value == "0" and b.kind == "num" and b.value == "0" then
+	if Util.isZero(a) and Util.isZero(b) then
 		return Solve.InfiniteSolutions
 	end
 
 	-- a == 0 and b != 0 -> no solution
-	if a.kind == "num" and a.value == "0" then
+	if Util.isZero(a) then
 		return Solve.NoSolution
 	end
 
@@ -317,7 +315,7 @@ local function solveQuadratic(eq, var, ctx)
 	local c = coeffs[0] or Node.Num("0")
 
 	-- If a == 0, fallback to linear.
-	if a.kind == "num" and a.value == "0" then
+	if Util.isZero(a) then
 		return solveLinear(eq, var, ctx)
 	end
 
@@ -355,8 +353,6 @@ local function solvePolynomial(eq, var, ctx)
 	return Solve.unknownSolve(eq, var, { reason = "polynomial_unimplemented" })
 end
 
--- TODO: make piecewise solving actually return solutions if possible.
-
 -- Solves a piecewise equation.
 local function solvePiecewise(eq, var, ctx)
 	local anyUnknown = false
@@ -365,8 +361,8 @@ local function solvePiecewise(eq, var, ctx)
 	-- Identify the piecwise side.
 	local lhs, rhs = eq.lhs, eq.rhs
 	local pw, other, pwOnLHS
-	
-	if lhs.kind == "piecewise" then
+
+	if Util.isPiecewise(lhs) then
 		pw = lhs
 		other = rhs
 		pwOnLHS = true
@@ -375,14 +371,14 @@ local function solvePiecewise(eq, var, ctx)
 		other = lhs
 		pwOnLHS = false
 	end
-	
+
 	local solutions = {}
-	
+
 	-- Solve each branch independently.
 	for _, branch in ipairs(pw.branches) do
 		local cond = branch[1]
 		local expr = branch[2]
-		
+
 		-- build sub-equation: expr == other
 		local subEq
 		if pwOnLHS then
@@ -398,10 +394,10 @@ local function solvePiecewise(eq, var, ctx)
 				"=="
 			)
 		end
-		
+
 		-- Solve the branch.
 		local subResult = Solve.solve(subEq, var, ctx)
-		
+
 		-- Handle each result type.
 		if subResult.kind == Solve.kind.SOLUTION then
 			anySolved = true
@@ -410,8 +406,8 @@ local function solvePiecewise(eq, var, ctx)
 				subResult.bindings,
 				{ cond },
 				subResult.meta
-			))
-			
+				))
+
 		elseif subResult.kind == Solve.kind.SET then
 			anySolved = true
 			-- Attach condition to each solution
@@ -420,7 +416,7 @@ local function solvePiecewise(eq, var, ctx)
 					sol.bindings,
 					{ cond },
 					sol.meta
-				))
+					))
 			end
 
 		elseif subResult.kind == Solve.kind.INFINITE then
@@ -440,31 +436,31 @@ local function solvePiecewise(eq, var, ctx)
 			return Solve.NoSolution
 		end
 	end
-	
+
 	-- Filter solutions by feasibility.
 	local filtered = {}
 	for _, sol in ipairs(solutions) do
 		if sol.kind == Solve.kind.SOLUTION then
 			local cond = sol.conditions[1]
-			
+
 			-- Substitute variable into condition.
 			local substituted = Substitute.apply(cond, sol.bindings)
-			
+
 			-- Evaluate condition.
 			local eval = Simplify.simplifyDeep(substituted)
-			
-			if eval.kind == "const" and eval.name == "true" then
+
+			if Util.isTrue(eval) then
 				table.insert(filtered, sol)
 			end
-			
+
 		else
 			-- Infinite or unknown: keep as-is.
 			table.insert(filtered, sol)
 		end
 	end
-	
+
 	if #filtered == 0 then return Solve.NoSolution end
-	
+
 	-- If all are infinite solutions, collapse.
 	local allInfinite = true
 	for _, sol in ipairs(filtered) do
@@ -474,12 +470,12 @@ local function solvePiecewise(eq, var, ctx)
 		end
 	end
 	if allInfinite then return Solve.InfiniteSolutions end
-	
+
 	-- If exactly one solution, return it.
 	if #filtered == 1 and filtered[1].kind == Solve.kind.SOLUTION then
 		return Solve.solutionSet({ filtered[1] })
 	end
-	
+
 	-- Otherwise, return a solution set.
 	return Solve.solutionSet(filtered)
 end

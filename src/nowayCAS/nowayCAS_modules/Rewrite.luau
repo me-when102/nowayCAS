@@ -78,24 +78,29 @@ end
 -- Try all rules once
 function Rewrite._rewrite(node, rules)
 	-- Recurse first
-	if node.kind == "op" then
+	if Util.isOp(node) then
 		local left, changedL = Rewrite._rewrite(node.left, rules)
 		local right, changedR = Rewrite._rewrite(node.right, rules)
+
 		if changedL or changedR then
 			node = Node.Op(node.op, left, right)
 		end
-	elseif node.kind == "func" then
+
+	elseif Util.isFunc(node) then
 		local newArgs = {}
 		local changed = false
+
 		for i, arg in ipairs(node.args) do
 			local nextArg, argChanged = Rewrite._rewrite(arg, rules)
 			newArgs[i] = nextArg
 			changed = changed or argChanged
 		end
+
 		if changed then
 			node = Node.Func(node.name, newArgs)
 		end
-	elseif node.kind == "piecewise" then
+
+	elseif Util.isPiecewise(node) then
 		local changed = false
 		local newBranches = {}
 
@@ -238,7 +243,7 @@ end
 
 -- Checks if the wildcard is a sequence
 local function isSeqWildcard(pattern)
-	return pattern.kind == "var"
+	return Util.isVar(pattern)
 		and isWildcardName(pattern.name)
 		and pattern.name:match("s$") -- ends with s
 end
@@ -274,7 +279,7 @@ end
 -- Finds the sequence of the wildcard.
 local function findSeqWildcard(list)
 	for i, p in ipairs(list) do
-		if p.kind == "var" and isSeqWildcard(p) then
+		if Util.isVar(p) and isSeqWildcard(p) then
 			return i, p
 		end
 	end
@@ -306,11 +311,19 @@ function Rewrite._matchACSeq(pattern, node, bindings)
 			local slice = {}
 
 			for _, n in ipairs(nList) do
-				if seqKind == "num" and not (n.kind == "num" or n.kind == "rat") then
-					return nil
-				elseif seqKind == "var" and n.kind ~= "var" then
-					return nil
+				if seqKind == "num" then
+					-- numeric sequence: allow num or rat
+					if not Util.isNum(n) then
+						return nil
+					end
+
+				elseif seqKind == "var" then
+					-- variable sequence: must be a var
+					if not Util.isVar(n) then
+						return nil
+					end
 				end
+
 				table_insert(slice, n)
 			end
 
@@ -382,17 +395,21 @@ function Rewrite._matchArgs(pArgs, nArgs, bindings)
 			for k = j, #nArgs do
 				local arg = nArgs[k]
 
-				if kind == "num" and arg.kind ~= "num" then
+				-- numeric sequence: allow num or rat
+				if kind == "num" and not Util.isNumeric(arg) then
 					return nil
-				elseif kind == "var" and arg.kind ~= "var" then
+				end
+
+				-- variable sequence: must be a var
+				if kind == "var" and not Util.isVar(arg) then
 					return nil
 				end
 
 				table_insert(slice, arg)
 			end
 
+			-- enforce consistency if already bound
 			if bindings[key] then
-				-- require same list
 				if not Util.nodeListEquals(bindings[key], slice) then
 					return nil
 				end
@@ -402,16 +419,23 @@ function Rewrite._matchArgs(pArgs, nArgs, bindings)
 
 			return bindings
 		else
-			if j > #nArgs then return nil end
+			-- no more args to match
+			if j > #nArgs then
+				return nil
+			end
+
 			bindings = Rewrite._match(p, nArgs[j], bindings)
-			if not bindings then return nil end
+			if not bindings then
+				return nil
+			end
+
 			i += 1
 			j += 1
 		end
 	end
 
+	-- extra unmatched args
 	if j <= #nArgs then
-		-- extra args not matched
 		return nil
 	end
 
@@ -423,67 +447,88 @@ end
 function Rewrite._match(pattern, node, bindings)
 	bindings = bindings or {}
 
-	-- Pattern variable wildcard (e.g., Node.Var("_x"), Node.Var("_n"), Node.Var("_v"))
-	if pattern.kind == "var" and isWildcardName(pattern.name) then
+	-- Wildcard variable (e.g. _x, _n, _v)
+	if Util.isVar(pattern) and isWildcardName(pattern.name) then
 		local key = pattern.name
-
-		-- Enforce type constraints based on wildcard kind
 		local kind = classifySingleWildcard(key)
-		if kind == "num" and not (node.kind == "num" or node.kind == "rat") then
-			return nil
-		elseif kind == "var" and node.kind ~= "var" then
+
+		-- numeric wildcard: allow num or rat
+		if kind == "num" and not Util.isNumeric(node) then
 			return nil
 		end
 
+		-- variable wildcard: must be a var
+		if kind == "var" and not Util.isVar(node) then
+			return nil
+		end
+
+		-- enforce consistent binding
 		if bindings[key] then
-			if Util.nodeEquals(bindings[key], node) then
-				return bindings
-			else
-				return nil
-			end
+			return Util.nodeEquals(bindings[key], node) and bindings or nil
 		else
 			bindings[key] = node
 			return bindings
 		end
 	end
 
-	-- Exact match
-	if pattern.kind ~= node.kind then return nil end
-
-	if pattern.kind == "num" then
-		if node.kind == "num" then
-			return (pattern.value == node.value) and bindings or nil
-		elseif node.kind == "rat" then
-			return (node.num == tonumber(pattern.value) and node.den == 1) and bindings or nil
-		else
-			return nil
-		end
+	-- Exact kind match required
+	if pattern.kind ~= node.kind then
+		return nil
 	end
 
-	if pattern.kind == "var" then
+	-- Numeric literal
+	if Util.isNum(pattern) then
+		if Util.isNum(node) then
+			return (pattern.value == node.value) and bindings or nil
+		end
+
+		if Util.isRat(node) then
+			return (node.num == tonumber(pattern.value) and node.den == 1)
+				and bindings
+				or nil
+		end
+
+		return nil
+	end
+
+	-- Variable literal
+	if Util.isVar(pattern) then
 		return (pattern.name == node.name) and bindings or nil
 	end
 
-	if pattern.kind == "func" then
-		if pattern.name ~= node.name then return nil end
+	-- Function
+	if Util.isFunc(pattern) then
+		if pattern.name ~= node.name then
+			return nil
+		end
 
 		return Rewrite._matchArgs(pattern.args, node.args, bindings)
 	end
 
-	if pattern.kind == "op" then
-		if pattern.op ~= node.op then return nil end
+	-- Operator
+	if Util.isOp(pattern) then
+		if pattern.op ~= node.op then
+			return nil
+		end
 
 		local info = OpInfo[pattern.op]
 
+		-- AC operator (associative + commutative)
 		if info and info.assoc and info.comm then
 			return Rewrite._matchAC(pattern, node, bindings)
 		end
 
-		-- Non-commutative: normal matching
+		-- Non‑commutative: match left then right
 		bindings = Rewrite._match(pattern.left, node.left, bindings)
-		if not bindings then return nil end
+		if not bindings then
+			return nil
+		end
+
 		return Rewrite._match(pattern.right, node.right, bindings)
 	end
+
+	-- Unknown node kind (should never happen)
+	return nil
 end
 
 -------------------------------------------------------
@@ -492,31 +537,33 @@ end
 
 -- Substitute patterns.
 function Rewrite.substitutePattern(node, bindings)
-	local kind = node.kind
-
 	-- Single-node wildcard
-	if kind == "var" and node.name:match("^_") and not node.name:match("s$") then
+	if Util.isVar(node)
+		and node.name:match("^_")
+		and not node.name:match("s$") then
 		return bindings[node.name] or node
 	end
 
 	-- Sequence wildcard inside function args
-	if kind == "var" and node.name:match("^_") and node.name:match("s$") then
+	if Util.isVar(node)
+		and node.name:match("^_")
+		and node.name:match("s$") then
 		-- Should only appear inside function args
 		return bindings[node.name] or {}
 	end
 
 	-- Numbers unchanged
-	if kind == "num" then
+	if Util.isNum(node) then
 		return node
 	end
-	
+
 	-- Rationals unchanged
-	if kind == "rat" then 
+	if Util.isRat(node) then 
 		return node 
 	end
 
 	-- Function: substitute args
-	if kind == "func" then
+	if Util.isFunc(node) then
 		local newArgs = {}
 		for i, arg in ipairs(node.args) do
 			local sub = Rewrite.substitutePattern(arg, bindings)
@@ -534,7 +581,7 @@ function Rewrite.substitutePattern(node, bindings)
 	end
 
 	-- Operator: handle AC expansion
-	if kind == "op" then
+	if Util.isOp(node) then
 		local left = Rewrite.substitutePattern(node.left, bindings)
 		local right = Rewrite.substitutePattern(node.right, bindings)
 
@@ -560,7 +607,7 @@ function Rewrite.substitutePattern(node, bindings)
 	end
 
 	-- Piecewise: substitute inside branches
-	if kind == "piecewise" then
+	if Util.isPiecewise(node) then
 		local newBranches = {}
 		for i, pair in ipairs(node.branches) do
 			local cond = Rewrite.substitutePattern(pair[1], bindings)

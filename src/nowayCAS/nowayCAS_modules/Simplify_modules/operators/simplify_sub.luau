@@ -1,5 +1,5 @@
 local Node = require(script.Parent.Parent.Parent.Node)
-local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
+local Util = require(script.Parent.Parent.Parent.Util)
 
 return {
 
@@ -7,7 +7,7 @@ return {
 	-- x - 0 -> x
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isZero(b) then
+		if Util.isZero(b) then
 			return a
 		end
 	end,
@@ -16,7 +16,7 @@ return {
 	-- 0 - x -> (-1) * x
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isZero(a) then
+		if Util.isZero(a) then
 			return Node.Op("*", Node.Num("-1"), b)
 		end
 	end,

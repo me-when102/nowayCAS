@@ -124,7 +124,7 @@ function FactorHelpers.divideTerm(term, factor)
 end
 
 function FactorHelpers.factor_flatten(node, op, out)
-	if node.kind == "op" and node.op == op then
+	if Util.isOp(node) and node.op == op then
 		FactorHelpers.factor_flatten(node.left, op, out)
 		FactorHelpers.factor_flatten(node.right, op, out)
 	else
@@ -141,30 +141,30 @@ function FactorHelpers.extractTerm(node)
 	local others = {}
 
 	for _, n in ipairs(factors) do
-		if n.kind == "num" then
+		if Util.isNum(n) then
 			num = num * tonumber(n.value)
 
-		elseif n.kind == "var" then
+		elseif Util.isVar(n) then
 			varExp[n.name] = (varExp[n.name] or 0) + 1
 
-		elseif n.kind == "op" and n.op == "^"
-			and n.left and n.left.kind == "var"
-			and n.right and n.right.kind == "num" then
+		elseif Util.isOp(n) and n.op == "^"
+			and Util.isVar(n.left)
+			and Util.isNum(n.right) then
 
 			varExp[n.left.name] =
 				(varExp[n.left.name] or 0) + tonumber(n.right.value)
 
-		elseif n.kind == "op" and n.op == "*" then
+		elseif Util.isOp(n) and n.op == "*" then
 			local parts = {}
 			FactorHelpers.factor_flatten(n, "*", parts)
 			for _, p in ipairs(parts) do
-				if p.kind == "num" then
+				if Util.isNum(p) then
 					num = num * tonumber(p.value)
-				elseif p.kind == "var" then
+				elseif Util.isVar(p) then
 					varExp[p.name] = (varExp[p.name] or 0) + 1
-				elseif p.kind == "op" and p.op == "^"
-					and p.left and p.left.kind == "var"
-					and p.right and p.right.kind == "num" then
+				elseif Util.isOp(p) and p.op == "^"
+					and Util.isVar(p.left)
+					and Util.isNum(p.right) then
 					varExp[p.left.name] = (varExp[p.left.name] or 0) + tonumber(p.right.value)
 				else
 					table_insert(others, p)
@@ -238,7 +238,7 @@ end
 -- Normalizes the node remainder.
 function FactorHelpers.normalizeRemainder(node)
 	local n = Canon.canonical(node)
-	if not (n.kind == "op" and n.op == "+") then
+	if not (Util.isOp(n) and n.op == "+") then
 		n = Canon.canonical(Node.Op("+", n, Node.Num("0")))
 	end
 	return n
@@ -246,9 +246,9 @@ end
 
 -- Gets the coefficient of the node, regardless if it is a number or a rational.
 function FactorHelpers.getCoeff(node)
-	if node.kind == "num" then
+	if Util.isNum(node) then
 		return node.value, 1
-	elseif node.kind == "rat" then
+	elseif Util.isRat(node) then
 		return node.num, node.den
 	else
 		return nil
@@ -459,14 +459,14 @@ end
 -- returning (true, base, sign), where base is K^(1/2) * U and sign is +-1.
 function FactorHelpers.getSquareBaseSigned(n)
 	-- pure symbolic square: u^2
-	if n.kind == "op" and n.op == "^" then
-		if n.right.kind == "num" and tonumber(n.right.value) == 2 then
+	if Util.isOp(n) and n.op == "^" then
+		if Util.isNum(n.right) and tonumber(n.right.value) == 2 then
 			return true, n.left, 1
 		end
 	end
 
 	-- pure numeric square: +-k
-	if n.kind == "num" then
+	if Util.isNum(n) then
 		local v = tonumber(n.value)
 		if v then
 			local r = math.sqrt(math.abs(v))
@@ -481,9 +481,6 @@ function FactorHelpers.getSquareBaseSigned(n)
 	-- general monomial with coefficient and powers, e.g. 9x^2, -25y^2, 49a^2
 	-- Use FactorHelpers.extractTerm to pull out numeric coefficient and symbolic factors.
 	local ex = FactorHelpers.extractTerm(n)
-	-- ex.num: integer coefficient
-	-- ex.varExp: map name -> exponent
-	-- ex.others: list of non-var/const factors
 
 	-- We only handle pure monomials: no "others"
 	if #ex.others > 0 then

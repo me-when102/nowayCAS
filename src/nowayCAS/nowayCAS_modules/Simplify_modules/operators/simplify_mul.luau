@@ -8,13 +8,13 @@ return {
 	-- identity: x * 1 -> x
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isOne(b) then
+		if Util.isOne(b) then
 			return a
 		end
 	end,
 
 	function(a, b)
-		if SimplifyHelpers.isOne(a) then
+		if Util.isOne(a) then
 			return b
 		end
 	end,
@@ -23,13 +23,13 @@ return {
 	-- annihilator: x * 0 -> 0
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isZero(b) then
+		if Util.isZero(b) then
 			return Node.Num("0")
 		end
 	end,
 
 	function(a, b)
-		if SimplifyHelpers.isZero(a) then
+		if Util.isZero(a) then
 			return Node.Num("0")
 		end
 	end,
@@ -39,7 +39,7 @@ return {
 	-- (-1) * (-1) -> 1
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(a) and SimplifyHelpers.isNegOne(b) then
+		if Util.isNegOne(a) and Util.isNegOne(b) then
 			return Node.Num("1")
 		end
 	end,
@@ -48,7 +48,7 @@ return {
 	-- (-1) * x -> -x
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(a) then
+		if Util.isNegOne(a) then
 			return Node.Op("*", Node.Num("-1"), b)
 		end
 	end,
@@ -57,7 +57,7 @@ return {
 	-- x * (-1) -> -x
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(b) then
+		if Util.isNegOne(b) then
 			return Node.Op("*", Node.Num("-1"), a)
 		end
 	end,
@@ -66,9 +66,9 @@ return {
 	-- -(-x) -> x
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(a)
-			and b.kind == "op" and b.op == "*"
-			and SimplifyHelpers.isNegOne(b.left) then
+		if Util.isNegOne(a)
+			and Util.isOp(b) and b.op == "*"
+			and Util.isNegOne(b.left) then
 			return b.right
 		end
 	end,
@@ -77,8 +77,8 @@ return {
 	-- (-1) * (u / v) -> -(u / v)
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(a)
-			and b.kind == "op" and b.op == "/" then
+		if Util.isNegOne(a)
+			and Util.isOp(b) and b.op == "/" then
 			return Node.Op("*", Node.Num("-1"), b)
 		end
 	end,
@@ -87,8 +87,8 @@ return {
 	-- (u / v) * (-1) -> -(u / v)
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(b)
-			and a.kind == "op" and a.op == "/" then
+		if Util.isNegOne(b)
+			and Util.isOp(a) and a.op == "/" then
 			return Node.Op("*", Node.Num("-1"), a)
 		end
 	end,
@@ -97,8 +97,8 @@ return {
 	-- (-1) * (u * v) -> -(u * v)
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(a)
-			and b.kind == "op" and b.op == "*" then
+		if Util.isNegOne(a)
+			and Util.isOp(b) and b.op == "*" then
 			return Node.Op("*", Node.Num("-1"), b)
 		end
 	end,
@@ -107,8 +107,8 @@ return {
 	-- (u * v) * (-1) -> -(u * v)
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(b)
-			and a.kind == "op" and a.op == "*" then
+		if Util.isNegOne(b)
+			and Util.isOp(a) and a.op == "*" then
 			return Node.Op("*", Node.Num("-1"), a)
 		end
 	end,
@@ -117,7 +117,7 @@ return {
 	-- Flatten right: x * (y * z) -> (x * y * z)
 	----------------------------------------------------------------------
 	function(a, b)
-		if b.kind == "op" and b.op == "*" then
+		if Util.isOp(b) and b.op == "*" then
 			return Node.Op("*",
 				Node.Op("*", a, b.left),
 				b.right
@@ -129,7 +129,7 @@ return {
 	-- Flatten left: (x * y) * z -> (x * y * z)
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "op" and a.op == "*" then
+		if Util.isOp(a) and a.op == "*" then
 			return Node.Op("*",
 				a.left,
 				Node.Op("*", a.right, b)
@@ -141,10 +141,10 @@ return {
 	-- Combine numeric factors: (a * b) * c -> Num(a*b*c)
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "op" and a.op == "*"
-			and SimplifyHelpers.isNumeric(a.left)
-			and SimplifyHelpers.isNumeric(a.right)
-			and SimplifyHelpers.isNumeric(b) then
+		if Util.isOp(a) and a.op == "*"
+			and Util.isNumeric(a.left)
+			and Util.isNumeric(a.right)
+			and Util.isNumeric(b) then
 
 			local ab = SimplifyHelpers.mul(a.left, a.right)
 			return SimplifyHelpers.mul(ab, b)
@@ -155,9 +155,9 @@ return {
 	-- (x * a) * b -> x * (a*b)
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "op" and a.op == "*"
-			and SimplifyHelpers.isNumeric(a.right)
-			and SimplifyHelpers.isNumeric(b) then
+		if Util.isOp(a) and a.op == "*"
+			and Util.isNumeric(a.right)
+			and Util.isNumeric(b) then
 
 			local prod = SimplifyHelpers.mul(a.right, b)
 			return Node.Op("*", a.left, prod)
@@ -168,8 +168,8 @@ return {
 	-- 1/x * x -> 1
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "op" and a.op == "/"
-			and SimplifyHelpers.isOne(a.left)
+		if Util.isOp(a) and a.op == "/"
+			and Util.isOne(a.left)
 			and Util.nodeEquals(a.right, b) then
 			return Node.Num("1")
 		end
@@ -179,8 +179,8 @@ return {
 	-- Negation propagation: (-1)*(u+v) -> (-u) + (-v)
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(a)
-			and b.kind == "op" and b.op == "+" then
+		if Util.isNegOne(a)
+			and Util.isOp(b) and b.op == "+" then
 
 			local negLeft = Node.Op("*", Node.Num("-1"), b.left)
 			local negRight = Node.Op("*", Node.Num("-1"), b.right)
@@ -193,7 +193,7 @@ return {
 	-- x * i
 	----------------------------------------------------------------------
 	function(a, b)
-		if b.kind == "const" and b.name == "i" then
+		if Util.isConst(b) and b.name == "i" then
 			return Node.Complex(Node.Num("0"), a)
 		end
 	end,
@@ -202,7 +202,7 @@ return {
 	-- i * x
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "const" and a.name == "i" then
+		if Util.isConst(a) and a.name == "i" then
 			return Node.Complex(Node.Num("0"), b)
 		end
 	end,
@@ -211,8 +211,8 @@ return {
 	-- i * i -> -1
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "const" and a.name == "i"
-			and b.kind == "const" and b.name == "i" then
+		if Util.isConst(a) and a.name == "i"
+			and Util.isConst(b) and b.name == "i" then
 			return Node.Num("-1")
 		end
 	end,
@@ -221,7 +221,7 @@ return {
 	-- (a + bi) * (c + di)
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "complex" and b.kind == "complex" then
+		if Util.isComplex(a) and Util.isComplex(b) then
 			local ac = Node.Op("*", a.real, b.real)
 			local bd = Node.Op("*", a.imag, b.imag)
 			local ad = Node.Op("*", a.real, b.imag)

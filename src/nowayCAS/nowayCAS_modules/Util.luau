@@ -7,8 +7,116 @@ local Node = require(script.Parent.Node)
 -------------------------------------------------------
 
 -------------------------------------------------------
--- Nodes
+-- Nodes and Node Manipulation
 -------------------------------------------------------
+
+-- Returns true if node is numeric literal.
+function Util.isNum(n)
+	return n.kind == "num"
+end
+
+-- Returns true if node is variable.
+function Util.isVar(n)
+	return n.kind == "var"
+end
+
+-- Returns true if node is a function.
+function Util.isFunc(n)
+	return n.kind == "func"
+end
+
+-- Returns true if node is complex.
+function Util.isComplex(n)
+	return n.kind == "complex"
+end
+
+-- Returns true if the node is rational.
+function Util.isRat(n)
+	return n.kind == "rat"
+end
+
+-- Returns true if node is constant.
+function Util.isConst(n)
+	return n.kind == "const"
+end
+
+-- Returns true if node is an operator.
+function Util.isOp(n)
+	return n.kind == "op"
+end
+
+-- Returns true if node is an operator.
+function Util.isPiecewise(n)
+	return n.kind == "piecewise"
+end
+
+-- Check if a node is a number or a rational kind.
+function Util.isNumeric(n)
+	return n.kind == "num" or n.kind == "rat"
+end
+
+-- Convert Node.Num or Node.Rat -> (num, den)
+function Util.toRational(n)
+	if n.kind == "num" then
+		return tonumber(n.value), 1
+	elseif n.kind == "rat" then
+		return n.num, n.den
+	end
+end
+
+-- Convert rational pair -> Node.Num or Node.Rat
+function Util.fromRational(num, den)
+	-- reduce
+	local g = Util.gcd(num, den)
+	num = num // g
+	den = den // g
+
+	if den == 1 then
+		return Node.Num(tostring(num))
+	end
+
+	return Node.Rat(num, den)
+end
+
+-- Returns true if the node is zero.
+function Util.isZero(n)
+	if n.kind == "num" then
+		return n.value == "0"
+	elseif n.kind == "rat" then
+		return n.num == 0
+	end
+	return false
+end
+
+-- Returns true if the node is negative one.
+function Util.isNegOne(n)
+	if n.kind == "num" then
+		return n.value == "-1"
+	elseif n.kind == "rat" then
+		return n.num == -1 and n.den == 1
+	end
+	return false
+end
+
+-- Returns true if the node is one.
+function Util.isOne(n)
+	if n.kind == "num" then
+		return n.value == "1"
+	elseif n.kind == "rat" then
+		return n.num == 1 and n.den == 1
+	end
+	return false
+end
+
+-- Returns true if the node is true.
+function Util.isTrue(n)
+	return n.kind == "const" and n.name == "true"
+end
+
+-- Returns true if the node is false.
+function Util.isFalse(n)
+	return n.kind == "const" and n.name == "false"
+end
 
 -- Checks if the instance is a node.
 function Util.isNode(x)
@@ -20,17 +128,21 @@ function Util.nodeEquals(a, b)
 	if a == b then return true end
 	if a.kind ~= b.kind then return false end
 
-	if a.kind == "num" then
+	if Util.isNum(a) then
 		return a.value == b.value
-	elseif a.kind == "var" then
+
+	elseif Util.isVar(a) then
 		return a.name == b.name
-	elseif a.kind == "func" then
+
+	elseif Util.isFunc(a) then
 		return a.name == b.name
 			and Util.nodeEquals(a.args, b.args)
-	elseif a.kind == "op" then
+
+	elseif Util.isOp(a) then
 		return a.op == b.op
 			and Util.nodeEquals(a.left, b.left)
 			and Util.nodeEquals(a.right, b.right)
+
 	end
 
 	return false
@@ -68,7 +180,7 @@ function Util.collectVars(node)
 	local seen = {}
 
 	local function walk(n)
-		if n.kind == "var" then
+		if Util.isVar(n) then
 			local name = n.name
 			if not seen[name] then
 				seen[name] = true
@@ -77,13 +189,13 @@ function Util.collectVars(node)
 			return
 		end
 
-		if n.kind == "op" then
+		if Util.isOp(n) then
 			walk(n.left)
 			walk(n.right)
 			return
 		end
 
-		if n.kind == "func" then
+		if Util.isFunc(n) then
 			for _, arg in ipairs(n.args) do
 				walk(arg)
 			end
@@ -102,15 +214,13 @@ end
 -- or nil if not a polynomial.
 function Util.collectCoefficients(expr, var)
 	local function collect(node)
-		local kind = node.kind
-
 		-- Constant
-		if kind == "num" or kind == "rat" then
+		if Util.isNumeric(node) then
 			return { [0] = node }
 		end
 
 		-- Variable
-		if kind == "var" then
+		if Util.isVar(node) then
 			if node.name == var.name then
 				return { [1] = Node.Num("1") }
 			else
@@ -119,7 +229,7 @@ function Util.collectCoefficients(expr, var)
 		end
 
 		-- Operator
-		if kind == "op" then
+		if Util.isOp(node) then
 			local op = node.op
 			local a, b = node.left, node.right
 
@@ -162,7 +272,7 @@ function Util.collectCoefficients(expr, var)
 
 			if op == "^" then
 				-- Only allow var^n where n is numeric
-				if a.kind == "var" and a.name == var.name and b.kind == "num" then
+				if Util.isVar(a) and a.name == var.name and Util.isNum(b) then
 					local n = tonumber(b.value)
 					if not n or n < 0 then return nil end
 					return { [n] = Node.Num("1") }

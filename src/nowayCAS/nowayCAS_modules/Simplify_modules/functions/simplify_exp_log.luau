@@ -1,5 +1,4 @@
 local Node = require(script.Parent.Parent.Parent.Node)
-local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
 local Util = require(script.Parent.Parent.Parent.Util)
 
 return {
@@ -8,7 +7,7 @@ return {
 	-- exp(0) = 1
 	----------------------------------------------------------------------
 	function(name, x)
-		if name == "exp" and SimplifyHelpers.isZero(x) then
+		if name == "exp" and Util.isZero(x) then
 			return Node.Num("1")
 		end
 	end,
@@ -17,7 +16,7 @@ return {
 	-- ln(1) = 0
 	----------------------------------------------------------------------
 	function(name, x)
-		if name == "ln" and SimplifyHelpers.isOne(x) then
+		if name == "ln" and Util.isOne(x) then
 			return Node.Num("0")
 		end
 	end,
@@ -26,7 +25,7 @@ return {
 	-- log10(1) = 0
 	----------------------------------------------------------------------
 	function(name, x)
-		if name == "log10" and SimplifyHelpers.isOne(x) then
+		if name == "log10" and Util.isOne(x) then
 			return Node.Num("0")
 		end
 	end,
@@ -36,13 +35,13 @@ return {
 	-- Only simplify trivial cases:
 	--   log(1, b) = 0
 	--   log(a, a) = 1
-	--   log(a, 1) = undefined -> leave symbolic
+	--   log(a, 1) = undefined → leave symbolic
 	----------------------------------------------------------------------
 	function(name, x, base)
 		if name ~= "log" then return end
 
 		-- log(1, b) = 0
-		if SimplifyHelpers.isOne(x) then
+		if Util.isOne(x) then
 			return Node.Num("0")
 		end
 
@@ -52,7 +51,6 @@ return {
 		end
 
 		-- log(a, 1) is undefined -> do nothing
-		-- idk
 	end,
 
 	----------------------------------------------------------------------
@@ -61,14 +59,14 @@ return {
 	-- Only when this SHORTENS the expression
 	----------------------------------------------------------------------
 	function(name, x)
-		-- exp(ln(x)) -> x
+		-- exp(ln(x)) → x
 		if name == "exp"
 			and x.kind == "func"
 			and x.name == "ln" then
 			return x.args[1]
 		end
 
-		-- ln(exp(x)) -> x
+		-- ln(exp(x)) → x
 		if name == "ln"
 			and x.kind == "func"
 			and x.name == "exp" then

@@ -2,6 +2,7 @@ local Diff = {}
 local DIFF_CACHE = {}
 
 local Node = require(script.Parent.Node)
+local Util = require(script.Parent.Util)
 local UserFunctions = require(script.Parent.UserFunctions)
 local Substitute = require(script.Parent.Substitute)
 
@@ -30,30 +31,32 @@ function Diff.diff(node, var)
 	end
 
 	local result
-	if node.kind == "num" then
+
+	-- Numbers and rationals -> derivative is 0
+	if Util.isNumeric(node) or Util.isConst(node) then
 		result = Node.Num("0")
 
-	elseif node.kind == "rat" then
-		result = Node.Num("0")
-
-	elseif node.kind == "var" then
+	-- Variable
+	elseif Util.isVar(node) then
 		result = Node.Num(node.name == var and "1" or "0")
 
-	elseif node.kind == "op" then
+	-- Operator
+	elseif Util.isOp(node) then
 		result = Diff._diffOp(node, var)
 
-	elseif node.kind == "func" then
+	-- Function
+	elseif Util.isFunc(node) then
 		result = Diff._diffFunc(node, var)
 
-	elseif node.kind == "const" then
-		result = Node.Num("0")
-
-	elseif node.kind == "complex" then
+	-- Complex
+	elseif Util.isComplex(node) then
 		-- d/dx (a + bi) = (da/dx) + (db/dx)i
 		local dReal = Diff.diff(node.real, var)
 		local dImag = Diff.diff(node.imag, var)
 		result = Node.Complex(dReal, dImag)
-	elseif node.kind == "piecewise" then
+
+	-- Piecewise
+	elseif Util.isPiecewise(node) then
 		-- Differentiate each branch
 		local newBranches = {}
 		for i, pair in ipairs(node.branches) do
@@ -484,7 +487,7 @@ function Diff._diffFunc(node, var)
 
 	if f == "sqrt" then
 		-- u' = 0 -> derivative is 0
-		if du.kind == "num" and du.value == "0" then
+		if Util.isZero(du) then
 			return Node.Num("0")
 		end
 

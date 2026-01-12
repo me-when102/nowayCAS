@@ -1,5 +1,5 @@
 local Node = require(script.Parent.Parent.Parent.Node)
-local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
+local Util = require(script.Parent.Parent.Parent.Util)
 
 return {
 
@@ -9,7 +9,7 @@ return {
 	-- cot(0) = undefined (leave alone)
 	----------------------------------------------------------------------
 	function(name, x)
-		if SimplifyHelpers.isZero(x) then
+		if Util.isZero(x) then
 			if name == "sec" then
 				return Node.Num("1")
 			end
@@ -23,19 +23,19 @@ return {
 	-- cot(-x) = -cot(x)
 	----------------------------------------------------------------------
 	function(name, x)
-		if x.kind == "op" and x.op == "*" and SimplifyHelpers.isNegOne(x.left) then
+		if Util.isOp(x) and x.op == "*" and Util.isNegOne(x.left) then
 			local inner = x.right
 
 			if name == "sec" then
-				return Node.Func("sec", {inner})
+				return Node.Func("sec", { inner })
 			end
 
 			if name == "csc" then
-				return Node.Op("*", Node.Num("-1"), Node.Func("csc", {inner}))
+				return Node.Op("*", Node.Num("-1"), Node.Func("csc", { inner }))
 			end
 
 			if name == "cot" then
-				return Node.Op("*", Node.Num("-1"), Node.Func("cot", {inner}))
+				return Node.Op("*", Node.Num("-1"), Node.Func("cot", { inner }))
 			end
 		end
 	end,

@@ -1,5 +1,6 @@
 local DAGString = {}
 
+local Util = require(script.Parent.Parent.Util)
 local String = require(script.Parent.String)
 local table_insert = table.insert
 
@@ -22,11 +23,25 @@ local function countRefs(root)
 		counts[node] = 1
 		table_insert(order, node)
 
-		if node.kind == "op" then
+		if Util.isOp(node) then
 			visit(node.left)
 			visit(node.right)
-		elseif node.kind == "func" then
-			visit(node.arg)
+
+		elseif Util.isFunc(node) then
+			-- functions have *args*, not arg
+			for _, a in ipairs(node.args) do
+				visit(a)
+			end
+
+		elseif Util.isComplex(node) then
+			visit(node.real)
+			visit(node.imag)
+
+		elseif Util.isPiecewise(node) then
+			for _, pair in ipairs(node.branches) do
+				visit(pair[1])
+				visit(pair[2])
+			end
 		end
 	end
 

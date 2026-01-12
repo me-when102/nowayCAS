@@ -30,7 +30,7 @@ Factor.trace = Trace
 
 -- recursively apply f bottom-up to every node and return f(node)
 local function mapNode(node, f)
-	if node.kind == "op" then
+	if Util.isOp(node) then
 		local left = mapNode(node.left, f)
 		local right = mapNode(node.right, f)
 		node = Node.Op(node.op, left, right)
@@ -42,7 +42,7 @@ end
 -- try trinomial, binomial, quadratic, bilinear, linear-in-var, then sum fallback at this node (in order).
 local function factorAt(node)
 
-	-- Try perfect square trinomial factoring first.	
+	-- Try perfect square trinomial factoring first.    
 	local sq = Tri.isPerfectSquareTrinomial(node)
 	if sq then return sq end
 
@@ -59,7 +59,7 @@ local function factorAt(node)
 	if bil then return bil end
 
 	-- Try linear in variable
-	if node.kind == "op" and node.op == "+" then
+	if Util.isOp(node) and node.op == "+" then
 		local vars = {}
 		local terms = {}
 		FactorHelpers.factor_flatten(node, "+", terms)
@@ -74,7 +74,7 @@ local function factorAt(node)
 	end
 
 	-- Try fallback: GCF extraction LAST
-	if node.kind == "op" and node.op == "+" then
+	if Util.isOp(node) and node.op == "+" then
 		return Sum.factorSum(node)
 	end
 
@@ -86,13 +86,13 @@ end
 local function mapNodeTopDown(node, f)
 	-- Try transform at this node first
 	local replaced = f(node)
-	if replaced and not (replaced.kind == "op" and replaced.op == "+") then
+	if replaced and not (Util.isOp(replaced) and replaced.op == "+") then
 		-- If f returned a non-nil transformation, use it (no recursion)
 		return replaced
 	end
 
 	-- Otherwise recurse into children (preserve replaced if it's still a sum)
-	if node.kind == "op" then
+	if Util.isOp(node) then
 		local left = mapNodeTopDown(node.left, f)
 		local right = mapNodeTopDown(node.right, f)
 		node = Node.Op(node.op, left, right)

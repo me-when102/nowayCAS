@@ -1,5 +1,6 @@
 local ASTDebug = {}
 
+local Util = require(script.Parent.Parent.Util)
 local table_insert = table.insert
 
 -------------------------------------------------------
@@ -10,33 +11,35 @@ local table_insert = table.insert
 -- Returns a shallow table representation of the AST (safe for printing / tests)
 local function nodeToTable(node)
 	if not node then return nil end
+
 	local t = { kind = node.kind }
-	if node.kind == "num" then
+
+	if Util.isNum(node) then
 		t.value = node.value
 
-	elseif node.kind == "var" then
+	elseif Util.isVar(node) then
 		t.name = node.name
 
-	elseif node.kind == "const" then
+	elseif Util.isConst(node) then
 		t.name = node.name
 
-	elseif node.kind == "complex" then
+	elseif Util.isComplex(node) then
 		t.real = nodeToTable(node.real)
 		t.imag = nodeToTable(node.imag)
 
-	elseif node.kind == "func" then
+	elseif Util.isFunc(node) then
 		t.name = node.name
 		t.args = {}
 		for i, a in ipairs(node.args) do
 			t.args[i] = nodeToTable(a)
 		end
 
-	elseif node.kind == "op" then
+	elseif Util.isOp(node) then
 		t.op = node.op
 		t.left = nodeToTable(node.left)
 		t.right = nodeToTable(node.right)
 
-	elseif node.kind == "piecewise" then
+	elseif Util.isPiecewise(node) then
 		t.branches = {}
 		for i, pair in ipairs(node.branches) do
 			t.branches[i] = {
@@ -44,8 +47,8 @@ local function nodeToTable(node)
 				expr = nodeToTable(pair[2]),
 			}
 		end
-
 	end
+
 	return t
 end
 
@@ -57,32 +60,32 @@ local function nodeToIndented(node, level, out)
 	if not node then
 		table_insert(out, indent .. "<nil>")
 
-	elseif node.kind == "num" then
+	elseif Util.isNum(node) then
 		table_insert(out, indent .. ("Num value=%s"):format(tostring(node.value)))
 
-	elseif node.kind == "var" then
+	elseif Util.isVar(node) then
 		table_insert(out, indent .. ("Var name=%s"):format(tostring(node.name)))
 
-	elseif node.kind == "const" then
+	elseif Util.isConst(node) then
 		table_insert(out, indent .. ("Const name=%s"):format(tostring(node.name)))
 
-	elseif node.kind == "complex" then
+	elseif Util.isComplex(node) then
 		table_insert(out, indent .. "Complex")
 		nodeToIndented(node.real, level + 1, out)
 		nodeToIndented(node.imag, level + 1, out)
 
-	elseif node.kind == "func" then
+	elseif Util.isFunc(node) then
 		table_insert(out, indent .. ("Func name=%s"):format(tostring(node.name)))
 		for _, a in ipairs(node.args) do
 			nodeToIndented(a, level + 1, out)
 		end
 
-	elseif node.kind == "op" then
+	elseif Util.isOp(node) then
 		table_insert(out, indent .. ("Op %s"):format(tostring(node.op)))
 		nodeToIndented(node.left, level + 1, out)
 		nodeToIndented(node.right, level + 1, out)
 
-	elseif node.kind == "piecewise" then
+	elseif Util.isPiecewise(node) then
 		table_insert(out, indent .. "Piecewise")
 		for _, pair in ipairs(node.branches) do
 			table_insert(out, indent .. "  Branch:")
@@ -97,9 +100,7 @@ end
 
 -- Returns a table and an indented string
 function ASTDebug._toASTRepresentation(root)
-	-- raw table (safe to compare in tests)
 	local raw = nodeToTable(root)
-	-- indented string for logs
 	local lines = {}
 	nodeToIndented(root, 0, lines)
 	local indented = table.concat(lines, "\n")

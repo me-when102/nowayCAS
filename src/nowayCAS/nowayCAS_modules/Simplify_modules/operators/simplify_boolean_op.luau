@@ -1,5 +1,5 @@
 local Node = require(script.Parent.Parent.Parent.Node)
-local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
+local Util = require(script.Parent.Parent.Parent.Util)
 
 return {
 
@@ -13,19 +13,19 @@ return {
 	function(a, b, op)
 		if op ~= "and" then return end
 
-		if SimplifyHelpers.isTrue(a) then
+		if Util.isTrue(a) then
 			return b
 		end
 
-		if SimplifyHelpers.isFalse(a) then
+		if Util.isFalse(a) then
 			return Node.Const("false")
 		end
 
-		if SimplifyHelpers.isTrue(b) then
+		if Util.isTrue(b) then
 			return a
 		end
 
-		if SimplifyHelpers.isFalse(b) then
+		if Util.isFalse(b) then
 			return Node.Const("false")
 		end
 	end,
@@ -40,19 +40,19 @@ return {
 	function(a, b, op)
 		if op ~= "or" then return end
 
-		if SimplifyHelpers.isTrue(a) then
+		if Util.isTrue(a) then
 			return Node.Const("true")
 		end
 
-		if SimplifyHelpers.isFalse(a) then
+		if Util.isFalse(a) then
 			return b
 		end
 
-		if SimplifyHelpers.isTrue(b) then
+		if Util.isTrue(b) then
 			return Node.Const("true")
 		end
 
-		if SimplifyHelpers.isFalse(b) then
+		if Util.isFalse(b) then
 			return a
 		end
 	end,

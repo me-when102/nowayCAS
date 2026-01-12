@@ -8,13 +8,13 @@ return {
 	-- identity: 0 + x -> x
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isZero(a) then
+		if Util.isZero(a) then
 			return b
 		end
 	end,
 
 	function(a, b)
-		if SimplifyHelpers.isZero(b) then
+		if Util.isZero(b) then
 			return a
 		end
 	end,
@@ -32,7 +32,7 @@ return {
 	-- numeric folding: num/rat combinations
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNumeric(a) and SimplifyHelpers.isNumeric(b) then
+		if Util.isNumeric(a) and Util.isNumeric(b) then
 			return SimplifyHelpers.add(a, b)
 		end
 	end,
@@ -43,18 +43,18 @@ return {
 	-- (-1)*x + y -> y - x
 	----------------------------------------------------------------------
 	function(a, b)
-		if b.kind == "op" and b.op == "*" then
+		if Util.isOp(b) and b.op == "*" then
 			local left, right = b.left, b.right
-			if SimplifyHelpers.isNegOne(left) then
+			if Util.isNegOne(left) then
 				return Node.Op("-", a, right)
 			end
 		end
 	end,
 
 	function(a, b)
-		if a.kind == "op" and a.op == "*" then
+		if Util.isOp(a) and a.op == "*" then
 			local left, right = a.left, a.right
-			if SimplifyHelpers.isNegOne(left) then
+			if Util.isNegOne(left) then
 				return Node.Op("-", b, right)
 			end
 		end
@@ -64,7 +64,7 @@ return {
 	-- complex addition
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "complex" and b.kind == "complex" then
+		if Util.isComplex(a) and Util.isComplex(b) then
 			return Node.Complex(
 				Node.Op("+", a.real, b.real),
 				Node.Op("+", a.imag, b.imag)

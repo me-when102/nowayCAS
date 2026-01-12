@@ -1,5 +1,6 @@
 local String = {}
 
+local Util = require(script.Parent.Parent.Util)
 local PrintHelpers = require(script.Parent.PrintHelpers)
 
 local table_insert = table.insert
@@ -13,7 +14,7 @@ local table_insert = table.insert
 
 -- Wraps the rational in paranthesis / brackets if rational
 local function wrapIfRat(node, s)
-	if node.kind == "rat" then
+	if Util.isRat(node) then
 		return "(" .. s .. ")"
 	end
 	return s
@@ -21,7 +22,7 @@ end
 
 -- Wrap child in parentheses / brackets if needed
 local function maybeParen(child, parentOp, isRight)
-	if child.kind ~= "op" then
+	if not Util.isOp(child) then
 		return String._toString(child, parentOp)
 	end
 
@@ -61,23 +62,23 @@ end
 function String._toString(node, parentOp)
 	local kind = node.kind
 
-	if kind == "num" then
+	if Util.isNum(node) then
 		return node.value
 	end
 
-	if kind == "rat" then
+	if Util.isRat(node) then
 		return tostring(node.num) .. "/" .. tostring(node.den)
 	end
 
-	if kind == "var" then
+	if Util.isVar(node) then
 		return node.name
 	end
 
-	if kind == "const" then
+	if Util.isConst(node) then
 		return PrintHelpers.unicodeConstants[node.name] or node.name
 	end
 
-	if kind == "complex" then
+	if Util.isComplex(node) then
 		local realStr = String._toString(node.real)
 		local imagStr = String._toString(node.imag)
 
@@ -99,14 +100,14 @@ function String._toString(node, parentOp)
 			return imagStr
 		end
 
-		if node.imag.kind == "num" and node.imag.value:sub(1,1) == "-" then
+		if Util.isNum(node.imag) and node.imag.value:sub(1,1) == "-" then
 			return realStr .. " - " .. imagStr:sub(2)
 		end
 
 		return realStr .. " + " .. imagStr
 	end
 
-	if kind == "func" then
+	if Util.isFunc(node) then
 
 		-- Special case: factorial
 		if node.name == "factorial" then
@@ -114,7 +115,7 @@ function String._toString(node, parentOp)
 			local inner = String._toString(arg)
 
 			-- Parenthesize if argument is not simple
-			if arg.kind == "op" or arg.kind == "func" then
+			if Util.isOp(arg) or Util.isFunc(arg) then
 				inner = "(" .. inner .. ")"
 			end
 
@@ -130,7 +131,7 @@ function String._toString(node, parentOp)
 		return node.name .. "(" .. table.concat(parts, ", ") .. ")"
 	end
 
-	if kind == "piecewise" then
+	if Util.isPiecewise(node) then
 		local lines = {}
 		table_insert(lines, "{")
 
@@ -144,13 +145,13 @@ function String._toString(node, parentOp)
 		return table.concat(lines, "\n")
 	end
 
-	if kind == "op" then
+	if Util.isOp(node) then
 		local op = node.op
 
 		-------------------------------------------------------
 		-- Unary minus
 		-------------------------------------------------------
-		if op == "*" and node.left.kind == "num" and node.left.value == "-1" then
+		if op == "*" and Util.isNum(node.left) and node.left.value == "-1" then
 			local inner = maybeParen(node.right, "u-", false)
 			return "-" .. inner
 		end
@@ -170,7 +171,7 @@ function String._toString(node, parentOp)
 		if op == "*" then
 			-- 1. Flatten chain
 			local function collect(n, out)
-				if n.kind == "op" and n.op == "*" then
+				if Util.isOp(n) and n.op == "*" then
 					collect(n.left, out)
 					collect(n.right, out)
 				else
@@ -200,13 +201,13 @@ function String._toString(node, parentOp)
 				local b = out[i]
 
 				-- number * variable -> 3x
-				if (leftNode.kind == "num" or leftNode.kind == "rat")
-					and rightNode.kind == "var" then
+				if (Util.isNum(leftNode) or Util.isRat(leftNode))
+					and Util.isVar(rightNode) then
 
 					result = wrapIfRat(leftNode, a) .. b
 
-					-- variable * number -> 3x
-				elseif (leftNode.kind == "num" or leftNode.kind == "rat")
+					-- variable * number -> x3
+				elseif (Util.isNum(leftNode) or Util.isRat(leftNode))
 					and PrintHelpers.isBareVar(rightNode) then
 
 					result = a .. wrapIfRat(rightNode, b)
@@ -217,19 +218,19 @@ function String._toString(node, parentOp)
 					if #leftNode.name > 1 or #rightNode.name > 1 then
 						result = a .. " * " .. b
 					else
-						-- single-letter vars stay intact.
 						result = a .. b
 					end
+
 					-- simple * composite -> x(...)
-				elseif PrintHelpers.isSimple(leftNode) and rightNode.kind == "op" then
+				elseif PrintHelpers.isSimple(leftNode) and Util.isOp(rightNode) then
 					result = wrapIfRat(leftNode, a) .. b
 
 					-- composite * simple -> (... )x
-				elseif leftNode.kind == "op" and PrintHelpers.isSimple(rightNode) then
+				elseif Util.isOp(leftNode) and PrintHelpers.isSimple(rightNode) then
 					result = a .. wrapIfRat(rightNode, b)
 
 					-- composite * composite -> (...)(...)
-				elseif leftNode.kind == "op" and rightNode.kind == "op" then
+				elseif Util.isOp(leftNode) and Util.isOp(rightNode) then
 					result = a .. b
 
 				else

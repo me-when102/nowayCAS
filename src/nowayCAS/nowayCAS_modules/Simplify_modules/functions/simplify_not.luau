@@ -1,5 +1,5 @@
 local Node = require(script.Parent.Parent.Parent.Node)
-local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
+local Util = require(script.Parent.Parent.Parent.Util)
 
 return {
 
@@ -9,11 +9,11 @@ return {
 	-- not false -> true
 	----------------------------------------------------------------------
 	function(name, arg)
-		if SimplifyHelpers.isTrue(arg) then
+		if Util.isTrue(arg) then
 			return Node.Const("false")
 		end
 
-		if SimplifyHelpers.isFalse(arg) then
+		if Util.isFalse(arg) then
 			return Node.Const("true")
 		end
 	end,

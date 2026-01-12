@@ -1,5 +1,5 @@
 local Node = require(script.Parent.Parent.Parent.Node)
-local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
+local Util = require(script.Parent.Parent.Parent.Util)
 
 return {
 
@@ -7,7 +7,7 @@ return {
 	-- x ^ 1 -> x
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isOne(b) then
+		if Util.isOne(b) then
 			return a
 		end
 	end,
@@ -16,7 +16,7 @@ return {
 	-- x ^ 0 -> 1
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isZero(b) then
+		if Util.isZero(b) then
 			return Node.Num("1")
 		end
 	end,
@@ -25,7 +25,7 @@ return {
 	-- x ^ (-1) -> 1 / x
 	----------------------------------------------------------------------
 	function(a, b)
-		if SimplifyHelpers.isNegOne(b) then
+		if Util.isNegOne(b) then
 			return Node.Op("/", Node.Num("1"), a)
 		end
 	end,
@@ -35,12 +35,12 @@ return {
 	-- Only when a and b are numeric (num or rat)
 	----------------------------------------------------------------------
 	function(a, b)
-		if a.kind == "op" and a.op == "^"
-			and SimplifyHelpers.isNumeric(a.right)
-			and SimplifyHelpers.isNumeric(b) then
+		if Util.isOp(a) and a.op == "^"
+			and Util.isNumeric(a.right)
+			and Util.isNumeric(b) then
 
-			local a_num, a_den = SimplifyHelpers.toRational(a.right)
-			local b_num, b_den = SimplifyHelpers.toRational(b)
+			local a_num, a_den = Util.toRational(a.right)
+			local b_num, b_den = Util.toRational(b)
 
 			-- Only fold integer exponents: denominator must be 1
 			if a_den == 1 and b_den == 1 then

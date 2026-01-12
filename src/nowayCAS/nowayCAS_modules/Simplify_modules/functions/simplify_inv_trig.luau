@@ -1,5 +1,5 @@
 local Node = require(script.Parent.Parent.Parent.Node)
-local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
+local Util = require(script.Parent.Parent.Parent.Util)
 
 return {
 
@@ -10,7 +10,7 @@ return {
 	-- atan(0) = 0
 	----------------------------------------------------------------------
 	function(name, x)
-		if SimplifyHelpers.isZero(x) then
+		if Util.isZero(x) then
 			if name == "asin" then return Node.Num("0") end
 			if name == "atan" then return Node.Num("0") end
 		end
@@ -23,15 +23,15 @@ return {
 	-- atan(-x) = -atan(x)
 	----------------------------------------------------------------------
 	function(name, x)
-		if x.kind == "op" and x.op == "*" and SimplifyHelpers.isNegOne(x.left) then
+		if Util.isOp(x) and x.op == "*" and Util.isNegOne(x.left) then
 			local inner = x.right
 
 			if name == "asin" then
-				return Node.Op("*", Node.Num("-1"), Node.Func("asin", {inner}))
+				return Node.Op("*", Node.Num("-1"), Node.Func("asin", { inner }))
 			end
 
 			if name == "atan" then
-				return Node.Op("*", Node.Num("-1"), Node.Func("atan", {inner}))
+				return Node.Op("*", Node.Num("-1"), Node.Func("atan", { inner }))
 			end
 
 			-- acos(-x) identity is unsafe (requires pi) and flips monotonicity, so skip it

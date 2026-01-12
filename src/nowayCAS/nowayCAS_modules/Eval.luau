@@ -34,27 +34,25 @@ local function atanh(x)
 	return 0.5 * math.log((1 + x) / (1 - x))
 end
 
--- Evaluate a node
+-- Evaluate a node.
 function Eval.eval(node, env)
-	local kind = node.kind
 
 	-------------------------------------------------------
 	-- Numbers
 	-------------------------------------------------------
-	if kind == "num" then
+	if Util.isNum(node) then
 		return tonumber(node.value)
 
 		-------------------------------------------------------
 		-- Rationals
 		-------------------------------------------------------
-	elseif kind == "rat" then
-
+	elseif Util.isRat(node) then
 		return node.num / node.den
 
 		-------------------------------------------------------
 		-- Variables
 		-------------------------------------------------------
-	elseif kind == "var" then
+	elseif Util.isVar(node) then
 		local v = env[node.name]
 		if v == nil then
 			error("nowayCAS.Eval: variable '" .. node.name .. "' not provided")
@@ -64,7 +62,7 @@ function Eval.eval(node, env)
 		-------------------------------------------------------
 		-- Constants
 		-------------------------------------------------------
-	elseif kind == "const" then
+	elseif Util.isConst(node) then
 		-- boolean literal handling
 		if node.name == "true" then return true end
 		if node.name == "false" then return false end
@@ -82,7 +80,7 @@ function Eval.eval(node, env)
 		-------------------------------------------------------
 		-- Piecewise
 		-------------------------------------------------------
-	elseif kind == "piecewise" then
+	elseif Util.isPiecewise(node) then
 		for _, pair in ipairs(node.branches) do
 			local condNode = pair[1]
 			local exprNode = pair[2]
@@ -100,7 +98,7 @@ function Eval.eval(node, env)
 		-------------------------------------------------------
 		-- Complex literal
 		-------------------------------------------------------
-	elseif kind == "complex" then
+	elseif Util.isComplex(node) then
 		local re = Eval.eval(node.real, env)
 		local im = Eval.eval(node.imag, env)
 
@@ -119,7 +117,7 @@ function Eval.eval(node, env)
 		-------------------------------------------------------
 		-- Functions
 		-------------------------------------------------------
-	elseif kind == "func" then
+	elseif Util.isFunc(node) then
 		local f = node.name
 
 		-------------------------------------------------------
@@ -140,13 +138,11 @@ function Eval.eval(node, env)
 		-------------------------------------------------------
 		-- Built-in Functions (single argument)
 		-------------------------------------------------------
-		-- Evaluate all args (even though built-ins only use the first)
 		local args = {}
 		for i, a in ipairs(node.args) do
 			args[i] = Eval.eval(a, env)
 		end
 
-		-- get arguments
 		local arg = args[1]
 		local arg2 = args[2]
 
@@ -223,7 +219,7 @@ function Eval.eval(node, env)
 		-------------------------------------------------------
 		-- Operators
 		-------------------------------------------------------
-	elseif kind == "op" then
+	elseif Util.isOp(node) then
 		local op = node.op
 		local left = Eval.eval(node.left, env)
 		local right = Eval.eval(node.right, env)
@@ -266,43 +262,19 @@ function Eval.eval(node, env)
 		-------------------------------------------------------
 		-- Comparison Operators
 		-------------------------------------------------------
-		if op == ">" then
-			return left > right
-		end
-
-		if op == "<" then
-			return left < right
-		end
-
-		if op == ">=" then
-			return left >= right
-		end
-
-		if op == "<=" then
-			return left <= right
-		end
-
-		if op == "==" then
-			return left == right
-		end
-
-		if op == "!=" then
-			return left ~= right
-		end
-
-		if op == "and" then
-			return left and right
-		end
-
-		if op == "or" then
-			return left or right
-		end
+		if op == ">" then return left > right end
+		if op == "<" then return left < right end
+		if op == ">=" then return left >= right end
+		if op == "<=" then return left <= right end
+		if op == "==" then return left == right end
+		if op == "!=" then return left ~= right end
+		if op == "and" then return left and right end
+		if op == "or" then return left or right end
 
 		error("nowayCAS.Eval: unsupported operator '" .. op .. "'")
 	end
 
-	error("nowayCAS.Eval: unknown node kind '" .. tostring(kind) .. "'")
+	error("nowayCAS.Eval: unknown node kind '" .. tostring(node.kind) .. "'")
 end
 
--- The Evaluator sub-library.
 return Eval

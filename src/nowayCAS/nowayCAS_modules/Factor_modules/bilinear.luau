@@ -27,7 +27,7 @@ local pairings = {
 
 -- try to factor a sum by finding a common factor across pairs for gruping checks
 function Bil.factorByPairwiseCommon(node)
-	if not (node and node.kind == "op" and node.op == "+") then return nil end
+	if not (node and Util.isOp(node) and node.op == "+") then return nil end
 
 	-- Flatten and extract
 	local terms = {}
@@ -126,7 +126,7 @@ end
 
 -- attempt bilinear grouping on a 4-term sum, returning (F1+F2)*R if found.
 function Bil.factorBilinearGrouping(node)
-	if node.kind ~= "op" or node.op ~= "+" then
+	if not (Util.isOp(node) and node.op == "+") then
 		return nil 
 	end
 
@@ -167,15 +167,15 @@ function Bil.factorBilinearGrouping(node)
 			return nil, nil
 		end
 
-		if canonFactored.kind == "op" and canonFactored.op == "*" then
+		if Util.isOp(canonFactored) and canonFactored.op == "*" then
 			local F, R = canonFactored.left, canonFactored.right
 			-- prefer non-sum side as F
-			if F.kind == "op" and F.op == "+" then
+			if Util.isOp(F) and F.op == "+" then
 				F, R = canonFactored.right, canonFactored.left
 			end
 			F = Canon.canonical(F)
 			-- normalize remainder to be a sum node
-			if not (R.kind == "op" and R.op == "+") then
+			if not (Util.isOp(R) and R.op == "+") then
 				R = Canon.canonical(Node.Op("+", R, Node.Num("0")))
 			else
 				R = Canon.canonical(R)

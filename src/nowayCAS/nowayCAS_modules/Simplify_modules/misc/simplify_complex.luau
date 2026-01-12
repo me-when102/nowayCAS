@@ -1,5 +1,5 @@
 local Node = require(script.Parent.Parent.Parent.Node)
-local SimplifyHelpers = require(script.Parent.Parent.SimplifyHelpers)
+local Util = require(script.Parent.Parent.Parent.Util)
 
 return {
 
@@ -7,7 +7,7 @@ return {
 	-- 0 + 0i -> 0
 	----------------------------------------------------------------------
 	function(real, imag)
-		if SimplifyHelpers.isZero(real) and SimplifyHelpers.isZero(imag) then
+		if Util.isZero(real) and Util.isZero(imag) then
 			return Node.Num("0")
 		end
 	end,
@@ -16,7 +16,7 @@ return {
 	-- a + 0i -> a
 	----------------------------------------------------------------------
 	function(real, imag)
-		if SimplifyHelpers.isZero(imag) then
+		if Util.isZero(imag) then
 			return real
 		end
 	end,
@@ -25,7 +25,7 @@ return {
 	-- 0 + bi -> b*i
 	----------------------------------------------------------------------
 	function(real, imag)
-		if SimplifyHelpers.isZero(real) then
+		if Util.isZero(real) then
 			return Node.Op("*", imag, Node.Const("i"))
 		end
 	end,

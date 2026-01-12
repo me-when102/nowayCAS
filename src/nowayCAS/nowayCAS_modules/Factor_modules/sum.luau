@@ -17,7 +17,7 @@ local ipairs = ipairs
 
 function Sum.factorSum(node)
 	-- Only sums can be factored here
-	if node.kind ~= "op" or node.op ~= "+" then
+	if not (Util.isOp(node) and node.op == "+") then
 		return node
 	end
 
@@ -87,9 +87,9 @@ function Sum.factorSum(node)
 	local product = Canon.canonical(Node.Op("*", common, distributed))
 
 	-- Ensure right side is a sum node
-	if product.kind == "op" and product.op == "*" then
+	if Util.isOp(product) and product.op == "*" then
 		local L, R = product.left, product.right
-		if not (R.kind == "op" and R.op == "+") then
+		if not (Util.isOp(R) and R.op == "+") then
 			R = Canon.canonical(Node.Op("+", R, Node.Num("0")))
 			product = Canon.canonical(Node.Op("*", L, R))
 		end

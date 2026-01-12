@@ -16,12 +16,12 @@ local Bin = {}
 
 -- Build (u - v)(u + v)
 local function diffOfSquares(u, v)
-    return Canon.canonical(
-        Node.Op("*",
-            Node.Op("-", u, v),
-            Node.Op("+", u, v)
-        )
-    )
+	return Canon.canonical(
+		Node.Op("*",
+			Node.Op("-", u, v),
+			Node.Op("+", u, v)
+		)
+	)
 end
 
 -- Build (u +- v)^2
@@ -39,21 +39,21 @@ end
 
 -- Factorizes the node in binomial if possible.
 function Bin.factorBinomial(node)
-    -- Only sums or differences can be binomials/trinomials
-    if node.kind ~= "op" or (node.op ~= "+" and node.op ~= "-") then
-        return nil
-    end
+	-- Only sums or differences can be binomials/trinomials
+	if not Util.isOp(node) or (node.op ~= "+" and node.op ~= "-") then
+		return nil
+	end
 
-    -- Flatten into terms
-    local terms = {}
-    if node.op == "-" then
-        terms[1] = node.left
-        terms[2] = Node.Op("*", Node.Num("-1"), node.right)
-    else
-        FactorHelpers.factor_flatten(node, "+", terms)
-    end
+	-- Flatten into terms
+	local terms = {}
+	if node.op == "-" then
+		terms[1] = node.left
+		terms[2] = Node.Op("*", Node.Num("-1"), node.right)
+	else
+		FactorHelpers.factor_flatten(node, "+", terms)
+	end
 
-    -- Extract square bases
+	-- Extract square bases
 	local squareTerms = {}
 	local others = {}
 
@@ -66,22 +66,22 @@ function Bin.factorBinomial(node)
 		end
 	end
 
-    -- Difference of squares: exactly 2 terms, both squares
-    if #terms == 2 and #squareTerms == 2 then
-        local A = squareTerms[1]
-        local B = squareTerms[2]
+	-- Difference of squares: exactly 2 terms, both squares
+	if #terms == 2 and #squareTerms == 2 then
+		local A = squareTerms[1]
+		local B = squareTerms[2]
 
-        -- Check signs via extracted term
-        local exA = FactorHelpers.extractTerm(A.node)
-        local exB = FactorHelpers.extractTerm(B.node)
+		-- Check signs via extracted term
+		local exA = FactorHelpers.extractTerm(A.node)
+		local exB = FactorHelpers.extractTerm(B.node)
 
-        -- We want A - B or B - A
-        if exA.num > 0 and exB.num < 0 then
-            return diffOfSquares(A.base, B.base)
-        elseif exA.num < 0 and exB.num > 0 then
-            return diffOfSquares(B.base, A.base)
-        end
-    end
+		-- We want A - B or B - A
+		if exA.num > 0 and exB.num < 0 then
+			return diffOfSquares(A.base, B.base)
+		elseif exA.num < 0 and exB.num > 0 then
+			return diffOfSquares(B.base, A.base)
+		end
+	end
 
 	-- Perfect square trinomial: (U^2) +- 2UV + (V^2)
 	if #terms == 3 and #squareTerms == 2 and #others == 1 then
@@ -98,7 +98,7 @@ function Bin.factorBinomial(node)
 		local ratio = Simplify.simplify(Node.Op("/", mid, uv))
 
 		-- ratio must simplify to +2 or -2
-		if ratio.kind == "num" then
+		if Util.isNum(ratio) then
 			local k = tonumber(ratio.value)
 			if k == 2 or k == -2 then
 				local sign = (k == 2) and "+" or "-"
@@ -107,7 +107,7 @@ function Bin.factorBinomial(node)
 		end
 	end
 
-    return nil
+	return nil
 end
 
 return Bin
