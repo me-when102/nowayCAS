@@ -60,15 +60,24 @@ end
 
 -- Get canonical key for deterministic stuff.
 local function canonicalKey(node)
-	if node.kind == "num" then
+	if Util.isNum(node) then
 		return "num:" .. node.value
-	elseif node.kind == "var" then
+
+	elseif Util.isRat(node) then
+		return "rat:" .. node.num .. "/" .. node.den
+
+	elseif Util.isVar(node) then
 		return "var:" .. node.name
-	elseif node.kind == "const" then
+
+	elseif Util.isConst(node) then
 		return "const:" .. node.name
-	elseif node.kind == "complex" then
-		return "complex(" .. canonicalKey(node.real) .. "," .. canonicalKey(node.imag) .. ")"
-	elseif node.kind == "func" then
+
+	elseif Util.isComplex(node) then
+		return "complex(" 
+			.. canonicalKey(node.real) .. "," 
+			.. canonicalKey(node.imag) .. ")"
+
+	elseif Util.isFunc(node) then
 		local parts = { "func:", node.name, "(" }
 		for i, arg in ipairs(node.args) do
 			if i > 1 then table_insert(parts, ",") end
@@ -76,10 +85,23 @@ local function canonicalKey(node)
 		end
 		table_insert(parts, ")")
 		return table.concat(parts)
-	elseif node.kind == "op" then
+
+	elseif Util.isOp(node) then
 		return "op:" .. node.op .. "("
 			.. canonicalKey(node.left) .. ","
 			.. canonicalKey(node.right) .. ")"
+
+	elseif Util.isPiecewise(node) then
+		local parts = { "piecewise(" }
+		for i, branch in ipairs(node.branches) do
+			if i > 1 then table_insert(parts, ",") end
+			table_insert(parts, canonicalKey(branch.cond))
+			table_insert(parts, ":")
+			table_insert(parts, canonicalKey(branch.expr))
+		end
+		table_insert(parts, ")")
+		return table.concat(parts)
+
 	else
 		return node.kind or "?"
 	end
@@ -313,12 +335,12 @@ local function monomialKey(node)
 	if Util.isOp(node) and node.op == "^" and Util.isNum(node.right) then
 		local exp = tonumber(node.right.value)
 
-		if node.left.kind == "var" then
+		if Util.isVar(node.left) then
 			return {
 				coeff = { num = 1, den = 1 },
 				vars  = { [node.left.name] = exp }
 			}
-		elseif node.left.kind == "const" then
+		elseif Util.isConst(node.left) then
 			return {
 				coeff = { num = 1, den = 1 },
 				vars  = { ["const:" .. node.left.name] = exp }
