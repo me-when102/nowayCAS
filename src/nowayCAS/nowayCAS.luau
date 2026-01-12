@@ -13,11 +13,14 @@
 	            - Postfix operators are parsed into functions since they are unary.
 	            - No node ever stores parent references.
 	            - No node may contain raw Lua tables except for func.args and piecewise.branches.
+	            - No node may contain approximate values (floats, scientific notation, rounded integers).
 	        
-	        Numeric Representation:
+	        Numbers and Numeric Representation:
 	            - Number nodes store their numeric value as a string literal and not a Lua number.
 	            - Unary minus is expressed as a multiplication node (left: -1, right: expr).
 	            - Rationals always contain integers (normalized, gcd=1, denominator>0).
+	            - A node cannot simultaneously represent multiple numeric types (eg: a num node cannot also store rational metadata).
+	            - Never overflow IEEE-754's exact integer range when during symbolic tasks. Allow this only for evaluation.
 	        
 	        Piecewise Semantics (untightened as for now):
 	        	- Piecewise nodes store an ordered list of { condition, expression } pairs.
@@ -37,6 +40,7 @@
 	            - Canonicalization flattens nested piecewise nodes.
 	            - Canonicalization prunes only syntactically unreachable piecewise branches (eg, literal false, duplicate conditions, or branches after a literal true). No semantic contradiction detection is performed.
 	            - Branch order is preserved unless contradictions are detected.
+	            - Canonicalization must not reorder non-commutative operators.
 	            
 	        Equations and Relational Semantics:
 	            - Equations are not expressions; they form a separate object type.
@@ -62,7 +66,8 @@
 	        	- Simplification never mutates nodes.
 				- Simplification always returns a new or original node.
 				- Simplification recursively simplifies children before applying rules.
-				- Simplify never changes the mathematical meaning of an expression
+				- Simplify never changes the mathematical meaning of an expression.
+				- Never fold when the result overflows the IEEE-754's exact integer range.
 			
 			Solving Semantics:
 				- Solving always return solutions, solution sets, or special tables, and not a node.
@@ -468,9 +473,8 @@ end
 
 -- Returns an expression added by another thing.
 function Expression.__add(a, b)
-	if a.kind == "equation" or b.kind == "equation" then
-		return Equation.apply_op(b, "add", a)
-	end
+	if Util.isEquation(a) then return a + b end
+	if Util.isEquation(b) then return b + a end 
 
 	local result = nowayCAS.Arithmetic.add(a, b)
 	return Expression.new(result)
@@ -478,9 +482,8 @@ end
 
 -- Returns an expression subtracted by another thing.
 function Expression.__sub(a, b)
-	if a.kind == "equation" or b.kind == "equation" then
-		return Equation.apply_op(b, "sub", a)
-	end
+	if Util.isEquation(a) then return a - b end
+	if Util.isEquation(b) then return b - a end
 
 	local result = nowayCAS.Arithmetic.sub(a, b)
 	return Expression.new(result)
@@ -488,9 +491,8 @@ end
 
 -- Returns an expression multiplied by another thing.
 function Expression.__mul(a, b)
-	if a.kind == "equation" or b.kind == "equation" then
-		return Equation.apply_op(b, "mul", a)
-	end
+	if Util.isEquation(a) then return a * b end
+	if Util.isEquation(b) then return b * a end
 
 	local result = nowayCAS.Arithmetic.mul(a, b)
 	return Expression.new(result)
@@ -498,9 +500,8 @@ end
 
 -- Returns an expression divided by another thing.
 function Expression.__div(a, b)
-	if a.kind == "equation" or b.kind == "equation" then
-		return Equation.apply_op(b, "div", a)
-	end
+	if Util.isEquation(a) then return a / b end
+	if Util.isEquation(b) then return b / a end
 
 	local result = nowayCAS.Arithmetic.div(a, b)
 	return Expression.new(result)
@@ -508,9 +509,8 @@ end
 
 -- Returns an expression powered by another thing
 function Expression.__pow(a, b)
-	if a.kind == "equation" or b.kind == "equation" then
-		return Equation.apply_op(b, "pow", a)
-	end
+	if Util.isEquation(a) then return a ^ b end
+	if Util.isEquation(b) then return b ^ a end
 
 	local result = nowayCAS.Arithmetic.pow(a, b)
 	return Expression.new(result)

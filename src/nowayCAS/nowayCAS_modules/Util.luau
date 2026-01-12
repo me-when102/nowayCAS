@@ -377,5 +377,22 @@ function Util.detectRelation(str)
 	return nil
 end
 
+-------------------------------------------------------
+-- First-class Helpers
+-------------------------------------------------------
+
+-- Returns true if the object is an equation.
+function Util.isEquation(a)
+	if a.kind and a.kind == "equation" then return true end
+	return false
+end
+
+-- Returns true if the object is an equation.
+function Util.isExpression(a)
+	if a.kind and a.kind == "expression" then return true end
+	return false
+end
+
+
 -- The Utility sub-library.
 return Util
