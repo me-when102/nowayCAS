@@ -17,7 +17,7 @@
 	        
 	        Numbers and Numeric Representation:
 	            - Number nodes store their numeric value as a string literal and not a Lua number.
-	            - Unary minus is expressed as a multiplication node (left: -1, right: expr).
+	            - Unary minus is expressed as a multiplication node (left: -1, right: expr), except when expr is a numeric.
 	            - Rationals always contain integers (normalized, gcd=1, denominator>0).
 	            - A node cannot simultaneously represent multiple numeric types (eg: a num node cannot also store rational metadata).
 	            - Never overflow IEEE-754's exact integer range when during symbolic tasks. Allow this only for evaluation.
