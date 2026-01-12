@@ -121,6 +121,16 @@ function Util.isOne(n)
 	return false
 end
 
+-- Returns true if the node is two.
+function Util.isTwo(n)
+	if n.kind == "num" then
+		return n.value == "2"
+	elseif n.kind == "rat" then
+		return n.num == 2 and n.den == 1
+	end
+	return false
+end
+
 -- Returns true if the node is true.
 function Util.isTrue(n)
 	return n.kind == "const" and n.name == "true"

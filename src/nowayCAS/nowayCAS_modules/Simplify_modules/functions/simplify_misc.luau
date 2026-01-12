@@ -14,31 +14,30 @@ return {
 	----------------------------------------------------------------------
 	function(name, x)
 		if Util.isZero(x) then
-			if name == "sqrt" then return Node.Num("0") end
-			if name == "abs" then return Node.Num("0") end
-			if name == "floor" then return Node.Num("0") end
-			if name == "ceil" then return Node.Num("0") end
-			if name == "sign" then return Node.Num("0") end
+			if name == "sqrt"      then return Node.Num("0") end
+			if name == "abs"       then return Node.Num("0") end
+			if name == "floor"     then return Node.Num("0") end
+			if name == "ceil"      then return Node.Num("0") end
+			if name == "sign"      then return Node.Num("0") end
 			if name == "factorial" then return Node.Num("1") end
 		end
 	end,
 
 	----------------------------------------------------------------------
 	-- sqrt(x^2) -> x or -x or abs(x)
+	-- Only applies when exponent is exactly 2.
 	----------------------------------------------------------------------
 	function(name, x)
 		if name ~= "sqrt" then return end
 
 		-- match x^2
-		if x.kind == "op"
-			and x.op == "^"
-			and x.right.kind == "num"
-			and x.right.value == "2"
+		if Util.isOp(x) and x.op == "^"
+			and Util.isTwo(x.right)
 		then
 			local base = x.left
 
 			-- Only variables get assumption-based simplification
-			if base.kind == "var" then
+			if Util.isVar(base) then
 				if Assume.is(base, "positive") then
 					return base
 				elseif Assume.is(base, "negative") then
@@ -51,14 +50,13 @@ return {
 	end,
 
 	----------------------------------------------------------------------
-	-- abs(-x) -> abs(x)
+	-- abs(-x)  -> abs(x)
 	-- sign(-x) -> -sign(x)
-	-- sqrt(-x) -> no simplification
-	-- floor/ceil/factorial: no negation rules
+	-- sqrt(-x), floor(-x), ceil(-x), factorial(-x) -> no simplification
 	----------------------------------------------------------------------
 	function(name, x)
 		-- match -1 * inner
-		if x.kind == "op" and x.op == "*" and Util.isNegOne(x.left) then
+		if Util.isOp(x) and x.op == "*" and Util.isNegOne(x.left) then
 			local inner = x.right
 
 			if name == "abs" then
@@ -69,21 +67,22 @@ return {
 				return Node.Op("*", Node.Num("-1"), Node.Func("sign", { inner }))
 			end
 
-			-- sqrt(-x), floor(-x), ceil(-x), factorial(-x) -> no simplification
+			-- Other functions do not simplify negative arguments
 		end
 	end,
 
 	----------------------------------------------------------------------
-	-- factorial(n) where n is a small integer constant
+	-- factorial(n) for small integer constants
 	-- Only structural: do NOT evaluate large factorials.
 	-- Allowed: 0! = 1, 1! = 1
 	----------------------------------------------------------------------
 	function(name, x)
 		if name ~= "factorial" then return end
-		if x.kind == "num" then
-			if x.value == "1" then
-				return Node.Num("1")
-			end
+
+		if Util.isOne(x) then
+			return Node.Num("1")
 		end
+		
+		-- 0! handled in the zero rule above
 	end,
 }
