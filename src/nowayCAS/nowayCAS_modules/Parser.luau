@@ -258,23 +258,33 @@ end
 -- factor -> ("+" | "-") factor
 --         | power
 function Parser._parseFactor(stream)
-	local tok = stream:peek()
+    local tok = stream:peek()
 
-	-- unary operators
-	if tok.kind == "operator" and (tok.value == "+" or tok.value == "-") then
-		stream:next()
-		local operand = Parser._parseFactor(stream)
+    -- unary operators
+    if tok.kind == "operator" and (tok.value == "+" or tok.value == "-") then
+        stream:next()
+        local operand = Parser._parseFactor(stream)
 
-		-- Represent unary minus as multiplication by -1
-		if tok.value == "-" then
-			return Node.Op("*", Node.Num("-1"), operand)
-		end
+        if tok.value == "-" then
+            -- If the operand is a number literal, fold the sign into the literal.
+            if operand.kind == "num" then
+                -- Avoid double minus like "--2"
+                if operand.value:sub(1, 1) == "-" then
+                    return Node.Num(operand.value:sub(2))
+                else
+                    return Node.Num("-" .. operand.value)
+                end
+            end
 
-		-- Unary plus is a no-op
-		return operand
-	end
+            -- Otherwise, represent unary minus as multiplication by -1.
+            return Node.Op("*", Node.Num("-1"), operand)
+        end
 
-	return Parser._parsePower(stream)
+        -- Unary plus is a no-op
+        return operand
+    end
+
+    return Parser._parsePower(stream)
 end
 
 -- power -> primary ("^" power)?
