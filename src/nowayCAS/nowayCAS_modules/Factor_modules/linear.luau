@@ -8,7 +8,7 @@ local Simplify = require(script.Parent.Parent.Simplify)
 
 local tonumber = tonumber
 local ipairs = ipairs
-local table_insert = table_insert
+local table_insert = table.insert
 
 local Lin = {}
 
