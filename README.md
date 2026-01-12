@@ -214,21 +214,18 @@ print(expr:varIs("y", "nonzero"))  --> true
 ### 12. Solving Equations
 
 ```lua
-local x = nowayCAS.new("x")
-
--- Quadratic with positive discriminant (two solutions)
 local a = nowayCAS.new("5564x^2 - 234x - 23 = 0")
-local solA = a:solve(x.node)
+local solA = a:solve("x")
 print(solA)
 
 -- Linear equation
 local b = nowayCAS.new("-7x + 4 = 3x - 123")
-local solB = b:solve(x.node)
+local solB = b:solve("x")
 print(solB)
 
 -- Quadratic with no real solutions
 local c = nowayCAS.new("x^2 + 1 = 0")
-local solC = c:solve(x.node)
+local solC = c:solve("x")
 print(solC)
 ```
 
