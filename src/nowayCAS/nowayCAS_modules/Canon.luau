@@ -15,13 +15,6 @@ local ipairs = ipairs
 -- Produces a unique, normalized AST form.
 -------------------------------------------------------
 
--- deep copy
-local function copy(t)
-	local n = {}
-	for k,v in pairs(t) do n[k] = v end
-	return n
-end
-
 -- Rational Addition.
 local function ratAdd(a, b)
 	-- a = {num, den}, b = {num, den}
