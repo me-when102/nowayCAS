@@ -4,6 +4,7 @@ local Node = require(script.Parent.Node)
 local Canon = require(script.Parent.Canon)
 local Util = require(script.Parent.Util)
 local RewriteDSL = require(script.RewriteDSL)
+local RewriteRuleHelpers = require(script.RewriteRuleHelpers)
 
 local table_remove = table.remove
 local table_insert = table.insert
@@ -33,30 +34,6 @@ local OpInfo = {
 	["=="] = { assoc = false, comm = false },
 	["!="] = { assoc = false, comm = false },
 }
-
-
--- Checks if the node's operator is op.
-local function isAssocOp(node, op)
-	return node.kind == "op" and node.op == op
-end
-
--- Gets the children of the node (left and right).
-local function childrenOf(node, op)
-	if isAssocOp(node, op) then
-		local items = {}
-		local function collect(n)
-			if isAssocOp(n, op) then
-				collect(n.left); collect(n.right)
-			else
-				table_insert(items, n)
-			end
-		end
-		collect(node)
-		return items
-	else
-		return { node }
-	end
-end
 
 -- Try to apply one rule to a node
 function Rewrite._applyRule(node, rule)
@@ -288,8 +265,8 @@ end
 
 -- Matches Associative-Commutative operators in a sequence
 function Rewrite._matchACSeq(pattern, node, bindings)
-	local pChildren = childrenOf(pattern, pattern.op)
-	local nChildren = childrenOf(node, node.op)
+	local pChildren = RewriteRuleHelpers.childrenOf(pattern, pattern.op)
+	local nChildren = RewriteRuleHelpers.childrenOf(node, node.op)
 
 	-- Find the sequence wildcard
 	local seqIndex, seqPat = findSeqWildcard(pChildren)
@@ -365,8 +342,8 @@ end
 
 -- Match Associative and Commutative operators
 function Rewrite._matchAC(pattern, node, bindings)
-	local pChildren = childrenOf(pattern, pattern.op)
-	local nChildren = childrenOf(node, node.op)
+	local pChildren = RewriteRuleHelpers.childrenOf(pattern, pattern.op)
+	local nChildren = RewriteRuleHelpers.childrenOf(node, node.op)
 
 	-- Check for sequence wildcard
 	local seqIndex = findSeqWildcard(pChildren)
@@ -477,7 +454,7 @@ function Rewrite._match(pattern, node, bindings)
 	end
 
 	-- Numeric literal
-	if Util.isNum(pattern) then
+	if Util.isNumeric(pattern) then
 		if Util.isNum(node) then
 			return (pattern.value == node.value) and bindings or nil
 		end
@@ -552,14 +529,9 @@ function Rewrite.substitutePattern(node, bindings)
 		return bindings[node.name] or {}
 	end
 
-	-- Numbers unchanged
-	if Util.isNum(node) then
+	-- Numeric nodes unchanged
+	if Util.isNumeric(node) then
 		return node
-	end
-
-	-- Rationals unchanged
-	if Util.isRat(node) then 
-		return node 
 	end
 
 	-- Function: substitute args

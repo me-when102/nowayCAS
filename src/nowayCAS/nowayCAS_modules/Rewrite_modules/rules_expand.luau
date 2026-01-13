@@ -2,6 +2,7 @@ local rules_expand = {}
 
 local Node = require(script.Parent.Parent.Node)
 local Rewrite = require(script.Parent)
+local RewriteRuleHelpers = require(script.Parent.RewriteRuleHelpers)
 local R = Rewrite.R
 local RF = Rewrite.RF
 
@@ -11,42 +12,10 @@ local table_insert = table.insert
 -- Expansion
 -------------------------------------------------------
 
-local function isAssocOp(node, op)
-	return node.kind == "op" and node.op == op
-end
-
-local function childrenOf(node, op)
-	if isAssocOp(node, op) then
-		local items = {}
-		local function collect(n)
-			if isAssocOp(n, op) then
-				collect(n.left); collect(n.right)
-			else
-				table_insert(items, n)
-			end
-		end
-		collect(node)
-		return items
-	else
-		return { node }
-	end
-end
-
-local function rebuildAssoc(op, items)
-	if #items == 0 then
-		error("rebuildAssoc: empty")
-	end
-	local acc = items[1]
-	for i = 2, #items do
-		acc = Node.Op(op, acc, items[i])
-	end
-	return acc
-end
-
 rules_expand = {
 	-- (a + b + ...)^n -> sum of all n-fold products
 	RF("(_sum)^_n", function(node, m)
-		local terms = childrenOf(m._sum, "+")
+		local terms = RewriteRuleHelpers.childrenOf(m._sum, "+")
 		local n = tonumber(m._n.value)
 		if not n or n < 2 then
 			return node
@@ -64,7 +33,7 @@ rules_expand = {
 			products = new
 		end
 
-		return rebuildAssoc("+", products)
+		return RewriteRuleHelpers.rebuildAssoc("+", products)
 	end),
 
 	-- (A + B + ...) * (C + D + ...) -> all pairwise products
@@ -85,7 +54,7 @@ rules_expand = {
 					local term = n
 					if sign == -1 then
 						-- Wrap in unary minus: 0 - term
-						term = Node.Op("-", Node.Num(0), n)
+						term = Node.Op("-", Node.Num("0"), n)
 					end
 					table.insert(terms, term)
 				end

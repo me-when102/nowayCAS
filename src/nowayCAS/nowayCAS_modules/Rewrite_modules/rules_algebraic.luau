@@ -7,6 +7,7 @@ local Assume = require(script.Parent.Parent.Assume)
 
 local R = Rewrite.R
 local RF = Rewrite.RF
+
 -------------------------------------------------------
 -- Algebraic Simplifications (Factorization, Cancellation,
 -- Rational simplification, Structural rewrites)
@@ -15,7 +16,7 @@ local RF = Rewrite.RF
 rules_algebraic.simplify = {
 	-- (x^2 - y^2) / (x - y) - > x + y
 	R("(_u^2 + -(_v^2)) / (_u + -(_v))", "_u + _v"),
-	
+
 	-- ln(x * y) = ln(x) + ln(y) if x and y > 0
 	RF("ln(_x * _y)", function(node, env)
 		local x = env._x
@@ -30,13 +31,13 @@ rules_algebraic.simplify = {
 
 		return node
 	end),
-	
+
 	-- (u * x + v) / x -> u + v/x
 	R("(_u * _x + _v) / _x", "_u + _v / _x"),
-	
+
 	-- (u * x - v) / x -> u - v/x
 	R("(_u * _x + -(_v)) / _x", "_u - _v / _x"),
-	
+
 	-- (u * x) / x -> u   (assumes x ~= 0; unguarded)
 	RF("(_u * _x) / _x", function(node, env)
 		local x = env._x
@@ -58,13 +59,13 @@ rules_algebraic.simplify = {
 
 		return node
 	end),
-	
+
 	-- (a / x) + (b / x) -> (a + b) / x
 	R("(_a / _d) + (_b / _d)", "(_a + _b) / _d"),
-	
+
 	-- (a / x) - (b / x) -> (a - b) / x
 	R("(_a / _d) - (_b / _d)", "(_a - _b) / _d"),
-	
+
 	-- sin(x)^2 + cos(x)^2 = 1
 	R("sin(_x)^2 + cos(_x)^2", "1"),
 	R("cos(_x)^2 + sin(_x)^2", "1"),
