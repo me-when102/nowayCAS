@@ -529,4 +529,17 @@ function Expression.__unm(a)
 end
 
 -------------------------------------------------------
+
+-- Versioning
+nowayCAS.VERSION = setmetatable({
+	major = 0,
+	minor = 12,
+	patch = 0,
+}, {
+	__tostring = function(v)
+		return string.format("%d.%d.%d", v.major, v.minor, v.patch)
+	end
+})
+
+-- export symbolic algebra
 return nowayCAS
