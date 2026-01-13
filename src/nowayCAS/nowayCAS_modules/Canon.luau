@@ -51,7 +51,7 @@ local function flatten(op, items)
 	return out
 end
 
--- Get canonical key for deterministic stuff.
+-- Returns the canonical structural idenitity of a node.
 local function canonicalKey(node)
 	if Util.isNum(node) then
 		return "num:" .. node.value
