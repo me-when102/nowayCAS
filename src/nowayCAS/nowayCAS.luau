@@ -9,8 +9,10 @@
 	            - Node kinds: "num", "var", "op", "func", "const", "rat", "complex", "piecewise".
 	            - For operator node kinds, the operator is represented as a literal string with the symbol on it.
 	            - For first-class objects, they have a { kind = "..." } that outputs their type in full with no captials.
-	            - Operators are binary; functions are unary.
-	            - Postfix operators are parsed into functions since they are unary.
+	            - Operators are fixed-arity binary infix constructs represented by literal operator strings and governed by precedence and associativity rules.
+	            - Functions are prefix constructs represented by a name and an explicit argument list, and may be unary or multi-argument.
+	            - Postfix operators are parsed into function calls.
+	            - Unary logical negation (not) is represented as a function, not an operator.
 	            - No node ever stores parent references.
 	            - No node may contain raw Lua tables except for func.args and piecewise.branches.
 	            - No node may contain approximate values (floats, scientific notation, rounded integers).
@@ -398,22 +400,22 @@ function nowayCAS.newEquation(lhsExpr, rhsExpr, rel)
 end
 
 -- Creates a new equal equation with two expressions.
-function nowayCAS.newEqual(lhs, rhs) return Equation.eq(lhs, rhs) end
+function nowayCAS.newEqual(lhs, rhs) return Equation.eq(lhs.node, rhs.node) end
 
 -- Creates a new not-equal equation with two expressions.
-function nowayCAS.newNotEqual(lhs, rhs) return Equation.neq(lhs, rhs) end
+function nowayCAS.newNotEqual(lhs, rhs) return Equation.neq(lhs.node, rhs.node) end
 
 -- Creates a new less-than equation with two expressions.
-function nowayCAS.newLessThan(lhs, rhs) return Equation.lt(lhs, rhs)  end
+function nowayCAS.newLessThan(lhs, rhs) return Equation.lt(lhs.node, rhs.node)  end
 
 -- Creates a new less-than-or-equal-to equation with two expressions.
-function nowayCAS.newLessThanOrEqual(lhs, rhs) return Equation.le(lhs, rhs) end
+function nowayCAS.newLessThanOrEqual(lhs, rhs) return Equation.le(lhs.node, rhs.node) end
 
 -- Creates a new greater-than equation with two expressions.
-function nowayCAS.newGreaterThan(lhs, rhs) return Equation.gt(lhs, rhs)  end
+function nowayCAS.newGreaterThan(lhs, rhs) return Equation.gt(lhs.node, rhs.node)  end
 
 -- Creates a new greater-than-or-equal-to equation with two expressions.
-function nowayCAS.newGreaterThanOrEqual(lhs, rhs) return Equation.ge(lhs, rhs) end
+function nowayCAS.newGreaterThanOrEqual(lhs, rhs) return Equation.ge(lhs.node, rhs.node) end
 
 -- Returns a solve, solveset table, or other special table from solving the equation for a variable.
 -- The variable must be a single variable node.

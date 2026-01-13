@@ -4,6 +4,7 @@ Equation.__index = Equation
 local Simplify = require(script.Parent.Simplify)
 local Arithmetic = require(script.Parent.Arithmetic)
 local Print = require(script.Parent.Print)
+local Util = require(script.Parent.Util)
 
 -------------------------------------------------------
 -- Equations
@@ -22,8 +23,9 @@ end
 
 -- Creates a new equation with the left expression, right expression, and relation.
 function Equation.new(lhs, rhs, rel)
+	if not Util.isNode(lhs) or not Util.isNode(rhs) then error("Equation.new: lhs or rhs must be nodes.") end
 	return setmetatable({
-		kind = "equation",
+		type = "equation",
 		lhs = lhs,
 		rhs = rhs,
 		rel = Equation.normalizeRel(rel or "=="),
@@ -64,7 +66,7 @@ local apply_op_dispatch = {
 -- Apply an arithmetic operation to both sides, symmetric in arguments.
 function Equation.apply_op(a, op, b)
 	-- both sides are equations, combine lhs and rhs pairwise.
-	if getmetatable(a) == Equation and getmetatable(b) == Equation then
+	if a.type == "equation" and b.type == "equation" then
 		local f = apply_op_dispatch[op]
 		if not f then
 			error("Unknown arithmetic op: " .. tostring(op))
@@ -75,11 +77,6 @@ function Equation.apply_op(a, op, b)
 			f(a.rhs, b.rhs),
 			a.rel -- keep the relation of the left equation
 		)
-	end
-
-	-- only one is an equation, swap if needed.
-	if getmetatable(a) ~= Equation then
-		return Equation.apply_op(b, op, a)
 	end
 
 	-- a is equation, b is expr, apply op to both sides.

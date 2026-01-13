@@ -20,7 +20,7 @@ local rules_expand = require(script.Parent.Rewrite.rules_expand)
 
 -- Creates an expression.
 function Expression.new(node)
-	return setmetatable({ kind = "expression", node = node }, Expression)
+	return setmetatable({ type = "expression", node = node }, Expression)
 end
 
 -- Returns the derivative of an expression with respect to a variable.
