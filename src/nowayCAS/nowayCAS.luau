@@ -148,6 +148,7 @@ Equation = require(script.Equation)
 Expression = require(script.Expression)
 Solve = require(script.Solve)
 Complex = require(script.Complex)
+Expand = require(script.Expand)
 
 -- Expose rules for external API use.
 rules_expand = require(script.Rewrite.rules_expand)
@@ -173,7 +174,8 @@ local nowayCAS = {
 	Equation = Equation,
 	Expression = Expression,
 	Solve = Solve,
-	Complex = Complex
+	Complex = Complex,
+	Expand = Expand
 }
 
 -------------------------------------------------------
