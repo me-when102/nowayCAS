@@ -24,11 +24,9 @@ local tonumber = tonumber
 
 -- Computes the dervative of a node with respect to a variable.
 function Diff.diff(node, var)
-	local key = node
+	local key = Util.hashNode(node) .. "|" .. var
 	local cached = DIFF_CACHE[key]
-	if cached then
-		return cached
-	end
+	if cached then return cached end
 
 	local result
 

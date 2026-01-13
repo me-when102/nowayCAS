@@ -171,6 +171,67 @@ function Util.nodeEquals(a, b)
 	return false
 end
 
+-- Hashes the node to get its structurally unique string.
+function Util.hashNode(node)
+	-- Numeric literal
+	if Util.isNum(node) then
+		return "n:" .. node.value
+	end
+
+	-- Variable
+	if Util.isVar(node) then
+		return "v:" .. node.name
+	end
+
+	-- Operator
+	if Util.isOp(node) then
+		return "o:" .. node.op
+			.. "(" .. Util.hashNode(node.left)
+			.. "," .. Util.hashNode(node.right)
+			.. ")"
+	end
+
+	-- Function
+	if Util.isFunc(node) then
+		local parts = {}
+		for i, a in ipairs(node.args) do
+			parts[i] = Util.hashNode(a)
+		end
+		return "f:" .. node.name .. "(" .. table.concat(parts, ",") .. ")"
+	end
+
+	-- Complex
+	if Util.isComplex(node) then
+		return "c:(" ..
+			Util.hashNode(node.real) .. "," ..
+			Util.hashNode(node.imag) .. ")"
+	end
+
+	-- Piecewise
+	if Util.isPiecewise(node) then
+		local parts = {}
+		for i, pair in ipairs(node.branches) do
+			parts[i] = "[" ..
+				Util.hashNode(pair[1]) .. "->" ..
+				Util.hashNode(pair[2]) .. "]"
+		end
+		return "p:" .. table.concat(parts, ";")
+	end
+
+	-- Rational (if you want to support it)
+	if Util.isRat(node) then
+		-- Assuming node has .num and .den fields
+		return "r:" .. node.num .. "/" .. node.den
+	end
+
+	-- Constant (symbolic constant)
+	if Util.isConst(node) then
+		return "cst:" .. node.name
+	end
+
+	error("hashNode: unknown node kind " .. tostring(node.kind))
+end
+
 -- Checks if two arrays of AST nodes are structurally identical.
 -- Each list must have the same length and every corresponding element
 function Util.nodeListEquals(a, b)
