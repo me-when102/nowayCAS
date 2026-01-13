@@ -263,9 +263,9 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Complex Analysis Extensions
 - LaTeX to AST parsing
 - Add safe guards for ergonomic use
-- Expanding the Expand module into a separate sub-system.
-- Refactoring `Diff.luau`.
-- Full refactor `Canon.luau`.
+- Expanding the Expand module into a separate sub-system
+- Refactoring `Diff.luau`
+- Full refactor `Canon.luau`
 
 ### Long-Term
 - Rational function algebra
