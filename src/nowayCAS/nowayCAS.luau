@@ -540,7 +540,7 @@ end
 -- Versioning
 nowayCAS.VERSION = setmetatable({
 	major = 0,
-	minor = 12,
+	minor = 13,
 	patch = 0,
 }, {
 	__tostring = function(v)
