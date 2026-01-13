@@ -170,9 +170,6 @@ function Simplify.simplify(node)
 	-- apply algebraic rewrite rules
 	out = Rewrite.apply(out, rules_algebraic.simplify)
 
-	-- canonicalize
-	out = Canon.canonical(out)
-
 	SIMPLIFY_CACHE[node] = out
 	return out
 end

@@ -11,8 +11,10 @@ local Print = require(script.Parent.Print)
 local Util = require(script.Parent.Util)
 local Assume = require(script.Parent.Assume)
 local Solve = require(script.Parent.Solve)
+local Canon = require(script.Parent.Canon)
 
 local rules_expand = require(script.Parent.Rewrite.rules_expand)
+local rules_algebraic = require(script.Parent.Rewrite.rules_algebraic)
 
 -------------------------------------------------------
 -- Expressions
@@ -37,8 +39,15 @@ end
 
 -- Returns the expression in simplified form.
 function Expression:simplify()
-	return Expression.new(Simplify.simplifyDeep(self.node))
+	local node = self.node
+
+	node = Rewrite.apply(node, rules_algebraic.simplify)
+	node = Simplify.simplifyDeep(node)
+	node = Canon.canonical(node)
+
+	return Expression.new(node)
 end
+
 
 -- Returns the expression in expanded form.
 function Expression:expand()
