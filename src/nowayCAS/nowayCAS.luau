@@ -151,7 +151,6 @@ Complex = require(script.Complex)
 Expand = require(script.Expand)
 
 -- Expose rules for external API use.
-rules_expand = require(script.Rewrite.rules_expand)
 rules_algebraic = require(script.Rewrite.rules_algebraic)
 
 local nowayCAS = {
@@ -266,7 +265,7 @@ end
 
 -- Returns the AST in expanded form.
 function nowayCAS.expand(node)
-	return Rewrite.apply(node, rules_expand)
+	return Expand.expand(node)
 end
 
 -- Returns the AST in factorized form.

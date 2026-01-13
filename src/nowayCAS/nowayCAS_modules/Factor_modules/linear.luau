@@ -2,7 +2,7 @@ local FactorHelpers = require(script.Parent.FactorHelpers)
 local Node = require(script.Parent.Parent.Node)
 local Canon = require(script.Parent.Parent.Canon)
 local Rewrite = require(script.Parent.Parent.Rewrite)
-local rules_expand = require(script.Parent.Parent.Rewrite.rules_expand)
+local Expand = require(script.Parent.Parent.Expand)
 local Util = require(script.Parent.Parent.Util)
 local Simplify = require(script.Parent.Parent.Simplify)
 
@@ -116,7 +116,7 @@ function Lin.factorLinearIn(node, varName)
 	local candidate = Node.Op("*", A, inner)
 
 	-- Verify correctness by expansion
-	local expanded = Rewrite.apply(candidate, rules_expand)
+	local expanded = Expand.expand(candidate)
 	expanded = Canon.canonical(expanded)
 
 	local original = Canon.canonical(node)

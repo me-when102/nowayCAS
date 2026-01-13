@@ -12,8 +12,8 @@ local Util = require(script.Parent.Util)
 local Assume = require(script.Parent.Assume)
 local Solve = require(script.Parent.Solve)
 local Canon = require(script.Parent.Canon)
+local Expand = require(script.Parent.Expand)
 
-local rules_expand = require(script.Parent.Rewrite.rules_expand)
 local rules_algebraic = require(script.Parent.Rewrite.rules_algebraic)
 
 -------------------------------------------------------
@@ -51,7 +51,7 @@ end
 
 -- Returns the expression in expanded form.
 function Expression:expand()
-	return Expression.new(Rewrite.apply(self.node, rules_expand))
+	return Expression.new(Expand.expand(self.node))
 end
 
 -- Returns the expression in factorized form.
