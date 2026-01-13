@@ -197,9 +197,6 @@ function Simplify.simplifyDeep(node, maxSteps)
 		steps += 1
 	end
 
-	if steps >= maxSteps then
-		warn("no")
-	end
 	return node
 end
 
