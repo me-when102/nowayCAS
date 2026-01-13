@@ -250,8 +250,10 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 
 ## **Roadmap (needs help)**
 - Enhancing simplification with strategies
+  - Performing unary minus distribution, eg: `-(a + b) + a` to `-b`
 - Robust canonicalization
 - Modularize canonicalization
+- Full Factorization subsystem.
 - Extended Equations System
   - Support generalized polynomial solving
   - Solve simultaneous questions
@@ -261,18 +263,21 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Complex Analysis Extensions
 - LaTeX to AST parsing
 - Add safe guards for ergonomic use
+- Expanding the Expand module into a separate sub-system.
+- Refactoring `Diff.luau`.
+- Full refactor `Canon.luau`.
 
 ### Long-Term
 - Rational function algebra
 - Robust factorization
   - Rational-aware factorization
+- Vector Algebra
+  - Dot product
+  - Cross product
 - Matrix Algebra
   - Matrix literals
   - Addition, multiplication matrix arithmetic, transpose
   - Row-reduction (RREF)
-- Vector Algebra
-  - Dot product
-  - Cross product
 - Tensor Algebra
 - Limits
 - Integrals 
