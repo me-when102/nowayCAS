@@ -1,7 +1,6 @@
 local Simplify = {}
 local SIMPLIFY_CACHE = {}
 
-local Canon = require(script.Parent.Canon)
 local Node = require(script.Parent.Node)
 local Rewrite = require(script.Parent.Rewrite)
 local Util = require(script.Parent.Util)
@@ -102,72 +101,76 @@ local function applyRules(rules, ...)
 	end
 end
 
--- Simplifies the node.
-function Simplify.simplify(node)
-	-- memoization
-	local cached = SIMPLIFY_CACHE[node]
-	if cached then return cached end
-
-	local out
-
+local function simplifyChildren(node)
 	if Util.isOp(node) then
-		local op = node.op
-		local left = Simplify.simplify(node.left)
-		local right = Simplify.simplify(node.right)
-
-		local rules = Simplify.operators[op]
-		if rules then
-			out = applyRules(rules, left, right)
-			if out then
-				out = Canon.canonical(out)
-				SIMPLIFY_CACHE[node] = out
-				return out
-			end
-		end
-
-		out = Node.Op(op, left, right)
-
-	elseif Util.isComplex(node) then
-		local real = Simplify.simplify(node.real)
-		local imag = Simplify.simplify(node.imag)
-
-		out = applyRules(simplifyComplex, real, imag)
-		out = Canon.canonical(out)
+		return Node.Op(node.op,
+			Simplify.simplify(node.left),
+			Simplify.simplify(node.right)
+		)
 
 	elseif Util.isFunc(node) then
-		local name = node.name
 		local args = {}
 		for i, a in ipairs(node.args) do
 			args[i] = Simplify.simplify(a)
 		end
+		return Node.Func(node.name, args)
 
-		local rules = Simplify.functions[name]
-		if rules then
-			out = applyRules(rules, name, table.unpack(args))
-			if out then
-				out = Canon.canonical(out)
-				SIMPLIFY_CACHE[node] = out
-				return out
-			end
-		end
-
-		out = Node.Func(name, args)
+	elseif Util.isComplex(node) then
+		return Node.Complex(
+			Simplify.simplify(node.real),
+			Simplify.simplify(node.imag)
+		)
 
 	elseif Util.isPiecewise(node) then
-		local newBranches = {}
+		local branches = {}
 		for i, pair in ipairs(node.branches) do
-			local cond = Simplify.simplify(pair[1])
-			local expr = Simplify.simplify(pair[2])
-			newBranches[i] = { cond, expr }
+			branches[i] = {
+				Simplify.simplify(pair[1]),
+				Simplify.simplify(pair[2])
+			}
 		end
-		out = simplifyPiecewise(newBranches)
-
-	else
-		-- num, var, const, rat, etc.
-		out = node
+		return simplifyPiecewise(branches)
 	end
 
-	-- apply algebraic rewrite rules
+	return node
+end
+
+
+local function simplifyNode(node)
+	if Util.isOp(node) then
+		local rules = Simplify.operators[node.op]
+		if rules then
+			local out = applyRules(rules, node.left, node.right)
+			if out then return out end
+		end
+
+	elseif Util.isFunc(node) then
+		local rules = Simplify.functions[node.name]
+		if rules then
+			local out = applyRules(rules, node.name, table.unpack(node.args))
+			if out then return out end
+		end
+
+	elseif Util.isComplex(node) then
+		local out = applyRules(simplifyComplex, node.real, node.imag)
+		if out then return out end
+	end
+
+	return node
+end
+
+-- Simplifies the node.
+function Simplify.simplify(node)
+	local cached = SIMPLIFY_CACHE[node]
+	if cached then return cached end
+
+	-- Recurse
+	local out = simplifyChildren(node)
+
+	-- Apply operator/function rules
+	out = simplifyNode(out)
+
+	-- Apply algebraic rewrite rules
 	out = Rewrite.apply(out, rules_algebraic.simplify)
 
 	SIMPLIFY_CACHE[node] = out
@@ -183,8 +186,8 @@ function Simplify.simplifyDeep(node, maxSteps)
 	while steps < maxSteps do
 		local next = Simplify.simplify(node)
 
-		-- canonical equality check
-		if Util.nodeEquals(Canon.canonical(node), next) then
+		-- If Simplify made no change, we reached a fixed point
+		if Util.nodeEquals(node, next) then
 			return next
 		end
 
