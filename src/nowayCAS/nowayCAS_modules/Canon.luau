@@ -46,7 +46,7 @@ local function flatten(op, items)
 	local out = {}
 
 	local function add(n)
-		if n.kind == "op" and n.op == op then
+		if Util.isOp(n) and n.op == op then
 			add(n.left)
 			add(n.right)
 		else
