@@ -8,8 +8,6 @@ local Util = require(script.Parent.Util)
 
 local rules_algebraic = require(script.Parent.Rewrite.rules_algebraic)
 
--- TODO: fix parser
-
 -------------------------------------------------------
 -- Simplifier
 -- Applies algebraic rewrite rules to AST nodes.

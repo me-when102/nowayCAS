@@ -1,6 +1,7 @@
 local RewriteDSL = {}
 
 local Node = require(script.Parent.Parent.Node)
+local Util = require(script.Parent.Parent.Util)
 
 -------------------------------------------------------
 -- RewriteDSL
@@ -161,7 +162,15 @@ local function parseFactor(tokens)
 	if t == "-" then
 		pop(tokens)
 		local factor = parseFactor(tokens)
-		return Node.Op("*", Node.Num("-1"), factor)
+
+		if Util.isNum(factor) then
+			-- numeric literals: just negate the string value
+			local val = tonumber(factor.value)
+			return Node.Num(tostring(-val))
+		else
+			-- everything else: -1 * expr   (as per invariants)
+			return Node.Op("*", Node.Num("-1"), factor)
+		end
 	end
 
 	return parsePower(tokens)
