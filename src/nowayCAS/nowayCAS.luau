@@ -179,6 +179,7 @@ local nowayCAS = {
 -- API Helpers
 -------------------------------------------------------
 
+-- Converts v into a node if possible.
 local function asNode(v)
 	if type(v) == "table" and v.kind then
 		return v
@@ -194,8 +195,7 @@ local function asNode(v)
 
 	if type(v) == "string" then
 		local tokens = Token._tokenize(v)
-		local ast = Parser.parse(tokens)
-		return Canon.canonical(ast)
+		return Parser.parse(tokens)
 	end
 
 	error("Cannot convert to node: " .. typeof(v))
@@ -396,26 +396,26 @@ end
 
 -- Creates a new equation.
 function nowayCAS.newEquation(lhsExpr, rhsExpr, rel)
-	return Equation.new(lhsExpr.node, rhsExpr.node, rel)
+	return Equation.new(asNode(lhsExpr), asNode(rhsExpr), rel)
 end
 
 -- Creates a new equal equation with two expressions.
-function nowayCAS.newEqual(lhs, rhs) return Equation.eq(lhs.node, rhs.node) end
+function nowayCAS.newEqual(lhs, rhs) return Equation.eq(asNode(lhs), asNode(rhs)) end
 
 -- Creates a new not-equal equation with two expressions.
-function nowayCAS.newNotEqual(lhs, rhs) return Equation.neq(lhs.node, rhs.node) end
+function nowayCAS.newNotEqual(lhs, rhs) return Equation.neq(asNode(lhs), asNode(rhs)) end
 
 -- Creates a new less-than equation with two expressions.
-function nowayCAS.newLessThan(lhs, rhs) return Equation.lt(lhs.node, rhs.node)  end
+function nowayCAS.newLessThan(lhs, rhs) return Equation.lt(asNode(lhs), asNode(rhs))  end
 
 -- Creates a new less-than-or-equal-to equation with two expressions.
-function nowayCAS.newLessThanOrEqual(lhs, rhs) return Equation.le(lhs.node, rhs.node) end
+function nowayCAS.newLessThanOrEqual(lhs, rhs) return Equation.le(asNode(lhs), asNode(rhs)) end
 
 -- Creates a new greater-than equation with two expressions.
-function nowayCAS.newGreaterThan(lhs, rhs) return Equation.gt(lhs.node, rhs.node)  end
+function nowayCAS.newGreaterThan(lhs, rhs) return Equation.gt(asNode(lhs), asNode(rhs))  end
 
 -- Creates a new greater-than-or-equal-to equation with two expressions.
-function nowayCAS.newGreaterThanOrEqual(lhs, rhs) return Equation.ge(lhs.node, rhs.node) end
+function nowayCAS.newGreaterThanOrEqual(lhs, rhs) return Equation.ge(asNode(lhs), asNode(rhs)) end
 
 -- Returns a solve, solveset table, or other special table from solving the equation for a variable.
 -- The variable must be a single variable node.
