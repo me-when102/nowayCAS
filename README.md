@@ -249,7 +249,7 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - API changes as it stabilizes
 
 ## **Roadmap (needs help)**
-- Enhancing simplification with strategies
+- Enhancing simplification / rewrite / canonicalization with strategies
   - Performing unary minus distribution, eg: `-(a + b) + a` to `-b`
   - Sign normalization
   - Better fraction & rational canonicalization
@@ -271,7 +271,7 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Full refactor `Canon.luau`
 
 ### Mid / Long-Term
-- Robust simplification engine.
+- Robust simplification / rewrite / canonicalization engine.
   - Aggressive factoring and cancelling.
   - Strong symbolic constant folding & Rewriting
   - Polynomial division remainder check / cancellation in rational expressions
