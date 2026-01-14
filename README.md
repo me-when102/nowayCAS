@@ -274,7 +274,6 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Robust simplification engine.
   - Aggressive factoring and cancelling.
   - Strong symbolic constant folding & Rewriting
-  - Full identity & trivial case removal everywhere
   - Polynomial division remainder check / cancellation in rational expressions
   - Common factor extraction / partial factoring
 - Grobner basis computation (for ideal membership, elimination, solving systems)
