@@ -191,16 +191,7 @@ function parseExpr(tokens)
 		if op == "+" or op == "-" or op == "*" or op == "/" then
 			pop(tokens)
 			local right = parseFactor(tokens)
-			if op == "-" then
-				-- a - b  ->  a + (-1 * b)
-				right = Util.isNum(right)
-					and Node.Num(tostring(-tonumber(right.value)))
-					or Node.Op("*", Node.Num("-1"), right)
-
-				left = Node.Op("+", left, right)
-			else
-				left = Node.Op(op, left, right)
-			end
+			left = Node.Op(op, left, right)
 		else
 			break
 		end
