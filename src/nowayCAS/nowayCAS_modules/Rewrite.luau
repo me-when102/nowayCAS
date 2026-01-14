@@ -1,7 +1,6 @@
 local Rewrite = {}
 
 local Node = require(script.Parent.Node)
-local Canon = require(script.Parent.Canon)
 local Util = require(script.Parent.Util)
 local RewriteDSL = require(script.RewriteDSL)
 local RewriteRuleHelpers = require(script.RewriteRuleHelpers)
@@ -110,30 +109,18 @@ function Rewrite.apply(node, rules)
 	local maxSteps = 50
 	local steps = 0
 
-	while true do
-		steps += 1
-		if steps > maxSteps then
-			warn("Rewrite.apply: maxSteps reached, returning canonical form")
-			return Canon.canonical(node)
-		end
-
+	while steps < maxSteps do
 		local next, changed = Rewrite._rewrite(node, rules)
-
-		-- No rule fired anywhere -> stable
 		if not changed then
-			return Canon.canonical(node)
+			return node
 		end
-
-		-- Canonical fixed point -> stable
-		local cNode = Canon.canonical(node)
-		local cNext = Canon.canonical(next)
-
-		if Util.nodeEquals(cNode, cNext) then
-			return cNext
-		end
-
 		node = next
+		steps += 1
 	end
+	if steps >= maxSteps then
+		warn("Rewrite.apply: maxSteps reached, exhausted rewriting execution.")
+	end
+	return node
 end
 
 -------------------------------------------------------

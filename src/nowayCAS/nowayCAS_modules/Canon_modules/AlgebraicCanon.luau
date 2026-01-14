@@ -50,9 +50,15 @@ function AlgebraicCanon.normalizeOp(node)
 		for i, n in ipairs(items) do
 			items[i] = AlgebraicCanon.normalize(n)
 		end
+
 		items = CanonAlgebraHelpers.combineAdd(items)
 		items = CanonAlgebraHelpers.combineLikeTerms(items)
-		return Node.Op("+", items[1], items[2] or Node.Num("0"))
+
+		local acc = items[1]
+		for i = 2, #items do
+			acc = Node.Op("+", acc, items[i])
+		end
+		return acc
 	end
 
 	-- MULTIPLICATION
