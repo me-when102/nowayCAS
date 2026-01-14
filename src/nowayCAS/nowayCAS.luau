@@ -265,7 +265,7 @@ end
 
 -- Returns the AST in expanded form.
 function nowayCAS.expand(node)
-	return Expand.expand(node)
+	return Expand.expandDeep(node)
 end
 
 -- Returns the AST in factorized form.
@@ -540,7 +540,7 @@ end
 nowayCAS.VERSION = setmetatable({
 	major = 0,
 	minor = 14,
-	patch = 0,
+	patch = 1,
 }, {
 	__tostring = function(v)
 		return string.format("%d.%d.%d", v.major, v.minor, v.patch)

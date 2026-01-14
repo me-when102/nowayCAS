@@ -51,7 +51,7 @@ end
 
 -- Returns the expression in expanded form.
 function Expression:expand()
-	return Expression.new(Expand.expand(self.node))
+	return Expression.new(Expand.expandDeep(self.node))
 end
 
 -- Returns the expression in factorized form.

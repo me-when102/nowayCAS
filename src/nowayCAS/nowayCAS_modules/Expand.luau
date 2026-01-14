@@ -36,5 +36,22 @@ function Expand.expand(node)
 	return node
 end
 
+-- Performs a fixed-point expansion on the node.
+-- Keeps expanding the node until it is unchanged.
+function Expand.expandDeep(node)
+	local prev = nil
+	local curr = node
+	
+	while true do
+		prev = curr
+		curr = Expand.expand(curr)
+		if Util.nodeEquals(curr, prev) then
+			break
+		end
+	end
+
+	return curr
+end
+
 -- The Expand sub-library.
 return Expand
