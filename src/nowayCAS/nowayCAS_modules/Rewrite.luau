@@ -107,14 +107,33 @@ end
 
 -- Performs a rewrite on a node with a set of rules.
 function Rewrite.apply(node, rules)
+	local maxSteps = 50
+	local steps = 0
+
 	while true do
+		steps += 1
+		if steps > maxSteps then
+			warn("Rewrite.apply: maxSteps reached, returning canonical form")
+			return Canon.canonical(node)
+		end
+
 		local next, changed = Rewrite._rewrite(node, rules)
+
+		-- No rule fired anywhere -> stable
 		if not changed then
 			return Canon.canonical(node)
 		end
+
+		-- Canonical fixed point -> stable
+		local cNode = Canon.canonical(node)
+		local cNext = Canon.canonical(next)
+
+		if Util.nodeEquals(cNode, cNext) then
+			return cNext
+		end
+
 		node = next
 	end
-	return node
 end
 
 -------------------------------------------------------
