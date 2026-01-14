@@ -251,6 +251,9 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 ## **Roadmap (needs help)**
 - Enhancing simplification with strategies
   - Performing unary minus distribution, eg: `-(a + b) + a` to `-b`
+  - Sign normalization
+  - Better fraction & rational canonicalization
+  - Smarter collection of like terms in sums
 - Robust canonicalization
 - Modularize canonicalization
 - Full Factorization subsystem.
@@ -267,7 +270,14 @@ nowayCAS started in **1st January 2026** and it's currently in **beta**. Expect:
 - Refactoring `Diff.luau`
 - Full refactor `Canon.luau`
 
-### Long-Term
+### Mid / Long-Term
+- Robust simplification engine.
+  - Aggressive factoring and cancelling.
+  - Strong symbolic constant folding & Rewriting
+  - Full identity & trivial case removal everywhere
+  - Polynomial division remainder check / cancellation in rational expressions
+  - Common factor extraction / partial factoring
+- Grobner basis computation (for ideal membership, elimination, solving systems)
 - Rational function algebra
 - Robust factorization
   - Rational-aware factorization
