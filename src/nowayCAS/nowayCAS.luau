@@ -38,17 +38,14 @@
 		------------------------------------------------------------------------
 		- Canonicalization is defined for all valid ASTs and is idempotent.
 		- Canonicalization never calls Simplify or Rewrite.
-		- Canonicalization only restructures expressions; it never performs algebra.
 		- Commutative operators store operands in sorted, flattened form.
 		- Associative operators never nest.
-		- Canonicalization does not combine like terms, cancel factors, or simplify rationals.
 		- Functions never evaluate unless fully numeric.
 		- Canonicalization flattens nested piecewise nodes.
 		- Canonicalization prunes only syntactically unreachable branches
 			(literal false, duplicates, branches after literal true).
 		- Canonicalization performs no semantic contradiction detection.
 		- Branch order is preserved unless syntactic contradictions require pruning.
-		- Canonicalization must not reorder non-commutative operators.
 
 		------------------------------------------------------------------------
 			Equation & Relational Invariants
@@ -61,16 +58,11 @@
 		------------------------------------------------------------------------
 			Rewrite Invariants
 		------------------------------------------------------------------------
-		- Rewrite is the primary place for deterministic algebraic simplifications that contribute toward a canonical algebraic form (like-term collection, cancellation, rational reduction, monomial combination, basic trig/exp identities that are always beneficial, etc.).
 		- Rewrite rules must terminate.
 		- Rewrite must work on arbitrary trees (not assume canonical form).
-		- Rewrite must not depend on Simplify or Canon.
+		- Rewrite must not depend on Simplify.
 		- Rewrite patterns match structural shapes only, not semantic meaning.
-		- Rewrite rules may perform algebraic transformations (like-term collection,
-			monomial combination, rational simplification, cancellation, etc.).
-		- Rewrite rules must produce output that is structurally canonical-shaped
-			and locally simplified (so no Canon/Simplify pass is required afterward).
-		- Rewrite must not introduce non-canonical structure.
+		- Rewrite must not introduce structure that violates AlgebraicCanon or StructuralCanon invariants.
 
 		------------------------------------------------------------------------
 			Simplification Invariants
@@ -271,7 +263,7 @@ function nowayCAS.substitute(node, map)
 	for key, value in pairs(map) do
 		map[key] = asNode(value)
 	end
-	
+
 	return nowayCAS.Substitute.apply(node, map)
 end
 
