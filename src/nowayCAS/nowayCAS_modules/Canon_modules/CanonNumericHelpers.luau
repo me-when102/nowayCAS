@@ -1,11 +1,11 @@
-local CanonNumeric = {}
+local CanonNumericHelpers = {}
 local Util = require(script.Parent.Parent.Util)
 local Node = require(script.Parent.Parent.Node)
 
 local table_insert = table.insert
 
 -- Rational Addition.
-function CanonNumeric.ratAdd(a, b)
+function CanonNumericHelpers.ratAdd(a, b)
 	-- a = {num, den}, b = {num, den}
 	local num = a.num * b.den + b.num * a.den
 	local den = a.den * b.den
@@ -14,40 +14,40 @@ function CanonNumeric.ratAdd(a, b)
 end
 
 -- Check if the rational is zero.
-function CanonNumeric.ratIsZero(r)
+function CanonNumericHelpers.ratIsZero(r)
 	return r.num == 0
 end
 
 -- Check if the rational is one.
-function CanonNumeric.ratIsOne(r)
+function CanonNumericHelpers.ratIsOne(r)
 	return r.num == r.den
 end
 
 -- Create a fresh rational accumulator for addition (num / den).
-function CanonNumeric.newAddAccumulator()
+function CanonNumericHelpers.newAddAccumulator()
 	return { num = 0, den = 1 }
 end
 
 -- Create a fresh rational accumulator for multiplication (num / den).
-function CanonNumeric.newMulAccumulator()
+function CanonNumericHelpers.newMulAccumulator()
 	return { num = 1, den = 1 }
 end
 
 -- Compute new numerator when adding an integer v to acc.
-function CanonNumeric.accAddInteger(acc, v)
+function CanonNumericHelpers.accAddInteger(acc, v)
 	local newNum = acc.num + v * acc.den
 	return newNum
 end
 
 -- Compute intermediate numerators for adding rational n2/d2 to acc.
-function CanonNumeric.accAddRational(acc, n2, d2)
+function CanonNumericHelpers.accAddRational(acc, n2, d2)
 	local a = acc.num * d2
 	local b = n2 * acc.den
 	return a, b
 end
 
 -- Commit a safe (num, den) pair into acc and reduce it.
-function CanonNumeric.accCommit(acc, newNum, newDen)
+function CanonNumericHelpers.accCommit(acc, newNum, newDen)
 	acc.num = newNum
 	acc.den = newDen
 	-- reduce
@@ -57,7 +57,7 @@ function CanonNumeric.accCommit(acc, newNum, newDen)
 end
 
 -- Emit accumulated rational into out and reset accumulator.
-function CanonNumeric.accFlush(acc, out)
+function CanonNumericHelpers.accFlush(acc, out)
 	if acc.num ~= 0 then
 		if acc.den == 1 then
 			table_insert(out, Node.Num(tostring(acc.num)))
@@ -69,17 +69,17 @@ function CanonNumeric.accFlush(acc, out)
 end
 
 -- Fold integer literal into acc or emit if overflow would occur.
-function CanonNumeric.handleIntegerAdd(acc, n, out)
+function CanonNumericHelpers.handleIntegerAdd(acc, n, out)
 	if Util.beyondIntegerLimit(n.value) then
 		table_insert(out, n)
 		return
 	end
 
 	local v = tonumber(n.value)
-	local newNum = CanonNumeric.accAddInteger(acc, v)
+	local newNum = CanonNumericHelpers.accAddInteger(acc, v)
 
 	if Util.beyondIntegerLimit(newNum) then
-		CanonNumeric.accFlush(acc, out)
+		CanonNumericHelpers.accFlush(acc, out)
 		table_insert(out, n)
 	else
 		acc.num = newNum
@@ -87,9 +87,9 @@ function CanonNumeric.handleIntegerAdd(acc, n, out)
 end
 
 -- Fold rational literal into acc or emit if overflow would occur.
-function CanonNumeric.handleRationalAdd(acc, n, out)
+function CanonNumericHelpers.handleRationalAdd(acc, n, out)
 	local n2, d2 = n.num, n.den
-	local a, b = CanonNumeric.accAddRational(acc, n2, d2)
+	local a, b = CanonNumericHelpers.accAddRational(acc, n2, d2)
 
 	if Util.beyondIntegerLimit(a) or Util.beyondIntegerLimit(b) then
 		table_insert(out, n)
@@ -104,11 +104,11 @@ function CanonNumeric.handleRationalAdd(acc, n, out)
 		return
 	end
 
-	CanonNumeric.accCommit(acc, newNum, newDen)
+	CanonNumericHelpers.accCommit(acc, newNum, newDen)
 end
 
 -- Fold integer literal into multiplicative accumulator or emit if overflow.
-function CanonNumeric.handleIntegerMul(acc, n, others)
+function CanonNumericHelpers.handleIntegerMul(acc, n, others)
 	if Util.beyondIntegerLimit(n.value) then
 		table_insert(others, n)
 		return
@@ -125,7 +125,7 @@ function CanonNumeric.handleIntegerMul(acc, n, others)
 end
 
 -- Fold rational literal into multiplicative accumulator or emit if overflow.
-function CanonNumeric.handleRationalMul(acc, n, others)
+function CanonNumericHelpers.handleRationalMul(acc, n, others)
 	local newNum = acc.num * n.num
 	local newDen = acc.den * n.den
 
@@ -142,4 +142,4 @@ function CanonNumeric.handleRationalMul(acc, n, others)
 	acc.den = acc.den // g
 end
 
-return CanonNumeric
+return CanonNumericHelpers

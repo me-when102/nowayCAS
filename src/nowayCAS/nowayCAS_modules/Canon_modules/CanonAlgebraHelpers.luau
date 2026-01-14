@@ -1,14 +1,14 @@
-local CanonAlgebra = {}
+local CanonAlgebraHelpers = {}
 local Node = require(script.Parent.Parent.Node)
 local Util = require(script.Parent.Parent.Util)
-local CanonNumeric = require(script.Parent.CanonNumeric)
+local CanonNumericHelpers = require(script.Parent.CanonNumericHelpers)
 local CanonHelpers = require(script.Parent.CanonHelpers)
 
 local table_insert = table.insert
 local table_sort = table.sort
 
 -- Flatten associative operators
-function CanonAlgebra.flatten(op, items)
+function CanonAlgebraHelpers.flatten(op, items)
 	local out = {}
 
 	local function add(n)
@@ -25,7 +25,7 @@ function CanonAlgebra.flatten(op, items)
 end
 
 -- Accumulate symbolic exponents (vars, consts, x^n) or classify as other.
-function CanonAlgebra.mulAccSymbol(accExp, n, others)
+function CanonAlgebraHelpers.mulAccSymbol(accExp, n, others)
 	if Util.isVar(n) then
 		accExp[n.name] = (accExp[n.name] or 0) + 1
 		return
@@ -56,7 +56,7 @@ function CanonAlgebra.mulAccSymbol(accExp, n, others)
 end
 
 -- Emit numeric coefficient into out; return true if product collapses to zero.
-function CanonAlgebra.mulEmitCoefficient(acc, out, hasOtherFactors)
+function CanonAlgebraHelpers.mulEmitCoefficient(acc, out, hasOtherFactors)
 	if acc.num ~= 1 or acc.den ~= 1 or not hasOtherFactors then
 		if acc.den == 1 then
 			table_insert(out, Node.Num(tostring(acc.num)))
@@ -73,7 +73,7 @@ function CanonAlgebra.mulEmitCoefficient(acc, out, hasOtherFactors)
 end
 
 -- Emit symbolic factors (vars, consts, powers) in canonical order.
-function CanonAlgebra.mulEmitSymbolic(accExp, out)
+function CanonAlgebraHelpers.mulEmitSymbolic(accExp, out)
 	local names = {}
 	for name,_ in pairs(accExp) do table_insert(names, name) end
 	table_sort(names)
@@ -101,7 +101,7 @@ function CanonAlgebra.mulEmitSymbolic(accExp, out)
 end
 
 -- Collapse repeated non-variable factors into exponent form.
-function CanonAlgebra.mulCollapseRepeats(out)
+function CanonAlgebraHelpers.mulCollapseRepeats(out)
 	local buckets = {}
 	local reps = {}
 
@@ -125,7 +125,7 @@ function CanonAlgebra.mulCollapseRepeats(out)
 end
 
 -- Combine numeric constants in addition.
-function CanonAlgebra.combineAdd(nodes)
+function CanonAlgebraHelpers.combineAdd(nodes)
 	local acc = CanonNumeric.newAddAccumulator()
 	local out = {}
 
@@ -147,7 +147,7 @@ end
 
 -- Combine numeric factors in multiplication
 -- Also combine repeated variables into powers: a*a*n*n -> a^2 * n^2
-function CanonAlgebra.combineMul(nodes)
+function CanonAlgebraHelpers.combineMul(nodes)
 	local acc = CanonNumeric.newMulAccumulator()
 	local accExp = {}
 	local others = {}
@@ -160,20 +160,20 @@ function CanonAlgebra.combineMul(nodes)
 			CanonNumeric.handleRationalMul(acc, n, others)
 
 		else
-			CanonAlgebra.mulAccSymbol(accExp, n, others)
+			CanonAlgebraHelpers.mulAccSymbol(accExp, n, others)
 		end
 	end
 
 	local out = {}
 
 	-- emit coefficient
-	local collapseToZero = CanonAlgebra.mulEmitCoefficient(acc, out, (#others > 0 or next(accExp) ~= nil))
+	local collapseToZero = CanonAlgebraHelpers.mulEmitCoefficient(acc, out, (#others > 0 or next(accExp) ~= nil))
 	if collapseToZero then
 		return { Node.Num("0") }
 	end
 
 	-- emit symbolic powers
-	CanonAlgebra.mulEmitSymbolic(accExp, out)
+	CanonAlgebraHelpers.mulEmitSymbolic(accExp, out)
 
 	-- emit other factors
 	for _, n in ipairs(others) do
@@ -186,7 +186,7 @@ function CanonAlgebra.combineMul(nodes)
 	end)
 
 	-- collapse repeated non-variable factors
-	return CanonAlgebra.mulCollapseRepeats(out)
+	return CanonAlgebraHelpers.mulCollapseRepeats(out)
 end
 
 -- Returns a canonical monomial descriptor:
@@ -194,7 +194,7 @@ end
 --     coeff = { num = <int>, den = <int> },
 --     vars  = { x = 2, y = 1, ["const:pi"] = 1 }
 -- }
-function CanonAlgebra.monomialKey(node)
+function CanonAlgebraHelpers.monomialKey(node)
 	-- Variable
 	if Util.isVar(node) then
 		return {
@@ -246,8 +246,8 @@ function CanonAlgebra.monomialKey(node)
 
 	-- Multiplication: combine recursively
 	if Util.isOp(node) and node.op == "*" then
-		local left  = CanonAlgebra.monomialKey(node.left)
-		local right = CanonAlgebra.monomialKey(node.right)
+		local left  = CanonAlgebraHelpers.monomialKey(node.left)
+		local right = CanonAlgebraHelpers.monomialKey(node.right)
 
 		-- If either side is non‑monomial, bail out
 		if not left or not right then
@@ -277,12 +277,12 @@ function CanonAlgebra.monomialKey(node)
 end
 
 -- Buckets symbolic monomials by variable signature; returns { buckets, others }.
-function CanonAlgebra.bucketMonomials(nodes)
+function CanonAlgebraHelpers.bucketMonomials(nodes)
 	local buckets = {}
 	local others = {}
 
 	for _, n in ipairs(nodes) do
-		local m = CanonAlgebra.monomialKey(n)
+		local m = CanonAlgebraHelpers.monomialKey(n)
 
 		-- Not a symbolic monomial → leave it alone
 		if not m or next(m.vars) == nil then
@@ -313,7 +313,7 @@ function CanonAlgebra.bucketMonomials(nodes)
 end
 
 -- Rebuilds a symbolic monomial AST from a bucket { coeff, vars }.
-function CanonAlgebra.rebuildMonomial(bucket)
+function CanonAlgebraHelpers.rebuildMonomial(bucket)
 	if CanonNumeric.ratIsZero(bucket.coeff) then
 		return nil
 	end
@@ -361,11 +361,11 @@ function CanonAlgebra.rebuildMonomial(bucket)
 end
 
 -- Rebuilds all monomials in the bucket table into AST nodes.
-function CanonAlgebra.rebuildAllMonomials(buckets)
+function CanonAlgebraHelpers.rebuildAllMonomials(buckets)
 	local out = {}
 
 	for _, bucket in pairs(buckets) do
-		local term = CanonAlgebra.rebuildMonomial(bucket)
+		local term = CanonAlgebraHelpers.rebuildMonomial(bucket)
 		if term then
 			table_insert(out, term)
 		end
@@ -375,9 +375,9 @@ function CanonAlgebra.rebuildAllMonomials(buckets)
 end
 
 -- Combine like terms: a*x + b*x -> (a+b)*x
-function CanonAlgebra.combineLikeTerms(nodes)
-	local buckets, others = CanonAlgebra.bucketMonomials(nodes)
-	local rebuilt = CanonAlgebra.rebuildAllMonomials(buckets)
+function CanonAlgebraHelpers.combineLikeTerms(nodes)
+	local buckets, others = CanonAlgebraHelpers.bucketMonomials(nodes)
+	local rebuilt = CanonAlgebraHelpers.rebuildAllMonomials(buckets)
 
 	for _, term in ipairs(rebuilt) do
 		table_insert(others, term)
@@ -386,4 +386,4 @@ function CanonAlgebra.combineLikeTerms(nodes)
 	return others
 end
 
-return CanonAlgebra
+return CanonAlgebraHelpers
