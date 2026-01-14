@@ -2,7 +2,7 @@ local StructuralCanon = {}
 
 local Node = require(script.Parent.Parent.Node)
 local Util = require(script.Parent.Parent.Util)
-local CanonAlgebra = require(script.Parent.CanonAlgebra)
+local CanonAlgebraHelpers = require(script.Parent.CanonAlgebraHelpers)
 local CanonHelpers = require(script.Parent.CanonHelpers)
 
 -- Canonicalizes the node structurally.
@@ -39,7 +39,7 @@ function StructuralCanon.normalizeOp(node)
 
 	-- ADDITION
 	if op == "+" then
-		local items = CanonAlgebra.flatten("+", { left, right })
+		local items = CanonAlgebraHelpers.flatten("+", { left, right })
 
 		table.sort(items, function(a, b)
 			return CanonHelpers.canonicalKey(a) < CanonHelpers.canonicalKey(b)
@@ -57,7 +57,7 @@ function StructuralCanon.normalizeOp(node)
 
 	-- MULTIPLICATION
 	if op == "*" then
-		local items = CanonAlgebra.flatten("*", { left, right })
+		local items = CanonAlgebraHelpers.flatten("*", { left, right })
 
 		table.sort(items, function(a, b)
 			if Util.isNum(a) and not Util.isNum(b) then return true end
@@ -76,7 +76,7 @@ function StructuralCanon.normalizeOp(node)
 
 	-- LOGICAL OPERATORS
 	if op == "and" or op == "or" then
-		local items = CanonAlgebra.flatten(op, { left, right })
+		local items = CanonAlgebraHelpers.flatten(op, { left, right })
 
 		local seen = {}
 		local unique = {}
