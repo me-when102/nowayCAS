@@ -16,20 +16,16 @@ end
 local function collectAddTerms(node)
 	local terms = {}
 
-	if isAddOp(node) then
-		local function collect(n)
-			if isAddOp(n) then
-				collect(n.left)
-				collect(n.right)
-			else
-				table.insert(terms, n)
-			end
+	local function collect(n)
+		if isAddOp(n) then
+			collect(n.left)
+			collect(n.right)
+		else
+			table.insert(terms, n)
 		end
-		collect(node)
-	else
-		table.insert(terms, node)
 	end
 
+	collect(node)
 	return terms
 end
 

@@ -21,14 +21,14 @@ function Expand.expand(node)
 	-- distribute unary minus and normalize signs
 	node = expand_sign.apply(node)
 
-	-- flatten additive chains (a + (b + c) -> a + b + c)
-	node = expand_add.apply(node)
+	-- expand powers (multinomial, binomial, etc.)
+	node = expand_pow.apply(node)
 
 	-- distribute multiplication over addition
 	node = expand_mul.apply(node)
 
-	-- expand powers (multinomial, binomial, etc.)
-	node = expand_pow.apply(node)
+	-- flatten additive chains (a + (b + c) -> a + b + c)
+	node = expand_add.apply(node)
 
 	-- Final canonicalization
 	node = Canon.canonical(node)

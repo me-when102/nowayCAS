@@ -47,6 +47,20 @@ local function buildMulChain(terms)
 	return result
 end
 
+-- Build a^b with constant folding for numeric^numeric
+local function makePow(base, exponent)
+	if Util.isNumeric(base) and Util.isNumeric(exponent) then
+		local b = tonumber(base.value)
+		local e = tonumber(exponent.value)
+
+		if b and e and e >= 0 and e == math.floor(e) then
+			return Node.Num(tostring(b ^ e))
+		end
+	end
+
+	return Node.Op("^", base, exponent)
+end
+
 -------------------------------------------------------
 -- Binomial / multinomial expansion
 -- (a + b + c)^n -> sum over all products of terms
@@ -83,7 +97,6 @@ local function expandAddPower(base, exponent)
 
 		for i = 0, n do
 			local coeff = Node.Num(tostring(Util.binomial(n, i)))
-
 			local factors = {}
 
 			-- a^(n-i)
@@ -91,7 +104,7 @@ local function expandAddPower(base, exponent)
 				if n - i == 1 then
 					table.insert(factors, a)
 				else
-					table.insert(factors, Node.Op("^", a, Node.Num(tostring(n - i))))
+					table.insert(factors, makePow(a, Node.Num(tostring(n - i))))
 				end
 			end
 
@@ -100,7 +113,7 @@ local function expandAddPower(base, exponent)
 				if i == 1 then
 					table.insert(factors, b)
 				else
-					table.insert(factors, Node.Op("^", b, Node.Num(tostring(i))))
+					table.insert(factors, makePow(b, Node.Num(tostring(i))))
 				end
 			end
 
@@ -133,7 +146,7 @@ local function expandAddPower(base, exponent)
 						if e == 1 then
 							table.insert(factors, terms[i])
 						else
-							table.insert(factors, Node.Op("^", terms[i], Node.Num(tostring(e))))
+							table.insert(factors, makePow(terms[i], Node.Num(tostring(e))))
 						end
 					end
 				end
@@ -173,6 +186,18 @@ function ExpandPow.apply(node)
 
 		-- Only expand powers
 		if node.op == "^" then
+			-- Constant folding: numeric^numeric
+			if Util.isNumeric(left) and Util.isNumeric(right) then
+				local base = tonumber(left.value)
+				local exp  = tonumber(right.value)
+
+				-- Only fold integer, non-negative exponents
+				if base and exp and exp >= 0 and exp == math.floor(exp) then
+					local v = base ^ exp
+					return Node.Num(tostring(v))
+				end
+			end
+
 			-- Case 1: (sum)^n
 			if isAddOp(left) then
 				return expandAddPower(left, right)
@@ -198,7 +223,7 @@ function ExpandPow.apply(node)
 
 					local powered = {}
 					for _, f in ipairs(factors) do
-						table.insert(powered, Node.Op("^", f, right))
+						table.insert(powered, makePow(f, right))
 					end
 
 					return buildMulChain(powered)
