@@ -1,130 +1,109 @@
--- nowayCAS: a symbolic algebra system module in the nowayCAS library
-
 --[[
-    The nowayCAS (Computer Algebra System) system:
-    
-        Invariants:
-        	AST Structure and Node Semantics:
-	            - All expressions are immutable trees (AST).
-	            - Node kinds: "num", "var", "op", "func", "const", "rat", "complex", "piecewise".
-	            - For operator node kinds, the operator is represented as a literal string with the symbol on it.
-	            - For first-class objects, they have a { kind = "..." } that outputs their type in full with no captials.
-	            - Operators are fixed-arity binary infix constructs represented by literal operator strings and governed by precedence and associativity rules.
-	            - Functions are prefix constructs represented by a name and an explicit argument list, and may be unary or multi-argument.
-	            - Postfix operators are parsed into function calls.
-	            - Unary logical negation (not) is represented as a function, not an operator.
-	            - No node ever stores parent references.
-	            - No node may contain raw Lua tables except for func.args and piecewise.branches.
-	            - No node may contain approximate values (floats, scientific notation, rounded integers).
-	        
-	        Numbers and Numeric Representation:
-	            - Number nodes store their numeric value as a string literal and not a Lua number.
-	            - Unary minus is expressed as a multiplication node (left: -1, right: expr), except when expr is a numeric.
-	            - Rationals always contain integers (normalized, gcd=1, denominator>0).
-	            - A node cannot simultaneously represent multiple numeric types (eg: a num node cannot also store rational metadata).
-	            - Never overflow IEEE-754's exact integer range when during symbolic tasks. Allow this only for evaluation.
-	        
-	        Piecewise Semantics:
-	        	- Piecewise nodes store an ordered list of { condition, expression } pairs.
-	        	- Conditions are AST nodes representing boolean expressions, default to false if invalid.
-	        	- A final unconditional branch may be represented as { true, expr }.
-	        	- Piecewise nodes are first-class expressions and may appear anywhere.
-	        	- Solvers must propagate conditions into solution sets.
-	        	- Simplify distributes over piecewise branches.
-	        	
-	        Canonicalization Rules:
-	            - Canonicalization is defined for all valid ASTs and always idempotent.
-	            - Canonicalization never calls Simplify.
-	            - Canonicalization only structures expressions and not algebraic meaning.
-	            - Commutative operators store operands in sorted, flattened form.
-	            - Associative operators never nest.
-	            - Functions never evaluate unless fully numeric.
-	            - Canonicalization flattens nested piecewise nodes.
-	            - Canonicalization prunes only syntactically unreachable piecewise branches (eg, literal false, duplicate conditions, or branches after a literal true). No semantic contradiction detection is performed.
-	            - Branch order is preserved unless contradictions are detected.
-	            - Canonicalization must not reorder non-commutative operators.
-	            
-	        Equations and Relational Semantics:
-	            - Equations are not expressions; they form a separate object type.
-	            - The relations of the equation are represented by their literal comparison operators in strings.
-	            - Arithmetic on equations applies operations to both sides.
-	            - Equation.lhs and Equation.rhs are always nodes.
-	        
-	        Rewriting:
-	            - Rewriting never mutates existing nodes; all transformations return new trees.
-	            - Rewrite rules must be terminating (no infinite self-application)
-	            - Rewrite never assumes canonical form; it must work on arbitrary trees.
-	            - Rewrite must not depend on Simplify or Canon to function correctly.
-	            - Rewrite patterns match only structural shapes, not semantic meaning.
-	        
-	        Print / Pretty-printer:
-	        	- Print never mutates nodes or expressions.
-	        	- Print never performs simplification or canonicalization
-	        	- Print never inspects Equation or Solution internals beyond reading fields.
-	        	- Print always respects operator precedence and associativity.
-	        	- Pretty-printing is pure and uses precedence rules without parent pointers.
-	        	- Print must not imply evaluation.
-            
-            Simplification Semantics:
-	        	- Simplification never mutates nodes.
-				- Simplification always returns a new or original node.
-				- Simplification rules must be terminating.
-				- Simplification recursively simplifies children before applying rules.
-				- Simplification never changes the mathematical meaning of an expression.
-				- Never fold when the result overflows the IEEE-754's exact integer range.
-			
-			Solving Semantics:
-				- Solving always return solutions, solution sets, or special tables, and not a node.
-				- Solvers never mutate the input equation.
-				- Solvers always operate on canonicalized expressions.
-				- Solvers never simplify the input equation, only the output expressions
-				- UnknownSolve is always returned for unsupported equation types.
-				- Solvers must not implicitly simplify.
-				- Solvers must propagate conditions faithfully.
-			
-			Expression Object Model:
-				- Expression objects never store raw Lua values; they always wrap AST trees.
-				- Expression methods never mutate the underlying Node.
+	nowayCAS: a symbolic algebra system module in the nowayCAS library
+	
+	Invariants:
+		------------------------------------------------------------------------
+			AST & Node Model Invariants
+		------------------------------------------------------------------------
+		- All expressions are immutable trees (AST).
+		- Node kinds: "num", "var", "op", "func", "const", "rat", "complex", "piecewise".
+		- Operators are fixed-arity binary infix constructs represented by literal operator strings.
+		- Functions are prefix constructs with explicit argument lists; postfix operators are parsed into function calls.
+		- Unary logical negation ("not") is represented as a function, not an operator.
+		- First-class objects expose { kind = "..." } with lowercase names.
+		- No node stores parent references.
+		- Only func.args and piecewise.branches may contain raw Lua tables.
+		- No node contains approximate numeric values (floats, scientific notation, rounded integers).
 
-			Complex Numbers:
-				- Complex numbers as an AST node are symbolic, and complex numbers as objects are numeric.
-				- Complex nodes store real and imag as AST nodes, not Lua numbers.
-			
-			Factorization:
-				- n/a for now
+		------------------------------------------------------------------------
+			Numeric Representation Invariants
+		------------------------------------------------------------------------
+		- Number nodes store their numeric value as a string literal, not a Lua number.
+		- Rational nodes store normalized integers (gcd = 1, denominator > 0).
+		- A node cannot represent multiple numeric types simultaneously.
+		- Symbolic tasks must not overflow IEEE-754’s exact integer range.
 
-        System:
-            Core:
-                Node.luau        -> AST constructors with DAG caching (no dependency)
-                Token.luau       -> Convert strings into tokens for the parser
-                Parser.luau      -> Convert tokens into AST expressions
-                Util.luau        -> Common helpers
-                Arithmetic.luau  -> Arithmetic between expressions
-                Expression.luau  -> Node objects (node)
-                Equation.luau    -> Relational objects (lhs, rhs, rel)
-                Complex.luau 	 -> Complex number object model (numeric)
-                
-            Expression transformers:
-                Canon.luau       -> Structural normalization (canonical forms)
-                Simplify.luau    -> Local simplifications and shortening
-                Rewrite.luau     -> Pattern-driven algebraic transformation
-                Substitute.luau  -> Replace variables with new expressions
-                Eval.luau    -> Evaluate expressions numerically with an environment
-                Factor.luau      -> Factor expressions using multiple techniques
-                Assume.luau      -> Assumptions system (domains, inequalities, etc.)
-               
-            Solving:
-            	Solve.luau		 -> Equation solving engine
-            	
-            Calculus:
-                Diff.luau        -> Derivatives
-            
-            User-defined:
-                UserConstants.luau -> User-defined constants
-                UserFunctions.luau -> User-defined functions
-                
-            Other:
-                Print.luau       -> Formatting and pretty-printing
+		------------------------------------------------------------------------
+			Piecewise Invariants
+		------------------------------------------------------------------------
+		- Piecewise nodes store ordered { condition, expression } pairs.
+		- Conditions are AST boolean expressions; invalid conditions default to false.
+		- A final unconditional branch may be represented as { true, expr }.
+		- Piecewise nodes may appear anywhere in an expression.
+		- Solvers must propagate conditions.
+		- Simplify distributes over piecewise branches.
+
+		------------------------------------------------------------------------
+			Canonicalization Invariants
+		------------------------------------------------------------------------
+		- Canonicalization is defined for all valid ASTs and is idempotent.
+		- Canonicalization never calls Simplify.
+		- Canonicalization only restructures expressions; it never changes algebraic meaning.
+		- Commutative operators store operands in sorted, flattened form.
+		- Associative operators never nest.
+		- Functions never evaluate unless fully numeric.
+		- Canonicalization flattens nested piecewise nodes.
+		- Canonicalization prunes only syntactically unreachable branches
+		  (literal false, duplicates, branches after literal true).
+		- Canonicalization performs no semantic contradiction detection.
+		- Branch order is preserved unless syntactic contradictions require pruning.
+		- Canonicalization must not reorder non-commutative operators.
+
+		------------------------------------------------------------------------
+			Equation & Relational Invariants
+		------------------------------------------------------------------------
+		- Equations are not expressions; they are separate objects.
+		- Relations are stored as literal comparison operator strings.
+		- Arithmetic on equations applies operations to both sides.
+		- Equation.lhs and Equation.rhs are always AST nodes.
+
+		------------------------------------------------------------------------
+			Rewrite Invariants
+		------------------------------------------------------------------------
+		- Rewrite never mutates nodes; all transformations return new trees.
+		- Rewrite rules must terminate.
+		- Rewrite must work on arbitrary trees (not assume canonical form).
+		- Rewrite must not depend on Simplify or Canon.
+		- Rewrite patterns match structural shapes only, not semantic meaning.
+
+		------------------------------------------------------------------------
+			Simplification Invariants
+		------------------------------------------------------------------------
+		- Simplify never mutates nodes.
+		- Simplify always returns a new or original node.
+		- Simplification rules must terminate.
+		- Simplify recursively simplifies children before applying rules.
+		- Simplify never changes mathematical meaning.
+		- Simplify must not fold results that overflow IEEE-754’s exact integer range.
+
+		------------------------------------------------------------------------
+			Solving Invariants
+		------------------------------------------------------------------------
+		- Solvers return solution objects, not AST nodes.
+		- Solvers never mutate input equations.
+		- Solvers operate on canonicalized expressions.
+		- Solvers never simplify the input equation (only output expressions).
+		- Unsupported equation types return UnknownSolve.
+		- Solvers must not implicitly simplify.
+		- Solvers must propagate conditions faithfully.
+
+		------------------------------------------------------------------------
+			Expression Object Model Invariants
+		------------------------------------------------------------------------
+		- Expression objects never store raw Lua values; they wrap AST nodes.
+		- Expression methods never mutate underlying nodes.
+
+		------------------------------------------------------------------------
+			Complex Number Invariants
+		------------------------------------------------------------------------
+		- Complex AST nodes are symbolic.
+		- Complex numeric objects are numeric.
+		- Complex AST nodes store real and imag as AST nodes.
+
+		------------------------------------------------------------------------
+			Factorization Invariants
+		------------------------------------------------------------------------
+		- N/A for now.
 ]]
 
 -- the require chain
