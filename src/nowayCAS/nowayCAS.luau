@@ -1,7 +1,7 @@
 --[[
-	nowayCAS: a symbolic algebra system module in the nowayCAS library
-	
-	Invariants:
+    nowayCAS: a symbolic algebra system module in the nowayCAS library
+    
+    Invariants:
 		------------------------------------------------------------------------
 			AST & Node Model Invariants
 		------------------------------------------------------------------------
@@ -14,7 +14,7 @@
 		- No node stores parent references.
 		- Only func.args and piecewise.branches may contain raw Lua tables.
 		- No node contains approximate numeric values (floats, scientific notation, rounded integers).
-
+		
 		------------------------------------------------------------------------
 			Numeric Representation Invariants
 		------------------------------------------------------------------------
@@ -22,7 +22,7 @@
 		- Rational nodes store normalized integers (gcd = 1, denominator > 0).
 		- A node cannot represent multiple numeric types simultaneously.
 		- Symbolic tasks must not overflow IEEE-754’s exact integer range.
-
+		
 		------------------------------------------------------------------------
 			Piecewise Invariants
 		------------------------------------------------------------------------
@@ -32,23 +32,24 @@
 		- Piecewise nodes may appear anywhere in an expression.
 		- Solvers must propagate conditions.
 		- Simplify distributes over piecewise branches.
-
+		
 		------------------------------------------------------------------------
 			Canonicalization Invariants
 		------------------------------------------------------------------------
 		- Canonicalization is defined for all valid ASTs and is idempotent.
-		- Canonicalization never calls Simplify.
-		- Canonicalization only restructures expressions; it never changes algebraic meaning.
+		- Canonicalization never calls Simplify or Rewrite.
+		- Canonicalization only restructures expressions; it never performs algebra.
 		- Commutative operators store operands in sorted, flattened form.
 		- Associative operators never nest.
+		- Canonicalization does not combine like terms, cancel factors, or simplify rationals.
 		- Functions never evaluate unless fully numeric.
 		- Canonicalization flattens nested piecewise nodes.
 		- Canonicalization prunes only syntactically unreachable branches
-		  (literal false, duplicates, branches after literal true).
+			(literal false, duplicates, branches after literal true).
 		- Canonicalization performs no semantic contradiction detection.
 		- Branch order is preserved unless syntactic contradictions require pruning.
 		- Canonicalization must not reorder non-commutative operators.
-
+		
 		------------------------------------------------------------------------
 			Equation & Relational Invariants
 		------------------------------------------------------------------------
@@ -56,7 +57,7 @@
 		- Relations are stored as literal comparison operator strings.
 		- Arithmetic on equations applies operations to both sides.
 		- Equation.lhs and Equation.rhs are always AST nodes.
-
+		
 		------------------------------------------------------------------------
 			Rewrite Invariants
 		------------------------------------------------------------------------
@@ -65,7 +66,12 @@
 		- Rewrite must work on arbitrary trees (not assume canonical form).
 		- Rewrite must not depend on Simplify or Canon.
 		- Rewrite patterns match structural shapes only, not semantic meaning.
-
+		- Rewrite rules may perform algebraic transformations (like-term collection,
+			monomial combination, rational simplification, cancellation, etc.).
+		- Rewrite rules must produce output that is structurally canonical-shaped
+			and locally simplified (so no Canon/Simplify pass is required afterward).
+		- Rewrite must not introduce non-canonical structure.
+		
 		------------------------------------------------------------------------
 			Simplification Invariants
 		------------------------------------------------------------------------
@@ -74,8 +80,14 @@
 		- Simplification rules must terminate.
 		- Simplify recursively simplifies children before applying rules.
 		- Simplify never changes mathematical meaning.
+		- Simplify performs only local simplifications (constant folding, removing
+			identity/annihilator elements, trivial function reductions, trivial
+			piecewise reductions).
+		- Simplify does not perform algebraic rewrites (no like-term collection,
+			no cancellation, no rational simplification).
 		- Simplify must not fold results that overflow IEEE-754’s exact integer range.
-
+		- Simplify must not call Rewrite.
+		
 		------------------------------------------------------------------------
 			Solving Invariants
 		------------------------------------------------------------------------
@@ -86,20 +98,20 @@
 		- Unsupported equation types return UnknownSolve.
 		- Solvers must not implicitly simplify.
 		- Solvers must propagate conditions faithfully.
-
+		
 		------------------------------------------------------------------------
 			Expression Object Model Invariants
 		------------------------------------------------------------------------
 		- Expression objects never store raw Lua values; they wrap AST nodes.
 		- Expression methods never mutate underlying nodes.
-
+		
 		------------------------------------------------------------------------
 			Complex Number Invariants
 		------------------------------------------------------------------------
 		- Complex AST nodes are symbolic.
 		- Complex numeric objects are numeric.
 		- Complex AST nodes store real and imag as AST nodes.
-
+		
 		------------------------------------------------------------------------
 			Factorization Invariants
 		------------------------------------------------------------------------
