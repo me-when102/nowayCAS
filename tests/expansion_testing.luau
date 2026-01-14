@@ -10,5 +10,7 @@ local exprs = {
 for _, s in ipairs(exprs) do
 	local e1 = nowayCAS.new(s):expand()
 	local e2 = e1:expand()
-	print(s, tostring(e1), tostring(e2))
+	print("s: ", s)
+	print("e1: ", e1)
+	print("e2: ", e2)
 end
